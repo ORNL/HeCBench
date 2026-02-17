@@ -12,7 +12,7 @@ void check (sycl::queue &q, unsigned *err_cnt) {
   printf("%s", err ? "x" : ".");
 
   // reset
-  q.memset(err_cnt, 0, sizeof(unsigned));
+  q.memset(err_cnt, 0, sizeof(unsigned)).wait();
 }
 
 // moving inversion tests with complementary patterns
