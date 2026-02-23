@@ -176,6 +176,9 @@ Program hang: bh-hip, mpc-sycl
 When double-precision floating-point operations are not supported on certain Intel GPU devices, software emulation may be enabled. [FP64 emulation](https://github.com/intel/compute-runtime/blob/master/opencl/doc/FAQ.md#feature-double-precision-emulation-fp64)
 
 # Feedback from the papers
+
+Velesko, P., Jääskeläinen, P., Linjamäki, H., Babej, M., Tu, P., Sarkar, S., Ashbaugh, B., Bertoni, C., Chen, J., Roth, P.C. and Elwasif, W., 2025. chipStar: Making HIP/CUDA applications cross-vendor portable by building on open standards. The International Journal of High Performance Computing Applications, p.10943420261423001.
+
 Ghosh, A., Nayak, A., Shyam, D.R.T. and Basu, A., 2026. Chasing Elusive Memory Bugs in GPU Programs. arXiv preprint arXiv:2601.21552.
 
 Zaeed, M., Islam, T.Z. and Inđić, V., 2025. Opal: A Modular Framework for Optimizing Performance using Analytics and LLMs. arXiv preprint arXiv:2510.00932.
