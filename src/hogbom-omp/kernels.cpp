@@ -38,7 +38,7 @@ static size_t posToIdx(const int width, const Position& pos)
 
 void k_findPeak(
   const float *__restrict image, 
-  size_t size,
+  const size_t size,
   Peak *__restrict absPeak)
 {
 
@@ -50,28 +50,31 @@ void k_findPeak(
     {
       int tid = omp_get_thread_num();
       int bid = omp_get_team_num();
-      const int column = tid + bid * findPeakWidth;
-      maxVal[tid] = 0.f;
-      maxPos[tid] = 0;
+      float val = 0.f;
+      size_t pos = 0;
 
-      for (int idx = column; idx < size; idx += findPeakWidth*findPeakNBlocks) {
-        if (fabsf(image[idx]) > fabsf(maxVal[tid])) {
-          maxVal[tid] = image[idx];
-          maxPos[tid] = idx;
+      for (size_t idx = tid + bid * findPeakWidth;
+                  idx < size; idx += findPeakWidth * findPeakNBlocks) {
+        if (fabsf(image[idx]) > fabsf(val)) {
+          val = image[idx];
+          pos = idx;
         }
       }
+      maxVal[tid] = val;
+      maxPos[tid] = pos;
 
       #pragma omp barrier
 
       if (tid == 0) {
-        absPeak[bid].val = 0.f;
-        absPeak[bid].pos = 0;
+        val = 0.f, pos = 0;
         for (int i = 0; i < findPeakWidth; ++i) {
-          if (fabsf(maxVal[i]) > fabsf(absPeak[bid].val)) {
-            absPeak[bid].val = maxVal[i];
-            absPeak[bid].pos = maxPos[i];
+          if (fabsf(maxVal[i]) > fabsf(val)) {
+            val = maxVal[i];
+            pos = maxPos[i];
           }
         }
+        absPeak[bid].val = val;
+        absPeak[bid].pos = pos;
       }
     }
   }

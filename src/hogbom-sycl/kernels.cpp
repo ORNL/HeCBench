@@ -54,28 +54,31 @@ static Peak findPeak(sycl::queue &q, float *d_image, Peak *d_peak, size_t size)
       sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
       int tid = item.get_local_id(0);
       int bid = item.get_group(0);
-      const int column = item.get_global_id(0);
-      maxVal[tid] = 0.f;
-      maxPos[tid] = 0;
+      float val = 0.f;
+      size_t pos = 0;
 
-      for (int idx = column; idx < size; idx += findPeakWidth*findPeakNBlocks) {
-        if (sycl::fabs(d_image[idx]) > sycl::fabs(maxVal[tid])) {
-          maxVal[tid] = d_image[idx];
-          maxPos[tid] = idx;
+      for (size_t idx = item.get_global_id(0);
+                  idx < size; idx += findPeakWidth*findPeakNBlocks) {
+        if (sycl::fabs(d_image[idx]) > sycl::fabs(val)) {
+          val = d_image[idx];
+          pos = idx;
         }
       }
+      maxVal[tid] = val;
+      maxPos[tid] = pos;
 
       item.barrier(sycl::access::fence_space::local_space);
 
       if (tid == 0) {
-        d_peak[bid].val = 0.f;
-        d_peak[bid].pos = 0;
+        val = 0.f, pos = 0;
         for (int i = 0; i < findPeakWidth; ++i) {
-          if (sycl::fabs(maxVal[i]) > sycl::fabs(d_peak[bid].val)) {
-            d_peak[bid].val = maxVal[i];
-            d_peak[bid].pos = maxPos[i];
+          if (sycl::fabs(maxVal[i]) > sycl::fabs(val)) {
+            val = maxVal[i];
+            pos = maxPos[i];
           }
         }
+        d_peak[bid].val = val;
+        d_peak[bid].pos = pos;
       }
     });
   });
