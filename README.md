@@ -25,7 +25,7 @@ Each benchmark falls into a single category. While such classification is not ac
     daphne
 
 ### Bandwidth
-    allreduce, cmembench, babelstream, ccl, memcpy, memtest, pingpong, randomAccess, shmembench, threadcpy, triad
+    allreduce, cmembench, babelstream, ccl, memcpy, memtest, pingpong, randomAccess, shmembench, storeKVCache, threadcpy, triad
 
 ### Bioinformatics
     all-pairs-distance, bsw, ccs, cm, deredundancy, diamond, epistasis, extend2, frna, fsm, ga, local-ht, logan, minibude, minimap2, nbnxm, nw, pcc, prna, sa, snake
@@ -1564,6 +1564,9 @@ Early results are shown [here](results/README.md)
 
 ### stencil3d (cuda)
   3D stencil (https://github.com/LLNL/cardioid)
+
+### storeKVCache (cuda)
+  KV cache storage (https://github.com/sgl-project/sglang/tree/main)
 
 ### streamcluster (opencl)
   Streamcluster in the Rodinia benchmark suite (http://lava.cs.virginia.edu/Rodinia/download_links.htm)
