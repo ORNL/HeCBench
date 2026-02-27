@@ -25,7 +25,7 @@ Each benchmark falls into a single category. While such classification is not ac
     daphne
 
 ### Bandwidth
-    allreduce, cmembench, babelstream, ccl, memcpy, memtest, pingpong, randomAccess, shmembench, threadcpy, triad
+    allreduce, cmembench, babelstream, ccl, memcpy, memtest, pingpong, randomAccess, shmembench, storeKVCache, threadcpy, triad
 
 ### Bioinformatics
     all-pairs-distance, bsw, ccs, cm, deredundancy, diamond, epistasis, extend2, frna, fsm, ga, local-ht, logan, minibude, minimap2, nbnxm, nw, pcc, prna, sa, snake
@@ -176,6 +176,9 @@ Program hang: bh-hip, mpc-sycl
 When double-precision floating-point operations are not supported on certain Intel GPU devices, software emulation may be enabled. [FP64 emulation](https://github.com/intel/compute-runtime/blob/master/opencl/doc/FAQ.md#feature-double-precision-emulation-fp64)
 
 # Feedback from the papers
+
+Velesko, P., Jääskeläinen, P., Linjamäki, H., Babej, M., Tu, P., Sarkar, S., Ashbaugh, B., Bertoni, C., Chen, J., Roth, P.C. and Elwasif, W., 2025. chipStar: Making HIP/CUDA applications cross-vendor portable by building on open standards. The International Journal of High Performance Computing Applications, p.10943420261423001.
+
 Ghosh, A., Nayak, A., Shyam, D.R.T. and Basu, A., 2026. Chasing Elusive Memory Bugs in GPU Programs. arXiv preprint arXiv:2601.21552.
 
 Zaeed, M., Islam, T.Z. and Inđić, V., 2025. Opal: A Modular Framework for Optimizing Performance using Analytics and LLMs. arXiv preprint arXiv:2510.00932.
@@ -1561,6 +1564,9 @@ Early results are shown [here](results/README.md)
 
 ### stencil3d (cuda)
   3D stencil (https://github.com/LLNL/cardioid)
+
+### storeKVCache (cuda)
+  KV cache storage (https://github.com/sgl-project/sglang/tree/main)
 
 ### streamcluster (opencl)
   Streamcluster in the Rodinia benchmark suite (http://lava.cs.virginia.edu/Rodinia/download_links.htm)

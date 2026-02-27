@@ -40,34 +40,36 @@ static size_t posToIdx(const int width, const Position& pos)
 __global__
 void k_findPeak(
   const float *__restrict__ image, 
-  size_t size,
+  const size_t size,
   Peak *__restrict__ absPeak)
 {
-
   __shared__ float maxVal[findPeakWidth];
   __shared__ size_t maxPos[findPeakWidth];
-  const int column = threadIdx.x + (blockIdx.x * blockDim.x);
-  maxVal[threadIdx.x] = 0.f;
-  maxPos[threadIdx.x] = 0;
+  float val = 0.f;
+  size_t pos = 0;
 
-  for (int idx = column; idx < size; idx += findPeakWidth*findPeakNBlocks) {
-    if (fabsf(image[idx]) > fabsf(maxVal[threadIdx.x])) {
-      maxVal[threadIdx.x] = image[idx];
-      maxPos[threadIdx.x] = idx;
+  for (size_t idx = threadIdx.x + blockIdx.x * blockDim.x;
+              idx < size; idx += findPeakWidth * findPeakNBlocks) {
+    if (fabsf(image[idx]) > fabsf(val)) {
+      val = image[idx];
+      pos = idx;
     }
   }
+  maxVal[threadIdx.x] = val;
+  maxPos[threadIdx.x] = pos;
 
   __syncthreads();
 
   if (threadIdx.x == 0) {
-    absPeak[blockIdx.x].val = 0.f;
-    absPeak[blockIdx.x].pos = 0;
+    val = 0.f, pos = 0;
     for (int i = 0; i < findPeakWidth; ++i) {
-      if (fabsf(maxVal[i]) > fabsf(absPeak[blockIdx.x].val)) {
-        absPeak[blockIdx.x].val = maxVal[i];
-        absPeak[blockIdx.x].pos = maxPos[i];
+      if (fabsf(maxVal[i]) > fabsf(val)) {
+        val = maxVal[i];
+        pos = maxPos[i];
       }
     }
+    absPeak[blockIdx.x].val = val;
+    absPeak[blockIdx.x].pos = pos;
   }
 }
 

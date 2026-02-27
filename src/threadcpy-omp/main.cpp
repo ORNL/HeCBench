@@ -31,8 +31,8 @@ void threads_copy_kernel(const T *in, T *out, const size_t n, const unsigned num
           }
       } else {
           using vec_t = data_t<T, vec_size>;
-          auto in_vec = reinterpret_cast<vec_t *>(const_cast<T *>(&in[index]));
-          auto out_vec = reinterpret_cast<vec_t *>(&out[index]);
+          auto in_vec = reinterpret_cast<const vec_t *>(in + index);
+          auto out_vec = reinterpret_cast<vec_t *>(out + index);
           *out_vec = *in_vec;
       }
     }
