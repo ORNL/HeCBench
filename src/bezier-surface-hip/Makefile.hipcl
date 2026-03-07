@@ -11,7 +11,7 @@ DEBUG     = no
 # Program name & source code list
 #===============================================================================
 
-program = bs
+program = main
 
 source = main.cu
 

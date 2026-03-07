@@ -30,7 +30,7 @@ endif
 
 #	EXECUTABLES (LINK OBJECTS TOGETHER INTO BINARY)
 
-./myocyte.out:	./main.o \
+./main:	./main.o \
 	./kernel/kernel_wrapper.o \
 	./util/file/file.o \
 	./util/num/num.o
@@ -39,7 +39,7 @@ endif
 		./util/file/file.o \
 		./util/num/num.o \
 		$(LDFLAGS) \
-		-o myocyte.out
+		-o main
 
 #	MAIN FUNCTION
 
@@ -81,11 +81,11 @@ endif
 		-o ./util/num/num.o \
 		-O3
 
-run: myocyte.out
-	$(LAUNCHER) ./myocyte.out -time 100
+run: main
+	$(LAUNCHER) ./main -time 100
 
 clean:
-	rm -rf	*.o *.out \
+	rm -rf	*.o main \
 		./kernel/*.o \
 		./util/file/*.o \
 		./util/num/*.o \

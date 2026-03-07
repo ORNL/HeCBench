@@ -12,7 +12,7 @@ LAUNCHER  =
 # Program name & source code list
 #===============================================================================
 
-program = sph
+program = main
 
 build: $(program)
 

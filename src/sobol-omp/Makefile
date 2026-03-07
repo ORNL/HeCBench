@@ -13,7 +13,7 @@ LAUNCHER  =
 # Program name & source code list
 #===============================================================================
 
-program = SobolQRNG
+program = main
 
 source = sobol.cpp sobol_gold.cpp sobol_gpu.cpp sobol_primitives.cpp
 

@@ -32,7 +32,7 @@ endif
 #===============================================================================
 # Program name & source code list
 #===============================================================================
-program = multimat multimat_FL multimat_F
+program = main
 
 all: $(program)
 

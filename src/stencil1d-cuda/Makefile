@@ -13,7 +13,7 @@ LAUNCHER  =
 # Program name & source code list
 #===============================================================================
 
-program = stencil_1d
+program = main
 
 source = stencil_1d.cu
 

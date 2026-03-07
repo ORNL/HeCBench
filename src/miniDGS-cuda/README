@@ -18,7 +18,7 @@ make
 # When the number of processes is one, cuda-memcheck reports CUDA API errors
 #
 # Run the various configurations (in parallel using MPI) with sample meshes:
-mpirun -np 2 ./MaxwellsGPU3d Meshes/FS_K01022.neu
+mpirun -np 2 ./main Meshes/FS_K01022.neu
 
 # Only one GPU device is used in the driver (src/MaxwellsDriver3d.c).
 #

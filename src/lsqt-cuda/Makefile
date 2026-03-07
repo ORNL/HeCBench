@@ -17,19 +17,16 @@ HEADERS = sigma.h vector.h lsqt.h hamiltonian.h model.h anderson.h charge.h comm
 ODIR = obj_gpu
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-all: builddir lsqt_gpu
-
-builddir:
-	mkdir -p $(ODIR)
+all: main
 
 $(ODIR)/%.o: %.cu $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-lsqt_gpu: $(OBJ)
+main: $(OBJ)
 	$(CC) $^ -o $@
 
 clean:
-	rm -f $(ODIR)/*.o lsqt_gpu
+	rm -f $(ODIR)/*.o main
 
-run: lsqt_gpu
-	./lsqt_gpu examples/input.txt
+run: main
+	$(LAUNCHER) ./main examples/input.txt

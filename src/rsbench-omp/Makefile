@@ -13,7 +13,7 @@ LAUNCHER  =
 # Program name & source code list
 #===============================================================================
 
-program = rsbench
+program = main
 
 source = init.c  io.c  main.c  material.c  simulation.c  utils.c
 

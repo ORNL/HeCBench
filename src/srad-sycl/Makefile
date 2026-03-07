@@ -64,7 +64,7 @@ endif
 # Targets to Build
 #===============================================================================
 
-./srad:	./main.o \
+./main:	./main.o \
 	./util/graphics/graphics.o \
 	./util/graphics/resize.o \
 	./util/timer/timer.o
@@ -73,7 +73,7 @@ endif
 		./util/graphics/resize.o \
 		./util/timer/timer.o \
 		-lm \
-		$(LDFLAGS) -o srad
+		$(LDFLAGS) -o main
 
 ./main.o:./main.cpp ./main.h \
 	kernel_compress.sycl \
@@ -106,7 +106,7 @@ endif
 		-O3
 
 clean:
-	rm -f ./*.o srad *.pgm ./util/graphics/*.o ./util/timer/*.o
+	rm -f ./*.o main *.pgm ./util/graphics/*.o ./util/timer/*.o
 
-run: srad
-	$(LAUNCHER) ./srad 1000 0.5 502 458
+run: main
+	$(LAUNCHER) ./main 1000 0.5 502 458

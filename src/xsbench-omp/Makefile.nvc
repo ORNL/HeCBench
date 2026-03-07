@@ -14,7 +14,7 @@ LAUNCHER  =
 # Program name & source code list
 #===============================================================================
 
-program = XSBench
+program = main
 
 obj = Main.o io.o Simulation.o GridInit.o XSutils.o Materials.o
 

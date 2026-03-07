@@ -12,7 +12,7 @@ LAUNCHER  =
 # Program name & source code list
 #===============================================================================
 
-program = vj-cpu vj-gpu
+program = main vj-cpu
 
 #===============================================================================
 # Sets Flags
@@ -63,7 +63,7 @@ rectangles.o: ../face-cuda/rectangles.cu $(HEADERS)
 vj-cpu: main.o haar-cpu.o image.o stdio-wrapper.o rectangles.o
 	$(CC) $(CFLAGS) -o $@ $+ $(LDFLAGS)
 
-vj-gpu: main.o haar-gpu.o image.o stdio-wrapper.o rectangles.o
+main: main.o haar-gpu.o image.o stdio-wrapper.o rectangles.o
 	$(CC) $(CFLAGS) -o $@ $+ $(LDFLAGS)
 
 clean:
@@ -71,4 +71,4 @@ clean:
 
 run: build
 	$(LAUNCHER) ./vj-cpu ../face-cuda/Face.pgm ../face-cuda/info.txt ../face-cuda/class.txt Output-cpu.pgm
-	$(LAUNCHER) ./vj-gpu ../face-cuda/Face.pgm ../face-cuda/info.txt ../face-cuda/class.txt Output-gpu.pgm
+	$(LAUNCHER) ./main ../face-cuda/Face.pgm ../face-cuda/info.txt ../face-cuda/class.txt Output-gpu.pgm

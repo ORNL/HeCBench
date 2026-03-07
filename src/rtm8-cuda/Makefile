@@ -13,7 +13,7 @@ LAUNCHER  =
 # Program name & source code list
 #===============================================================================
 
-program = rtm8
+program = main
 
 source = rtm8.cu
 

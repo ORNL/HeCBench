@@ -51,16 +51,16 @@ OBJS    = \
 	src/MaxwellsKernel3d.o\
 	src/MaxwellsDriver3d.o
 
-MaxwellsGPU3d:$(OBJS)
-	$(LD) $(LDFLAGS) -o MaxwellsGPU3d $(OBJS) $(LIBS)
+main:$(OBJS)
+	$(LD) $(LDFLAGS) -o main $(OBJS) $(LIBS)
 
 # what to do if user types "make clean"
 clean :
-	rm -rf $(OBJS) MaxwellsGPU3d
+	rm -rf $(OBJS) main
 	
 veryclean :
 	make clean
 	cd 3rdParty/ParMetis-3.1 && make clean
 
 run :
-	mpiexec -n $(NP) ./MaxwellsGPU3d  Meshes/FS_K01022.neu
+	mpiexec -n $(NP) ./main  Meshes/FS_K01022.neu

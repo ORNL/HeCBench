@@ -17,10 +17,10 @@ MINIFE_KERNELS = 0
 
 vpath %.cpp ../utils
 
-all:common_files generate_info miniFE.x
+all:common_files generate_info main
 
-miniFE.x:common_files generate_info $(MAIN_OBJ) $(OBJS) $(UTIL_OBJS) $(OPTIONAL_OBJS) *.hpp
-	$(INSTRUMENT) $(CXX) $(CXXFLAGS) $(CPPFLAGS) $(MAIN_OBJ) $(OBJS) $(UTIL_OBJS) $(OPTIONAL_OBJS) -o miniFE.x $(LDFLAGS) $(OPTIONAL_LIBS) $(LIBS)
+main:common_files generate_info $(MAIN_OBJ) $(OBJS) $(UTIL_OBJS) $(OPTIONAL_OBJS) *.hpp
+	$(INSTRUMENT) $(CXX) $(CXXFLAGS) $(CPPFLAGS) $(MAIN_OBJ) $(OBJS) $(UTIL_OBJS) $(OPTIONAL_OBJS) -o main $(LDFLAGS) $(OPTIONAL_LIBS) $(LIBS)
 
 common_files:
 	./get_common_files
@@ -37,11 +37,11 @@ verify:all
 %.o:%.c *.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $<
 
-run: miniFE.x
-	./miniFE.x -nx 128 -ny 128 -nz 128
+run: main
+	$(LAUNCHER) ./main -nx 128 -ny 128 -nz 128
 
 clean:
-	rm -f *.o *.a *.x *.linkinfo miniFE_info.hpp
+	rm -f *.o *.a main *.linkinfo miniFE_info.hpp
 
 realclean: clean
 	rm -f gmon.out gprof.* *~ *.yaml *.TVD.* *.mtx* *.vec* minife_debug*

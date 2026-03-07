@@ -14,7 +14,7 @@ LAUNCHER  =
 # Program name & source code list
 #===============================================================================
 
-program = nw
+program = main
 
 source = nw.cpp
 

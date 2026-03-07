@@ -13,7 +13,7 @@ LAUNCHER  =
 # Program name & source code list
 #===============================================================================
 
-program = xsbench
+program = main
 
 source = Main.cu \
          Simulation.cu\

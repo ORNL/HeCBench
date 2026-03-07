@@ -29,16 +29,16 @@ HEADERS = sigma.h vector.h lsqt.h hamiltonian.h model.h anderson.h charge.h comm
 ODIR = obj_gpu
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-all: lsqt_gpu
+all: main
 
 $(ODIR)/%.o: %.cpp $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-lsqt_gpu: $(OBJ)
+main: $(OBJ)
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
-	rm -f $(ODIR)/*.o lsqt_gpu *.out
+	rm -f $(ODIR)/*.o main *.out
 
-run: lsqt_gpu
-	./lsqt_gpu ../lsqt-cuda/examples/input.txt
+run: main
+	$(LAUNCHER) ./main ../lsqt-cuda/examples/input.txt

@@ -11,7 +11,7 @@ DEBUG     = no
 # Program name & source code list
 #===============================================================================
 
-program = nn
+program = main
 
 source = nearestNeighbor.cu utils.cu 
 

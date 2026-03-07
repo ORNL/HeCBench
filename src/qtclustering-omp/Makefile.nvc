@@ -15,7 +15,7 @@ LAUNCHER  =
 # Program name & source code list
 #===============================================================================
 
-program = qtc
+program = main
 
 source = main.cpp Option.cpp OptionParser.cpp QTC.cpp comm.cpp libdata.cpp
 

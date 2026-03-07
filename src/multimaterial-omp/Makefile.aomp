@@ -13,7 +13,7 @@ LAUNCHER  =
 #===============================================================================
 # Program name & source code list
 #===============================================================================
-program= multimat multimat_FL multimat_F
+program = main
 
 source=compact.cpp full_matrix.cpp multimat.cpp
 

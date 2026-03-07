@@ -19,7 +19,7 @@ HIP_ARCH  = gfx908
 # Program name & source code list
 #===============================================================================
 
-program = beyond
+program = main
 
 source = ../src/beyond.cpp
 

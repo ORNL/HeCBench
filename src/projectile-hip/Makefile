@@ -12,7 +12,7 @@ LAUNCHER  =
 # Program name & source code list
 #===============================================================================
 
-program = Projectile
+program = main
 
 source = Projectile.cu
 

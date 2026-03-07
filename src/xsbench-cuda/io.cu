@@ -166,7 +166,7 @@ void fancy_int( long a )
 
 void print_CLI_error(void)
 {
-  printf("Usage: ./XSBench <options>\n");
+  printf("Usage: ./main <options>\n");
   printf("Options include:\n");
   printf("  -m <simulation method>   Simulation method (history, event)\n");
   printf("  -s <size>                Size of H-M Benchmark to run (small, large, XL, XXL)\n");

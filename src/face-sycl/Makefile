@@ -19,7 +19,7 @@ HIP_ARCH  = gfx908
 # Program name & source code list
 #===============================================================================
 
-program = vj-cpu vj-gpu
+program = main
 
 source = main.cpp
 
@@ -98,8 +98,11 @@ vj-cpu: main.o haar-cpu.o image.o stdio-wrapper.o rectangles.o
 vj-gpu: main.o haar-gpu.o image.o stdio-wrapper.o rectangles.o
 	$(CC) $(CFLAGS) -o $@ $+ $(LDFLAGS)
 
+$(program): main.o haar-gpu.o image.o stdio-wrapper.o rectangles.o
+	$(CC) $(CFLAGS) -o $@ $+ $(LDFLAGS)
+
 clean:
-	rm -f $(program) *.o Output-cpu.pgm Output-gpu.pgm
+	rm -f $(program) vj-cpu vj-gpu *.o Output-cpu.pgm Output-gpu.pgm
 
 run: build
 	$(LAUNCHER) ./vj-cpu ../face-cuda/Face.pgm ../face-cuda/info.txt ../face-cuda/class.txt Output-cpu.pgm

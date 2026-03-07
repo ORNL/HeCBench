@@ -9,7 +9,7 @@ BUILD_HIP_PATH = build/hip
 BIN_PATH = $(BUILD_PATH)/bin
 
 # executable #
-BIN_NAME = kernel
+BIN_NAME = main
 
 # extensions #
 SRC_EXT = cpp
@@ -29,7 +29,7 @@ DEPS = $(OBJECTS:.o=.d)
 
 # flags #
 COMPILE_FLAGS = -std=c++17 -Wall -Wextra -g
-HIPCC_COMPILE_FLAGS = -std=c++17 -g -O3 
+HIPCC_COMPILE_FLAGS = -std=c++17 -g -O3
 INCLUDES = -I include/ -I /usr/local/include
 # Space-separated pkg-config libraries used by this project
 LIBS =

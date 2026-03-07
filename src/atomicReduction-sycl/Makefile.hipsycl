@@ -16,7 +16,7 @@ ROCM_DEVICE_LIB = -nogpulib \
 # Program name & source code list
 #===============================================================================
 
-program = reduction
+program = main
 
 source = reduction.cpp
 

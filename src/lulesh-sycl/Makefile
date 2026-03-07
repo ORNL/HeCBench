@@ -20,7 +20,7 @@ HIP_ARCH  = gfx908
 # Program name & source code list
 #===============================================================================
 
-program = lulesh
+program = main
 
 source = lulesh.cc \
         lulesh-viz.cc \

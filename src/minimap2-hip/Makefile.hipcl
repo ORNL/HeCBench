@@ -9,7 +9,7 @@ BUILD_DEVICE_PATH = build/cuda
 BIN_PATH = $(BUILD_PATH)/bin
 
 # executable #
-BIN_NAME = kernel
+BIN_NAME = main
 
 # extensions #
 SRC_EXT = cpp

@@ -66,18 +66,18 @@ endif
 # Targets to Build
 #===============================================================================
 
-b+tree.out:./main.o \
+main: ./main.o \
            ./kernel/kernel_wrapper.o \
            ./kernel/kernel2_wrapper.o \
            ./util/timer/timer.o \
-           ./util/num/num.o 
+           ./util/num/num.o
 	$(CC) $(CFLAGS)	./main.o \
 			./kernel/kernel_wrapper.o \
 			./kernel/kernel2_wrapper.o \
 			./util/timer/timer.o \
 			./util/num/num.o \
 			$(LDFLAGS) \
-	                -o b+tree.out
+	                -o main
 
 
 main.o:	./b+tree.h ./main.c
@@ -117,11 +117,11 @@ main.o:	./b+tree.h ./main.c
 		-o ./util/num/num.o \
 		-O3
 
-run: b+tree.out
-	$(LAUNCHER) ./b+tree.out file ../data/b+tree/mil.txt command ../data/b+tree/command.txt
+run: main
+	$(LAUNCHER) ./main file ../data/b+tree/mil.txt command ../data/b+tree/command.txt
 
 clean:
-	rm -f	*.o *.out \
+	rm -f	*.o main \
 		./kernel/*.o \
 		./util/timer/*.o \
 		./util/num/*.o \

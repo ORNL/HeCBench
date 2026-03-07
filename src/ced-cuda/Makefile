@@ -14,7 +14,7 @@ LAUNCHER  =
 # Program name & source code list
 #===============================================================================
 
-program = ced
+program = main
 
 source = main.cu kernel_reference.cu 
 

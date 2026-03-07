@@ -28,7 +28,7 @@ ifeq ($(OPTIMIZE),yes)
   CFLAGS += -O3
 endif
 
-leukocyte: detect_main.o \
+main: detect_main.o \
 	avilib.o \
 	track_ellipse.o \
 	track_ellipse_gpu.o \
@@ -36,7 +36,7 @@ leukocyte: detect_main.o \
 	misc_math.o \
 	helper.o \
 	$(MATRIX_DIR)/meschach.a
-	$(CC)  -o leukocyte avilib.o \
+	$(CC)  -o main avilib.o \
 		track_ellipse.o \
 		track_ellipse_gpu.o \
 		find_ellipse.o \
@@ -63,9 +63,9 @@ track_ellipse_gpu.o: track_ellipse_gpu.c track_ellipse.h kernel_IMGVF.h
 $(MATRIX_DIR)/meschach.a:
 	cd $(MATRIX_DIR); make cleanup; make all CC=$(CC); make clean
 
-run: leukocyte
-	$(LAUNCHER) ./leukocyte ../data/leukocyte/testfile.avi 100
+run: main
+	$(LAUNCHER) ./main ../data/leukocyte/testfile.avi 100
 
 clean:
-	rm -f *.o *~ leukocyte 
+	rm -f *.o *~ main 
 	cd $(MATRIX_DIR); make cleanup

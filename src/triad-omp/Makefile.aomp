@@ -15,7 +15,7 @@ LAUNCHER  =
 # Program name & source code list
 #===============================================================================
 
-program = triad
+program = main
 
 source = main.cpp  Option.cpp  OptionParser.cpp  triad.cpp Timer.cpp
 

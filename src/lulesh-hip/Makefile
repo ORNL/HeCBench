@@ -13,7 +13,7 @@ LAUNCHER  =
 # Program name & source code list
 #===============================================================================
 
-program = lulesh
+program = main
 
 source = lulesh.cu \
         lulesh-viz.cu \

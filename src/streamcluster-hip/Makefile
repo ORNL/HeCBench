@@ -26,10 +26,10 @@ ifeq ($(OPTIMIZE),yes)
 endif
 
 SRC = streamcluster.cu
-EXE = streamcluster
+EXE = main
 
 $(EXE):$(SRC) kernel.h streamcluster.h  streamcluster_cl.h
-	$(CC) $(CFLAGS) $(SRC) -o $(EXE) $(LDFLAGS)	
+	$(CC) $(CFLAGS) $(SRC) -o $(EXE) $(LDFLAGS)
 
 run: $(EXE)
 	$(LAUNCHER) ./$(EXE) 10 20 256 65536 65536 1000 none output.txt 1 

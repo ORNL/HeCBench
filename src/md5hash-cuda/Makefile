@@ -13,7 +13,7 @@ LAUNCHER  =
 # Program name & source code list
 #===============================================================================
 
-program = MD5Hash
+program = main
 
 source = MD5Hash.cu
 

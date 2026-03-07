@@ -33,10 +33,10 @@ else
   CFLAGS +=-qopenmp
 endif
 
-all: kmeans
+all: main
 
-kmeans: cluster.o getopt.o read_input.o rmse.o kmeans.c
-	$(CC) $(KERNEL_DIM) $(CFLAGS) $^ -o kmeans $(LDFLAGS)
+main: cluster.o getopt.o read_input.o rmse.o kmeans.c
+	$(CC) $(KERNEL_DIM) $(CFLAGS) $^ -o main $(LDFLAGS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) $< -c
@@ -52,9 +52,9 @@ read_input.o: read_input.c kmeans.h
 rmse.o: rmse.c kmeans.h
 
 clean:
-	rm -f *.o *~ kmeans *.linkinfo
+	rm -f *.o *~ main *.linkinfo
 
-run: kmeans
-	$(LAUNCHER) ./kmeans -r -n 5 -m 15 -l 10 -o -i ../data/kmeans/kdd_cup
+run: main
+	$(LAUNCHER) ./main -r -n 5 -m 15 -l 10 -o -i ../data/kmeans/kdd_cup
 
 

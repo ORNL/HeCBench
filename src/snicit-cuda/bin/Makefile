@@ -13,7 +13,7 @@ LAUNCHER  =
 # Program name & source code list
 #===============================================================================
 
-program = beyond
+program = main
 
 source = ../src/beyond.cu
 

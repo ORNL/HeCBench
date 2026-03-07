@@ -11,7 +11,7 @@ DEBUG     = no
 # Program name & source code list
 #===============================================================================
 
-program = lud
+program = main
 
 source = lud.cu ./common/common.cu 
 

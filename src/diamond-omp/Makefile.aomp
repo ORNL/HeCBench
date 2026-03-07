@@ -14,7 +14,7 @@ LAUNCHER    =
 # Program name & source code list
 #===============================================================================
 
-program = diamond
+program = main
 
 c_src= \
   $(DMND_PATH)/src/blast/sm_blosum45.c \
