@@ -295,7 +295,6 @@ int main (void) {
 
   fclose(pfile);
   printf("%s\n", count == 0 ? "PASS" : "FAIL");
-  if (count != 0) exit(1);
 
   free(aP);
   free(aW);
@@ -309,5 +308,6 @@ int main (void) {
   free(temp_black_ref);
   free(bl_norm_L2);
 
+  if (count != 0) return 1;
   return 0;
 }

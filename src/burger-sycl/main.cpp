@@ -238,7 +238,6 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   free(x);
   free(y);
@@ -253,5 +252,6 @@ int main(int argc, char* argv[])
   sycl::free(d_u_new, q);
   sycl::free(d_v_new, q);
 
+  if (!ok) return 1;
   return 0;
 }

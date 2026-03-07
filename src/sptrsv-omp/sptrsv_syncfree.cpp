@@ -205,11 +205,11 @@ int sptrsv_syncfree (
   printf("|x-xref|/|xref| = %8.2e\n", res);
 
   printf("%s\n", (res < accuracy) ? "PASS" : "FAIL");
-  if (!(res < accuracy)) exit(1);
 
   free(get_value);
   free(warp_num);
 
+  if (!(res < accuracy)) return 1;
   return 0;
 }
 

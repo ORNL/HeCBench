@@ -170,7 +170,6 @@ int main(int argc, char** argv)
     }
   }
   std::cout << "FFT " << (error ? "FAIL" : "PASS")  << std::endl;
-  if (error) exit(1);
  
   // execute iFFT
   ifft1D_512<<<n_ffts, 64>>>(d_source);
@@ -190,7 +189,6 @@ int main(int argc, char** argv)
     }
   }
   std::cout << "iFFT " << (error ? "FAIL" : "PASS")  << std::endl;
-  if (error) exit(1);
 
   auto start = std::chrono::steady_clock::now();
 
@@ -209,5 +207,7 @@ int main(int argc, char** argv)
   free(reference);
   free(source);
 
+  if (error) return 1;
+  if (error) return 1;
   return 0;
 }

@@ -168,7 +168,6 @@ void eval(const int nrows, const int repeat) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   free(a);
   free(b);
@@ -192,5 +191,6 @@ int main(int argc, char* argv[])
   printf("=========== Data type is FP64 ==========\n");
   eval<double>(nrows, repeat);
 
+  if (!ok) return 1;
   return 0;
 }

@@ -48,7 +48,6 @@ void test01 ( sycl::queue &q, int nfun  )
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
   printf ( "  %s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
 #ifdef DEBUG
   r8vec_print ( n_max, l,
@@ -103,7 +102,6 @@ void test02 ( sycl::queue &q, int nfun  )
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
   printf ( "  %s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
 #ifdef DEBUG
   r8vec_print ( n_max, l,
@@ -158,7 +156,6 @@ void test03 ( sycl::queue &q, int nfun  )
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
   printf ( "  %s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
 #ifdef DEBUG
   r8vec_print ( n_max, l,
@@ -213,7 +210,6 @@ void test04 ( sycl::queue &q, int nfun  )
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
   printf ( "  %s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
 #ifdef DEBUG
   r8vec_print ( n_max, l,
@@ -268,7 +264,6 @@ void test05 ( sycl::queue &q, int nfun  )
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
   printf ( "  %s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
 #ifdef DEBUG
   r8vec_print ( n_max, l,
@@ -323,7 +318,6 @@ void test06 ( sycl::queue &q, int nfun  )
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
   printf ( "  %s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
 #ifdef DEBUG
   r8vec_print ( n_max, l,
@@ -378,7 +372,6 @@ void test07 ( sycl::queue &q, int nfun  )
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
   printf ( "  %s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
 #ifdef DEBUG
   r8vec_print ( n_max, l,
@@ -433,7 +426,6 @@ void test08 ( sycl::queue &q, int nfun  )
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
   printf ( "  %s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
 #ifdef DEBUG
   r8vec_print ( n_max, l,
@@ -488,7 +480,6 @@ void test09 ( sycl::queue &q, int nfun  )
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
   printf ( "  %s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
 #ifdef DEBUG
   r8vec_print ( n_max, l,
@@ -540,5 +531,14 @@ int main (int argc, char* argv[] )
     timestamp ( );
   }
 
+  if (!ok) return 1;
+  if (!ok) return 1;
+  if (!ok) return 1;
+  if (!ok) return 1;
+  if (!ok) return 1;
+  if (!ok) return 1;
+  if (!ok) return 1;
+  if (!ok) return 1;
+  if (!ok) return 1;
   return 0;
 }

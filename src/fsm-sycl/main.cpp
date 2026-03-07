@@ -187,7 +187,6 @@ int main(int argc, char *argv[])
 
   bool ok = ((length - misses) == besthits);
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
   
 #ifdef DEBUG
   // print FSM state assignment in R's ncol format
@@ -208,5 +207,6 @@ int main(int argc, char *argv[])
   sycl::free(d_smax, q);
   sycl::free(d_sbest, q);
   sycl::free(d_oldmax, q);
+  if (!ok) return 1;
   return 0;
 }

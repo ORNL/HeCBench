@@ -215,7 +215,6 @@ int main(int argc, char *argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   pt_rate = pts/dt;
   flop_rate = flops/dt;
@@ -242,5 +241,6 @@ int main(int argc, char *argv[]) {
   sycl::free(image_d, q);
   sycl::free(a_d, q);
 
+  if (!ok) return 1;
   return 0;
 }

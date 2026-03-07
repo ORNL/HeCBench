@@ -213,7 +213,6 @@ void filtering (sycl::queue &q, const int repeat,
 
   bool ok = compare_results<T>(x_ref, x, n_signals * n_samples, 1e-4, 1e-4);
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   q.wait();
   auto start = std::chrono::steady_clock::now();
@@ -268,5 +267,6 @@ int main(int argc, char** argv)
 
   printf("Double-precision second-order-section filtering of digital signals\n");
   filtering<double> (q, repeat, numSignals, numSamples, numSections, zi_width);
+  if (!ok) return 1;
   return 0;
 }

@@ -125,7 +125,6 @@ int main(int argc, char* argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   sycl::free(d_lb, q);
   sycl::free(d_avgs, q);
@@ -140,6 +139,7 @@ int main(int argc, char* argv[]) {
   free(subject);
   free(lower);
   free(upper);
+  if (!ok) return 1;
   return 0;
 }
 

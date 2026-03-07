@@ -213,11 +213,11 @@ int main(int argc, char** argv) {
     printf("atomic add results: %llu %lld %lf\n", res_u64[2], res_s64[2], res_f64[2]);
   }
   printf("%s\n", error ? "FAIL" : "PASS");
-  if (error) exit(1);
 
   sycl::free(d_res_u64, q);
   sycl::free(d_res_s64, q);
   sycl::free(d_res_f64, q);
 
+  if (error) return 1;
   return 0;
 }

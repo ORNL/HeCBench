@@ -141,7 +141,6 @@ void run_gemm_example(MKL_INT m, MKL_INT k, MKL_INT n, int repeat) {
   q.memcpy(r, dr, C_size).wait();
   int error = memcmp(c, r, C_size);
   std::cout << (error ? "FAIL" : "PASS") << std::endl;
-  if (error) exit(1);
 
   q.wait();
   auto start = std::chrono::steady_clock::now();
@@ -207,5 +206,6 @@ int main (int argc, char ** argv) {
   std::cout << "\tRunning with double precision data type:" << std::endl;
   run_gemm_example<double>(m, k, n, repeat);
 
+  if (error) return 1;
   return 0;
 }

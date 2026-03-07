@@ -36,7 +36,6 @@ void verifySort(const T *keys, const size_t size)
     std::cout << "PASS" << std::endl;
   else
     std::cout << "FAIL" << std::endl;
-  if (!passed) exit(1);
 }
 
 int main(int argc, char** argv) 
@@ -168,5 +167,6 @@ int main(int argc, char** argv)
   free(idata);
   free(isums);
   free(odata);
+  if (!passed) return 1;
   return 0;
 }

@@ -313,7 +313,6 @@ void attention_page(sycl::queue &Q, int num_seqs, int num_query_heads, int num_k
       }
     }
     printf("%s\n", ok ? "PASS" : "FAIL");
-    if (!ok) exit(1);
 
     free(query_h);
     free(out_h);
@@ -386,5 +385,6 @@ int main(int argc, char* argv[])
       Q, num_seqs, num_query_heads, num_kv_heads, head_size, max_seq_len,
       num_blocks, repeat);
 
+  if (!ok) return 1;
   return 0;
 }

@@ -176,7 +176,6 @@ int main(int argc, char* argv[])
     int32_t rc = memcmp(output, output_vec4, output_size_bytes);
 
     printf("%s\n", rc ? "FAIL" : "PASS");
-    if (rc) exit(1);
 
     GPU_CHECK(hipFree(d_input));
     free(input);
@@ -184,5 +183,6 @@ int main(int argc, char* argv[])
   GPU_CHECK(hipFree(d_output));
   free(output);
   free(output_vec4);
+  if (rc) return 1;
   return 0;
 }

@@ -162,7 +162,6 @@ void bscan (const int repeat)
 
   printf("Block size = %d, ratio of valid elements = %f, verify = %s\n",
           N, valid_count * 1.f / (N * repeat), ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   if (ok) {
     printf("Average execution time: %f (us)\n", (time * 1e-3f) / repeat);
@@ -189,5 +188,6 @@ int main(int argc, char* argv[])
   bscan<512>(repeat);
   bscan<1024>(repeat);
 
+  if (!ok) return 1;
   return 0; 
 }

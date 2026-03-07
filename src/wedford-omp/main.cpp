@@ -134,12 +134,12 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   free(input);
   free(mean);
   free(var);
   free(r_mean);
   free(r_var);
+  if (!ok) return 1;
   return 0;
 }

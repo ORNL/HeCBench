@@ -342,7 +342,6 @@ int main(int argc, char **argv) {
     if (!ok) break;
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
 #ifndef MKLRAND
   free(randvals_host);
@@ -356,5 +355,6 @@ int main(int argc, char **argv) {
   sycl::free(d_lattice_w, q);
   sycl::free(d_randvals, q);
 
+  if (!ok) return 1;
   return 0;
 }

@@ -146,12 +146,12 @@ int main(int argc, char* argv[])
     }
     stop:
     printf("%s\n", ok ? "PASS" : "FAIL");
-    if (!ok) exit(1);
   }
 
   sycl::free(d_A, q);
   sycl::free(d_out, q);
   free(A);
   free(out);
+  if (!ok) return 1;
   return 0;
 }

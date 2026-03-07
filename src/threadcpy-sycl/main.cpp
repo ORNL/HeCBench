@@ -59,7 +59,6 @@ void test_threads_copy(sycl::queue &q, size_t n, int repeat) try {
 
     int s = memcmp(out_h, in_h, sizeof(scalar_t) * n);
     std::cout << (s ? "FAIL" : "PASS") << std::endl;
-    if (s) exit(1);
 
     auto start = std::chrono::steady_clock::now();
 
@@ -139,5 +138,6 @@ int main(int argc, char* argv[])
     test_threads_copy<8, char>(q, numel * 4, repeat);
     std::cout << "char16: ";
     test_threads_copy<16, char>(q, numel * 4, repeat);
+    if (s) return 1;
     return 0;
 }

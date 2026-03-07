@@ -216,9 +216,9 @@ int main(int argc, char** argv) {
     printf("PASS\n");
   else
     printf("FAIL\n");
-  if (!check) exit(1);
 
   free(keys);
   free(out);
+  if (!check) return 1;
   return 0;
 }

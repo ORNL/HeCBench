@@ -118,7 +118,6 @@ void atomicPerf (int n, int t, int repeat)
     BlockRangeAtomicOnGlobalMem_ref<T>(r_data, n);
   fail = memcmp(h_data, r_data, data_size);
   printf("%s\n", fail ? "FAIL" : "PASS");
-  if (fail) exit(1);
   
   CHECK_ERROR( hipMemcpy(d_data, data, data_size, hipMemcpyHostToDevice) );
   CHECK_ERROR( hipDeviceSynchronize() );
@@ -139,7 +138,6 @@ void atomicPerf (int n, int t, int repeat)
     WarpRangeAtomicOnGlobalMem_ref<T>(r_data, n);
   fail = memcmp(h_data, r_data, data_size);
   printf("%s\n", fail ? "FAIL" : "PASS");
-  if (fail) exit(1);
 
   CHECK_ERROR( hipMemcpy(d_data, data, data_size, hipMemcpyHostToDevice) );
   CHECK_ERROR( hipDeviceSynchronize() );
@@ -160,7 +158,6 @@ void atomicPerf (int n, int t, int repeat)
     SingleRangeAtomicOnGlobalMem_ref<T>(r_data, i % BLOCK_SIZE, n);
   fail = memcmp(h_data, r_data, data_size);
   printf("%s\n", fail ? "FAIL" : "PASS");
-  if (fail) exit(1);
 
   CHECK_ERROR( hipMemcpy(d_data, data, data_size, hipMemcpyHostToDevice) );
   CHECK_ERROR( hipDeviceSynchronize() );
@@ -178,7 +175,6 @@ void atomicPerf (int n, int t, int repeat)
   CHECK_ERROR( hipMemcpy(h_data, d_data, data_size, hipMemcpyDeviceToHost) );
   fail = memcmp(h_data, data, data_size);
   printf("%s\n", fail ? "FAIL" : "PASS");
-  if (fail) exit(1);
 
   CHECK_ERROR( hipMemcpy(d_data, data, data_size, hipMemcpyHostToDevice) );
   CHECK_ERROR( hipDeviceSynchronize() );
@@ -196,7 +192,6 @@ void atomicPerf (int n, int t, int repeat)
   CHECK_ERROR( hipMemcpy(h_data, d_data, data_size, hipMemcpyDeviceToHost) );
   fail = memcmp(h_data, data, data_size);
   printf("%s\n", fail ? "FAIL" : "PASS");
-  if (fail) exit(1);
 
   CHECK_ERROR( hipMemcpy(d_data, data, data_size, hipMemcpyHostToDevice) );
   CHECK_ERROR( hipDeviceSynchronize() );
@@ -214,7 +209,6 @@ void atomicPerf (int n, int t, int repeat)
   CHECK_ERROR( hipMemcpy(h_data, d_data, data_size, hipMemcpyDeviceToHost) );
   fail = memcmp(h_data, data, data_size);
   printf("%s\n", fail ? "FAIL" : "PASS");
-  if (fail) exit(1);
 
   free(data);
   free(h_data);
@@ -242,5 +236,11 @@ int main(int argc, char* argv[])
   printf("\nFP32 atomic add\n");
   atomicPerf<float>(n, len, repeat); 
 
+  if (fail) return 1;
+  if (fail) return 1;
+  if (fail) return 1;
+  if (fail) return 1;
+  if (fail) return 1;
+  if (fail) return 1;
   return 0;
 }

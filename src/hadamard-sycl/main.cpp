@@ -310,7 +310,6 @@ void hadamard_transform(sycl::queue &q, int batch_size, int dim, int repeat) try
       }
     }
     printf("%s\n", ok ? "PASS" : "FAIL");
-    if (!ok) exit(1);
 
     sycl::free(d_x, q);
     sycl::free(d_out, q);
@@ -341,5 +340,6 @@ int main(int argc, char* argv[])
     hadamard_transform<sycl::half>(q, batch_size, dim, repeat);
     hadamard_transform<sycl::ext::oneapi::bfloat16>(q, batch_size, dim, repeat);
   }
+  if (!ok) return 1;
   return 0;
 }

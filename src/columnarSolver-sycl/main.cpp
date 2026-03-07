@@ -156,7 +156,6 @@ int main(int argc, char* argv[]) {
   //printf("Best candidate score: %f\n", bestScore);
   bool pass = verify(&decrypted[ENCRYPTEDLEN*bestCandidate]);
   printf("%s\n", pass ? "PASS" : "FAIL");
-  if (!pass) exit(1);
 
   sycl::free(d_scores, q);
   sycl::free(d_encrypted, q);
@@ -164,5 +163,6 @@ int main(int argc, char* argv[]) {
   sycl::free(d_states, q);
   delete[] decrypted;
   delete[] scoreHistory;
+  if (!pass) return 1;
   return 0;
 }

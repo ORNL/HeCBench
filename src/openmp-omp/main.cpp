@@ -91,11 +91,11 @@ int main(int argc, char *argv[]) {
       // check the result
       bool bResult = correctResult(a, nwords, b, repeat);
       printf("%s\n", bResult ? "PASS" : "FAIL");
-      if (!bResult) exit(1);
     }
   }
   printf("Runtime overhead of first run is %f seconds\n", overhead);
 
   free(a);
+  if (!bResult) return 1;
   return 0;
 }

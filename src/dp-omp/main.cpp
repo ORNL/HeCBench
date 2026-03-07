@@ -90,7 +90,6 @@ void dot (const size_t iNumElements, const int iNumIterations)
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     printf("Average kernel execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
     printf("%s\n\n", dst == dst_ref ? "PASS" : "FAIL");
-    if (dst != dst_ref) exit(1);
   }
 
   // Compute and compare results for golden-host and report errors and pass/fail
@@ -113,5 +112,6 @@ int main(int argc, char **argv)
   printf("------------- Data type is Float64 ---------------\n");
   dot<double>(iNumElements, iNumIterations);
 
+  if (dst != dst_ref) return 1;
   return EXIT_SUCCESS;
 }

@@ -168,7 +168,6 @@ int main(int argc, char* argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   free(encode_result);
   free(voltage);
@@ -180,5 +179,6 @@ int main(int argc, char* argv[]) {
   free(spikes);
   free(spikes_host);
 
+  if (!ok) return 1;
   return 0;
 }

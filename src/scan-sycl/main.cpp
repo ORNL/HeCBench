@@ -17,7 +17,6 @@ void verify(const T* cpu_out, const T* gpu_out, int64_t n)
     }
   }
   printf("%s\n", error ? "FAIL" : "PASS");
-  if (error) exit(1);
 }
 
 #define LOG_MEM_BANKS 5
@@ -265,5 +264,6 @@ int main(int argc, char* argv[])
   run<1024>(q, n, repeat);
   run<2048>(q, n, repeat);
 
+  if (error) return 1;
   return 0;
 }

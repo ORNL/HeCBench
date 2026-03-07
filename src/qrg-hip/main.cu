@@ -258,10 +258,10 @@ int main(int argc, const char **argv)
     printf("PASS\n");
   else
     printf("FAIL\n");
-  if (!bPassFlag) exit(1);
 
   free(h_OutputGPU);
   hipFree(d_Output);
   hipFree(d_Table);
+  if (!bPassFlag) return 1;
   return 0;
 }

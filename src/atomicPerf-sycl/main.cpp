@@ -149,7 +149,6 @@ void atomicPerf (int n, int t, int repeat)
     BlockRangeAtomicOnGlobalMem_ref<T>(r_data, n);
   fail = memcmp(h_data, r_data, data_size);
   printf("%s\n", fail ? "FAIL" : "PASS");
-  if (fail) exit(1);
   
   q.memcpy(d_data, data, data_size).wait();
   start = std::chrono::steady_clock::now();
@@ -173,7 +172,6 @@ void atomicPerf (int n, int t, int repeat)
     WarpRangeAtomicOnGlobalMem_ref<T>(r_data, n);
   fail = memcmp(h_data, r_data, data_size);
   printf("%s\n", fail ? "FAIL" : "PASS");
-  if (fail) exit(1);
 
   q.memcpy(d_data, data, data_size).wait();
   start = std::chrono::steady_clock::now();
@@ -197,7 +195,6 @@ void atomicPerf (int n, int t, int repeat)
     SingleRangeAtomicOnGlobalMem_ref<T>(r_data, i % BLOCK_SIZE, n);
   fail = memcmp(h_data, r_data, data_size);
   printf("%s\n", fail ? "FAIL" : "PASS");
-  if (fail) exit(1);
 
   q.memcpy(d_data, data, data_size).wait();
   start = std::chrono::steady_clock::now();
@@ -219,7 +216,6 @@ void atomicPerf (int n, int t, int repeat)
   q.memcpy(h_data, d_data, data_size).wait();
   fail = memcmp(h_data, data, data_size);
   printf("%s\n", fail ? "FAIL" : "PASS");
-  if (fail) exit(1);
 
   q.memcpy(d_data, data, data_size).wait();
   start = std::chrono::steady_clock::now();
@@ -241,7 +237,6 @@ void atomicPerf (int n, int t, int repeat)
   q.memcpy(h_data, d_data, data_size).wait();
   fail = memcmp(h_data, data, data_size);
   printf("%s\n", fail ? "FAIL" : "PASS");
-  if (fail) exit(1);
 
   q.memcpy(d_data, data, data_size).wait();
   start = std::chrono::steady_clock::now();
@@ -264,7 +259,6 @@ void atomicPerf (int n, int t, int repeat)
   q.memcpy(h_data, d_data, data_size).wait();
   fail = memcmp(h_data, data, data_size);
   printf("%s\n", fail ? "FAIL" : "PASS");
-  if (fail) exit(1);
 
   free(data);
   free(h_data);
@@ -292,5 +286,11 @@ int main(int argc, char* argv[])
   printf("\nFP32 atomic add\n");
   atomicPerf<float>(n, len, repeat); 
 
+  if (fail) return 1;
+  if (fail) return 1;
+  if (fail) return 1;
+  if (fail) return 1;
+  if (fail) return 1;
+  if (fail) return 1;
   return 0;
 }

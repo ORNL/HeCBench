@@ -286,7 +286,6 @@ int main (void) {
 
   fclose(pfile);
   printf("%s\n", count == 0 ? "PASS" : "FAIL");
-  if (count != 0) exit(1);
 
   cudaFree(aP_d);
   cudaFree(aW_d);
@@ -310,5 +309,6 @@ int main (void) {
   free(temp_red_ref);
   free(temp_black_ref);
 
+  if (count != 0) return 1;
   return 0;
 }

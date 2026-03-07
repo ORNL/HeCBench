@@ -271,7 +271,6 @@ void run(XYZ *in, int in_size_i, int in_size_j, int out_size_i, int out_size_j, 
   // Verify
   int status = compare_output(gpu_out, cpu_out, in_size_i, in_size_j, out_size_i, out_size_j);
   printf("%s\n", (status == 0) ? "PASS" : "FAIL");
-  if (!(status == 0)) exit(1);
 
   free(cpu_out);
   free(gpu_out);
@@ -291,5 +290,6 @@ int main(int argc, char **argv) {
   run(h_in, p.in_size_i, p.in_size_j, p.out_size_i, p.out_size_j, p);
 
   free(h_in);
+  if (!(status == 0)) return 1;
   return 0;
 }

@@ -144,12 +144,12 @@ int main(int argc, char* argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   free(input);
   free(output_cpu);
   free(output_gpu);
   cudaFree(d_input);
   cudaFree(d_output);
+  if (!ok) return 1;
   return 0;
 }

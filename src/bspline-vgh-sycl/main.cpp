@@ -325,7 +325,6 @@ int main(int argc, char ** argv) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   free(Af);
   free(dAf);
@@ -354,5 +353,6 @@ int main(int argc, char ** argv) {
   sycl::free(d_d2a, q);
   sycl::free(d_d2b, q);
   sycl::free(d_d2c, q);
+  if (!ok) return 1;
   return 0;
 }

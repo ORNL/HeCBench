@@ -218,12 +218,12 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", error ? "FAIL" : "PASS");
-  if (error) exit(1);
 
   sycl::free(d_T, q);
   sycl::free(d_r, q);
   free(T);
   free(r);
   free(h_r);
+  if (error) return 1;
   return 0;
 }

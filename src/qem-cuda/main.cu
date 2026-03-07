@@ -99,7 +99,6 @@ int main(int argc, char* argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   avg = 0;
 
@@ -128,7 +127,6 @@ int main(int argc, char* argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   checkCuda(cudaFreeHost(A));
   checkCuda(cudaFreeHost(B));
@@ -138,5 +136,7 @@ int main(int argc, char* argv[]) {
   checkCuda(cudaFreeHost(minimum_ref));
   checkCuda(cudaFreeHost(minimum));
 
+  if (!ok) return 1;
+  if (!ok) return 1;
   return 0;
 }

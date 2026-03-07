@@ -160,9 +160,9 @@ int main(int argc, char* argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
   
   cudaFree(d_distance);
   cudaFree(d_data);
+  if (!ok) return 1;
   return 0;
 }

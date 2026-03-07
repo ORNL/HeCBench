@@ -295,7 +295,6 @@ int main(int argc, char * argv[])
     std::cout << "PASS" << std::endl;
   else
     std::cout << "FAIL" << std::endl;
-  if (!(compare<float>(outputBuffer, verificationOutput, length, (float)0.001))) exit(1);
 
   free(verificationOutput);
   free(inputBuffer);
@@ -304,5 +303,6 @@ int main(int argc, char * argv[])
   free(blockSumBufferSizeOffset);
   free(outputBuffer);
   free(outputBufferSizeOffset);
+  if (!(compare<float>(outputBuffer, verificationOutput, length, (float)0.001))) return 1;
   return 0;
 }

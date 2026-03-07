@@ -285,7 +285,6 @@ void attention_page (int num_seqs,
       }
     }
     printf("%s\n", ok ? "PASS" : "FAIL");
-    if (!ok) exit(1);
 
     free(query_h);
     free(out_h);
@@ -344,5 +343,6 @@ int main(int argc, char* argv[])
     attention_page<__nv_bfloat16, 32>(num_seqs, num_query_heads,
       num_kv_heads, head_size, max_seq_len, num_blocks, repeat);
 
+    if (!ok) return 1;
     return 0;
 }

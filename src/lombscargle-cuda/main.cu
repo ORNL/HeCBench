@@ -201,7 +201,6 @@ int main(int argc, char* argv[]) {
   }
 
   printf("%s\n", error ? "FAIL" : "PASS");
-  if (error) exit(1);
 
   cudaFree(d_x);
   cudaFree(d_y);
@@ -212,5 +211,6 @@ int main(int argc, char* argv[]) {
   free(f);
   free(p);
   free(p2);
+  if (error) return 1;
   return 0;
 }

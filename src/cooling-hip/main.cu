@@ -183,12 +183,12 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", error ? "FAIL" : "PASS");
-  if (error) exit(1);
 
   hipFree(d_T);
   hipFree(d_r);
   free(T);
   free(r);
   free(h_r);
+  if (error) return 1;
   return 0;
 }

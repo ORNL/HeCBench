@@ -127,7 +127,6 @@ int main(int argc, char * argv[])
     std::cout << "FAIL\n";
   else
     std::cout << "PASS\n";
-  if (fail) exit(1);
 
   //initialize soa data
   for (int i = 0; i < treeNumber; i++)
@@ -173,13 +172,14 @@ int main(int argc, char * argv[])
     std::cout << "FAIL\n";
   else
     std::cout << "PASS\n";
-  if (fail) exit(1);
 
 }
 
   free(output);
   free(reference);
   free(data);
+  if (fail) return 1;
+  if (fail) return 1;
   return 0;
 }
 

@@ -108,7 +108,6 @@ int main(int argc, char **argv){
     }
     printf("\n RMS error = %f \n", sqrtf(err/ NX*NY*NZ));
     printf(" %s\n", ok ? "PASS" : "FAIL");
-    if (!ok) exit(1);
   }
 
  // Release CPU memory
@@ -116,6 +115,7 @@ int main(int argc, char **argv){
   free(h_u2);
   free(h_u3);
 
+  if (!ok) return 1;
   return 0;
 }
 

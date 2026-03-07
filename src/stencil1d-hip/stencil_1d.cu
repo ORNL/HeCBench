@@ -111,12 +111,12 @@ int main(int argc, char* argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   // Cleanup
   free(a);
   free(b); 
   hipFree(d_a); 
   hipFree(d_b); 
+  if (!ok) return 1;
   return 0;
 }

@@ -294,12 +294,12 @@ int main(int argc, char **argv) {
       }
     }
     printf("check = %s\n", ok ? "PASS" : "FAIL");
-    if (!ok) exit(1);
 
     free(z);
     sycl::free(x_d, q);
   }
 
   free(x);
+  if (!ok) return 1;
   return 0;
 }

@@ -220,7 +220,6 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");    
-  if (!ok) exit(1);
   
   free(hq);
   free(hk);
@@ -228,5 +227,6 @@ int main(int argc, char* argv[])
   free(h_dst);
   free(r_dst);
 
+  if (!ok) return 1;
   return 0;
 }

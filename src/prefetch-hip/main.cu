@@ -89,7 +89,6 @@ void prefetch (const int gpuDeviceId, const int numElements, const int repeat)
 
   bool testResult = (maxError == 0.0f);
   printf("%s\n", testResult ? "PASS" : "FAIL");
-  if (!testResult) exit(1);
 }
 
 void naive (const int numElements, const int repeat)
@@ -168,5 +167,6 @@ int main(int argc, char *argv[])
   for (int i = 0; i < 10; i++) {
     naive(numElements, repeat);
   }
+  if (!testResult) return 1;
   return 0;
 }

@@ -208,7 +208,6 @@ maxed_out:
 
   bool ok = fabs(emp4_r - emp4) < 1e-6 && fabs(emp5_r - emp5) < 1e-6;
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   free(eorb);
   free(f1n );
@@ -243,5 +242,6 @@ maxed_out:
   free(t1v1  );
   free(t1v2  );
 
+  if (!ok) return 1;
   return 0;
 }

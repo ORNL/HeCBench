@@ -205,10 +205,10 @@ int main(int argc, char* argv[])
   q.memcpy(out.data(), d_out, out_size).wait();
 
   printf("%s\n", out == ref ? "PASS" : "FAIL");
-  if (out != ref) exit(1);
 
   sycl::free(d_A, q);
   sycl::free(d_code, q);
   sycl::free(d_out, q);
+  if (out != ref) return 1;
   return 0;
 }

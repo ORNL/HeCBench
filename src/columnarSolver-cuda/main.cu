@@ -133,7 +133,6 @@ int main(int argc, char* argv[]) {
   //printf("Best candidate score: %f\n", bestScore);
   bool pass = verify(&decrypted[ENCRYPTEDLEN*bestCandidate]);
   printf("%s\n", pass ? "PASS" : "FAIL");
-  if (!pass) exit(1);
 
   cudaFree(d_scores);
   cudaFree(d_encrypted);
@@ -141,5 +140,6 @@ int main(int argc, char* argv[]) {
   cudaFree(devStates);
   delete[] decrypted;
   delete[] scoreHistory;
+  if (!pass) return 1;
   return 0;
 }

@@ -192,13 +192,11 @@ void Test()
       printf("\tOutput items: ");
       int compare = CompareDeviceResults(h_reference, d_out, TILE_SIZE);
       printf("%s\n", compare ? "FAIL" : "PASS");
-      if (compare) exit(1);
 
       // Check total aggregate
       printf("\tAggregate: ");
       compare = CompareDeviceResults(&h_aggregate, d_out + TILE_SIZE, 1);
       printf("%s\n", compare ? "FAIL" : "PASS");
-      if (compare) exit(1);
     }
   }
   GPU_CHECK(hipDeviceSynchronize());
@@ -272,5 +270,7 @@ int main(int argc, char** argv)
   Test<64, 16, BLOCK_SCAN_WARP_SCANS>();
   //Test<32, 32, BLOCK_SCAN_WARP_SCANS>();
 
+  if (compare) return 1;
+  if (compare) return 1;
   return 0;
 }

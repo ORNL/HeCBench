@@ -104,7 +104,6 @@ int main(int argc, char *argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   avg = 0;
 
@@ -133,7 +132,6 @@ int main(int argc, char *argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   sycl::free(A, q);
   sycl::free(B, q);
@@ -143,5 +141,7 @@ int main(int argc, char *argv[]) {
   sycl::free(minimum_ref, q);
   sycl::free(minimum, q);
 
+  if (!ok) return 1;
+  if (!ok) return 1;
   return 0;
 }

@@ -112,7 +112,6 @@ void convert(bool isE4M3, int nelems, int niters)
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   HIP_CHECK(hipFree(src));
   HIP_CHECK(hipFree(dst));
@@ -135,5 +134,6 @@ int main(int argc, char* argv[]) {
   printf("float -> fp8 E5M2\n");
   convert<uint8_t, float>(false, nelems, niters); 
 
+  if (!ok) return 1;
   return 0;
 }

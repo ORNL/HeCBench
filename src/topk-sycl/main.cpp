@@ -150,7 +150,6 @@ int32_t main(int32_t argc, char *argv[]) try {
       }
 
       printf("%s\n", ok ? "PASS" : "FAIL");
-      if (!ok) exit(1);
 
       sycl::free(d_x, q);
       sycl::free(d_topk_ids, q);
@@ -158,6 +157,7 @@ int32_t main(int32_t argc, char *argv[]) try {
     }
   }
 
+  if (!ok) return 1;
   return 0;
 }
 catch (sycl::exception const &exc) {

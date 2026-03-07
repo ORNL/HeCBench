@@ -250,15 +250,12 @@ void Test(DeviceInputIteratorT d_in,
 
   compare0 = CompareDeviceResults(h_unique_reference, d_unique_out, num_runs, true, g_verbose);
   printf("\t Keys %s\n", compare0 ? "FAIL" : "PASS");
-  if (compare0) exit(1);
 
   compare1 = CompareDeviceResults(h_lengths_reference, d_lengths_out, num_runs, true, g_verbose);
   printf("\t Lengths %s\n", compare1 ? "FAIL" : "PASS");
-  if (compare1) exit(1);
 
   compare2 = CompareDeviceResults(&num_runs, d_num_runs, 1, true, g_verbose);
   printf("\t Count %s\n", compare2 ? "FAIL" : "PASS");
-  if (compare2) exit(1);
 
   // Flush any stdout/stderr
   fflush(stdout);
@@ -513,5 +510,8 @@ int main(int argc, char **argv)
   // TestSize<float, int, int>(num_items);
   // TestSize<double, int, int>(num_items);
 
+  if (compare0) return 1;
+  if (compare1) return 1;
+  if (compare2) return 1;
   return 0;
 }

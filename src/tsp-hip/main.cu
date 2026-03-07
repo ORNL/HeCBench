@@ -372,7 +372,6 @@ int main(int argc, char *argv[])
     printf("PASS\n");
   else
     printf("FAIL\n");
-  if (best < 38000 && best < 35002) exit(1);
 
   hipFree(glob_d);
   hipFree(best_d);
@@ -381,5 +380,6 @@ int main(int argc, char *argv[])
   hipFree(posy_d);
   free(posx);
   free(posy);
+  if (best < 38000 && best < 35002) return 1;
   return 0;
 }

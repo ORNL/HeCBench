@@ -217,11 +217,11 @@ int main(int argc, char *argv[]) {
   // Verify
   int unequal = memcmp(data_gpu, data_cpu, size_bytes);
   std::cout << (unequal ? "FAIL" : "PASS") << std::endl;
-  if (unequal) exit(1);
 
   // Clean CPU memory.
   free(data_cpu);
   free(data_gpu);
 
+  if (unequal) return 1;
   return 0;
 }

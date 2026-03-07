@@ -85,11 +85,11 @@ int main(int argc, char* argv[])
       }
     }
     printf("%s\n", ok ? "PASS" : "FAIL");
-    if (!ok) exit(1);
 
     for (int i = 0; i < num_devices; i++) {
       free(device_ptr[i], queues[i]);
     }
   }
+  if (!ok) return 1;
   return 0;
 }

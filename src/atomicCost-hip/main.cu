@@ -85,7 +85,6 @@ void atomicCost (int length, int size, int repeat)
 
   int diff = memcmp(result_wi, result_wo, result_size);
   printf("%s\n", diff ? "FAIL" : "PASS");
-  if (diff) exit(1);
 
   free(result_wi);
   free(result_wo);
@@ -115,5 +114,6 @@ int main(int argc, char* argv[])
   printf("\nFP32 atomic add\n");
   atomicCost<float>(length, nelems, repeat);
 
+  if (diff) return 1;
   return 0;
 }

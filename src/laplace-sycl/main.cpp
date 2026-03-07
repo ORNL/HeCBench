@@ -287,7 +287,6 @@ int main(void) {
 
   fclose(pfile);
   printf("%s\n", count == 0 ? "PASS" : "FAIL");
-  if (count != 0) exit(1);
 
   sycl::free(aP_d, q);
   sycl::free(aW_d, q);
@@ -310,5 +309,6 @@ int main(void) {
   free(temp_red_ref);
   free(temp_black_ref);
 
+  if (count != 0) return 1;
   return 0;
 }

@@ -129,7 +129,6 @@ int main(int argc, char* argv[])
 
   int error = memcmp(result, raw_keystream, result_len);
   printf("%s\n", error ? "FAIL" : "PASS");
-  if (error) exit(1);
 
   free(result);
   free(raw_keystream);
@@ -142,5 +141,6 @@ int main(int argc, char* argv[])
   sycl::free(d_result, q);
   sycl::free(d_char_to_uint, q);
 
+  if (error) return 1;
   return 0;
 }

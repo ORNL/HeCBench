@@ -112,7 +112,6 @@ void conv3D(const int N, const int C, const int M, const int Win, const int Hin,
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   free(X);
   free(W);
@@ -141,5 +140,6 @@ int main(int argc, char* argv[]) {
   printf("\n========== Warmup done ==========\n");
   conv3D<float>(N, C, M, W, H, K, repeat);
 
+  if (!ok) return 1;
   return 0;
 }

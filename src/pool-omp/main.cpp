@@ -203,12 +203,12 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   delete[] input;
   delete[] output;
   delete[] input_grad;
   delete[] input_grad_ref;
   delete[] output_grad;
+  if (!ok) return 1;
   return 0;
 }

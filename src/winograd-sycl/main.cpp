@@ -179,7 +179,6 @@ int main(int argc, char* argv[]) {
   } // sweep
 
   printf("%s\n", pass ? "PASS" : "FAIL");
-  if (!pass) exit(1);
 
   sycl::free(d_A, q);
   sycl::free(d_B, q);
@@ -195,5 +194,6 @@ int main(int argc, char* argv[]) {
   printf("Ratio of co-execution time to total time: %.2lf%%\n",
          100.0 * co_time / (end - start));
 
+  if (!pass) return 1;
   return 0;
 }

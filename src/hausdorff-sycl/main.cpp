@@ -130,12 +130,12 @@ int main(int argc, char* argv[]) {
 
   bool error = (fabsf(t_distance - r_distance)) > 1e-3f;
   printf("%s\n", error ? "FAIL" : "PASS");
-  if (error) exit(1);
 
   free(h_Apoints);
   free(h_Bpoints);
   sycl::free(d_distance, q);
   sycl::free(d_Apoints, q);
   sycl::free(d_Bpoints, q);
+  if (error) return 1;
   return 0;
 }

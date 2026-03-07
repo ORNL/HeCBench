@@ -74,7 +74,6 @@ int main(int argc, char *argv[]) {
           }
 
           printf("%s\n", ok ? "PASS" : "FAIL");
-          if (!ok) exit(1);
           free(x_and_gate);
           free(output);
           free(output_ref);
@@ -110,5 +109,6 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  if (!ok) return 1;
   return 0;
 }

@@ -138,12 +138,12 @@ int main(int argc, char *argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   free(buffer);
   free(h_out);
   free(h_in);
   free(d_in);
   free(d_out);
+  if (!ok) return 1;
   return 0;
 }

@@ -143,7 +143,6 @@ int main(int argc, char* argv[]) {
      std::cout << "PASS\n";
   else
      std::cout << "FAIL\n";
-  if (centroids.size() != M && are_close) exit(1);
 
   // Reset device data
   cudaMemcpy(d_data, data.data(), data_bytes, cudaMemcpyHostToDevice);
@@ -168,9 +167,10 @@ int main(int argc, char* argv[]) {
      std::cout << "PASS\n";
   else
      std::cout << "FAIL\n";
-  if (centroids.size() != M && are_close) exit(1);
 
   cudaFree(d_data);
   cudaFree(d_data_next);
+  if (centroids.size() != M && are_close) return 1;
+  if (centroids.size() != M && are_close) return 1;
   return 0;
 }

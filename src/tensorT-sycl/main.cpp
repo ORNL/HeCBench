@@ -32,7 +32,6 @@ void verify(double *input, double *output) {
     }
   }
   if (!error) printf("PASS\n");
-  if (error) exit(1);
 }
 
 int main(int argc, char **argv) {
@@ -148,5 +147,6 @@ int main(int argc, char **argv) {
   verify(input, output);
   delete [] input;
   delete [] output;
+  if (error) return 1;
   return 0;
 }

@@ -122,7 +122,6 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   hipMemcpy(d_output, input, src_size_bytes, hipMemcpyHostToDevice);
   gelu_bias_loop <<<grid, block>>> (d_output, d_bias, hidden_dim, seq_len);
@@ -136,7 +135,6 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   hipDeviceSynchronize();
   auto start = std::chrono::steady_clock::now();
@@ -168,5 +166,7 @@ int main(int argc, char* argv[])
   free(output_ref);
   free(bias);
 
+  if (!ok) return 1;
+  if (!ok) return 1;
   return 0;
 }

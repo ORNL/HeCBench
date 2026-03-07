@@ -303,7 +303,6 @@ void hadamard_transform(int batch_size, int dim, int repeat) {
       }
     }
     printf("%s\n", ok ? "PASS" : "FAIL");
-    if (!ok) exit(1);
 
     GPU_CHECK(hipFree(d_x));
     GPU_CHECK(hipFree(d_out));
@@ -323,5 +322,6 @@ int main(int argc, char* argv[])
     hadamard_transform<__half>(batch_size, dim, repeat);
     hadamard_transform<__hip_bfloat16>(batch_size, dim, repeat);
   }
+  if (!ok) return 1;
   return 0;
 }

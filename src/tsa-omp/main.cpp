@@ -109,7 +109,6 @@ void tsa(int width, int height, int repeat) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   delete[] d_real[0];
   delete[] d_imag[0];
@@ -135,5 +134,6 @@ int main(int argc, char** argv) {
 
   printf("TSA in float64\n");
   tsa<double>(width, height, repeat);
+  if (!ok) return 1;
   return 0;
 }

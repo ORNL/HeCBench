@@ -158,7 +158,6 @@ int main(int argc, char *argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   free(m);
   free(a);
@@ -242,6 +241,7 @@ int parseCommandline(int argc, char *argv[], char* filename,
       }
     }
   }
+  if (!ok) return 1;
   return 0;
 }
 

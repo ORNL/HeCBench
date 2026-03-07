@@ -49,7 +49,6 @@ void Verify(const float* h_OutputGPU,
     printf("PASS\n"); 
   else
     printf("FAIL\n");
-  if (L2norm >= 1E-6) exit(1);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -132,5 +131,6 @@ int main(int argc, char **argv)
   free(h_OutputCPU);
   free(h_Input);
 
+  if (L2norm >= 1E-6) return 1;
   return 0;
 }

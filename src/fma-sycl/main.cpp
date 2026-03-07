@@ -80,7 +80,6 @@ void fma(sycl::queue &q, int NA, int NC, int C, int num_ops, int repeat) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   double time = 0;
   for (int i = 0; i < repeat; i++) {
@@ -159,5 +158,6 @@ int main(int argc, char* argv[])
     fma<double>(q, NA, NC, C, num_ops, repeat);
   }
 
+  if (!ok) return 1;
   return 0;
 }

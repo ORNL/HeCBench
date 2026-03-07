@@ -185,10 +185,10 @@ int main(int argc, char* argv[])
   hipMemcpy(out.data(), d_out, out_size, hipMemcpyDeviceToHost);
 
   printf("%s\n", out == ref ? "PASS" : "FAIL");
-  if (out != ref) exit(1);
   
   hipFree(d_A);
   hipFree(d_code);
   hipFree(d_out);
+  if (out != ref) return 1;
   return 0;
 }

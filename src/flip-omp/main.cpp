@@ -126,7 +126,6 @@ void flip (const int64_t num_dims, const int64_t num_flip_dims,
     #pragma omp target update from (d_output[0:n])
     int error = memcmp(output, output_ref, output_size_bytes);
     printf("%s\n", error ? "FAIL" : "PASS");
-    if (error) exit(1);
 
     #ifdef EXAMPLE
       for (int i = 0; i < n; i++) {
@@ -183,5 +182,6 @@ int main(int argc, char* argv[])
   printf("=========== Data type is FP64 ==========\n");
   flip<double>(num_dims, num_flip_dims, dim_size, repeat);
 
+  if (error) return 1;
   return 0;
 }

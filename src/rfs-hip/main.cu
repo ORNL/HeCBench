@@ -158,7 +158,6 @@ int main(int argc, char* argv[]) {
   hipMemcpy(result, d_result, narray_size, hipMemcpyDeviceToHost);
   bool ok = !memcmp(result_ref, result, narray_size);
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
   
   start = std::chrono::steady_clock::now();
 
@@ -174,7 +173,6 @@ int main(int argc, char* argv[]) {
   hipMemcpy(result, d_result, narray_size, hipMemcpyDeviceToHost);
   ok = !memcmp(result_ref, result, narray_size);
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   hipFree(d_arrays);
   hipFree(d_maxVal);
@@ -185,5 +183,7 @@ int main(int argc, char* argv[]) {
   free(factor);
   free(result_ref);
 
+  if (!ok) return 1;
+  if (!ok) return 1;
   return 0;
 }

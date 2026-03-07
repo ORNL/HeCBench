@@ -119,7 +119,6 @@ void eval(const int64_t nframe,
     ok = false;
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 }
 
 template <typename scalar_t, typename index_t>
@@ -195,5 +194,6 @@ int main(int argc, char* argv[])
   printf("=========== Data type is FP32 ==========\n");
   driver<float, int>(argv);
 
+  if (!ok) return 1;
   return 0;
 }

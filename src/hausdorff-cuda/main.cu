@@ -115,12 +115,12 @@ int main(int argc, char* argv[]) {
 
   bool error = (fabsf(t_distance - r_distance)) > 1e-3f;
   printf("%s\n", error ? "FAIL" : "PASS");
-  if (error) exit(1);
 
   free(h_Apoints);
   free(h_Bpoints);
   cudaFree(d_distance);
   cudaFree(d_Apoints);
   cudaFree(d_Bpoints);
+  if (error) return 1;
   return 0;
 }

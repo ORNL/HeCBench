@@ -120,7 +120,6 @@ void index_accumulate(int batch_size, int output_size, int vector_dim, int repea
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   int64_t time = 0;
   auto start = std::chrono::steady_clock::now();
@@ -173,5 +172,6 @@ int main(int argc, char* argv[])
   printf("vector_dimension: %d\n", vector_dim);
 
   index_accumulate (batch_size, output_size, vector_dim, repeat) ;
+  if (!ok) return 1;
   return 0;
 }

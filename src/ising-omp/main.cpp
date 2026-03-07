@@ -250,11 +250,11 @@ int main(int argc, char **argv) {
     if (!ok) break;
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
   free(randvals);
   free(lattice_b);
   free(lattice_w);
   free(lattice_b_r);
   free(lattice_w_r);
+  if (!ok) return 1;
   return 0;
 }

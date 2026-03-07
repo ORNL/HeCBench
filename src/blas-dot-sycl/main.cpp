@@ -60,7 +60,6 @@ void dot (const size_t iNumElements, const int iNumIterations)
   q.memcpy(&dst, d_dst, sizeof(T)).wait();
   printf("Host: %lf  Device: %lf\n", sum, double(dst));
   printf("%s\n\n", (fabs(double(dst) - sum) < 1e-1) ? "PASS" : "FAIL");
-  if (!(fabs(double(dst) - sum) < 1e-1)) exit(1);
 
   sycl::free(d_dst, q);
   sycl::free(d_srcA, q);
@@ -88,5 +87,6 @@ int main(int argc, char **argv)
   printf("\nBF16 Dot\n");
   dot<sycl::ext::oneapi::bfloat16>(iNumElements, iNumIterations);
 
+  if (!(fabs(double(dst) - sum) < 1e-1)) return 1;
   return EXIT_SUCCESS;
 }

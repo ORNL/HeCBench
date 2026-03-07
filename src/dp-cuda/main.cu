@@ -135,7 +135,6 @@ void dot (const size_t iNumElements, const int iNumIterations)
 
   GPU_CHECK(cudaMemcpy(&dst, d_dst, sizeof(T), cudaMemcpyDeviceToHost));
   printf("%s\n\n", dst == dst_ref ? "PASS" : "FAIL");
-  if (dst != dst_ref) exit(1);
 
   cublasHandle_t h;
   BLAS_CHECK(cublasCreate(&h));
@@ -176,7 +175,6 @@ void dot (const size_t iNumElements, const int iNumIterations)
 
   GPU_CHECK(cudaMemcpy(&dst, d_dst, sizeof(T), cudaMemcpyDeviceToHost));
   printf("%s\n\n", dst == dst_ref ? "PASS" : "FAIL");
-  if (dst != dst_ref) exit(1);
 
   // warmup
   for (i = 0; i < 100; i++) {
@@ -195,7 +193,6 @@ void dot (const size_t iNumElements, const int iNumIterations)
   time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average std::transform_reduce execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
   printf("%s\n\n", dst == dst_ref ? "PASS" : "FAIL");
-  if (dst != dst_ref) exit(1);
 
   GPU_CHECK(cudaFree(d_dst));
   GPU_CHECK(cudaFree(d_srcA));
@@ -220,5 +217,8 @@ int main(int argc, char **argv)
   printf("------------- Data type is Float64 ---------------\n");
   dot<double>(iNumElements, iNumIterations);
 
+  if (dst != dst_ref) return 1;
+  if (dst != dst_ref) return 1;
+  if (dst != dst_ref) return 1;
   return EXIT_SUCCESS;
 }

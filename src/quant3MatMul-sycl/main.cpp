@@ -96,7 +96,6 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   // verify vecquant3matmul_faster
   q.memset(d_output, 0, sizeof(scalar_t) * mul_size);
@@ -111,7 +110,6 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   auto start = std::chrono::steady_clock::now();
 
@@ -150,5 +148,7 @@ int main(int argc, char* argv[])
   free(h_scale);
   free(h_bias);
   free(h_output);
+  if (!ok) return 1;
+  if (!ok) return 1;
   return 0;
 }

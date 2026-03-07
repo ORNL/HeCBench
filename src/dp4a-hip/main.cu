@@ -205,7 +205,6 @@ void dot (const size_t iNumElements, const int iNumIterations)
   T dst_dev = 0;
   for (i = 0; i < grid_size; i++) dst_dev += dst[i];
   printf("%s\n\n", dst_dev == M * dst_ref ? "PASS" : "FAIL");
-  if (dst_dev != M * dst_ref) exit(1);
 
   start = std::chrono::steady_clock::now();
 
@@ -222,7 +221,6 @@ void dot (const size_t iNumElements, const int iNumIterations)
   dst_dev = 0;
   for (i = 0; i < grid_size; i++) dst_dev += dst[i];
   printf("%s\n\n", dst_dev == M * dst_ref ? "PASS" : "FAIL");
-  if (dst_dev != M * dst_ref) exit(1);
 
   GPU_CHECK(hipFree(d_dst));
   GPU_CHECK(hipFree(d_srcA));
@@ -247,5 +245,7 @@ int main(int argc, char **argv)
   printf("------------- Data type is uint32 ---------------\n");
   dot<unsigned>(iNumElements, iNumIterations);
 
+  if (dst_dev != M * dst_ref) return 1;
+  if (dst_dev != M * dst_ref) return 1;
   return EXIT_SUCCESS;
 }

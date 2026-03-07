@@ -316,10 +316,10 @@ int main(int argc, char * argv[])
     std::cout << "PASS" << std::endl;
   else
     std::cout << "FAIL" << std::endl;
-  if (!(compare<float>(output, verificationOutput, length, (float)0.001))) exit(1);
 
   free(input);
   free(output);
   free(verificationOutput);
+  if (!(compare<float>(output, verificationOutput, length, (float)0.001))) return 1;
   return 0;
 }

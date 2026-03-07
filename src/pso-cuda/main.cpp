@@ -58,12 +58,12 @@ int main(int argc, char* argv[])
   }
 
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   free(positions);
   free(velocities);
   free(pBests);
   free(pBests_ref);
   free(gBest);
+  if (!ok) return 1;
   return 0;
 }

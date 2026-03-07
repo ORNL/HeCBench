@@ -287,7 +287,6 @@ int main(int argc, char **argv) {
   // Verify
   int status = verify(h_in_out, h_in_backup, tiled_n * p.s, p.m, p.s);
   printf("%s\n", (status == 0) ? "PASS" : "FAIL");
-  if (!(status == 0)) exit(1);
 
   // Free memory
   free(h_in_out);
@@ -295,5 +294,6 @@ int main(int argc, char **argv) {
   free(h_head);
   free(h_in_backup);
 
+  if (!(status == 0)) return 1;
   return 0;
 }

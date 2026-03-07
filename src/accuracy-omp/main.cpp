@@ -80,7 +80,6 @@ int main(int argc, char* argv[])
       #pragma omp target update from (count[0:1]) 
       bool ok = (count[0] == count_ref);
       printf("%s\n", ok ? "PASS" : "FAIL");
-      if (!ok) exit(1);
       // printf("Accuracy = %f\n", (float)count / nrows);
     }
   }
@@ -88,5 +87,6 @@ int main(int argc, char* argv[])
   free(label);
   free(data);
 
+  if (!ok) return 1;
   return 0;
 }

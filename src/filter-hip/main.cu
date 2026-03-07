@@ -157,7 +157,6 @@ int main(int argc, char **argv) {
 
   bool match = check(d_nres, d_output, h_flt_count, h_output);
   printf("%s\n", match ? "PASS" : "FAIL");
-  if (!match) exit(1);
 
   start = std::chrono::steady_clock::now();
 
@@ -174,11 +173,12 @@ int main(int argc, char **argv) {
 
   match = check(d_nres, d_output, h_flt_count, h_output);
   printf("%s\n", match ? "PASS" : "FAIL");
-  if (!match) exit(1);
 
   hipFree(d_input);
   hipFree(d_output);
   hipFree(d_nres);
 
+  if (!match) return 1;
+  if (!match) return 1;
   return 0;
 }

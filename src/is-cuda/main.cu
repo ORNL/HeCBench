@@ -349,7 +349,6 @@ int main(int argc, char** argv){
   /* the final printout  */
   if(passed_verification != 5*MAX_ITERATIONS+1) {passed_verification = 0;}
   printf("%s\n", passed_verification ? "PASS" : "FAIL");
-  if (!passed_verification) exit(1);
 
   cudaFree(key_array_device);
   cudaFree(key_buff1_device);
@@ -360,5 +359,6 @@ int main(int argc, char** argv){
   cudaFree(passed_verification_device);
   cudaFree(sum_device);
 
+  if (!passed_verification) return 1;
   return 0;  
 }

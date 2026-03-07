@@ -133,7 +133,6 @@ void reference(const T *h_in,
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 }
 
 template <typename T>
@@ -248,5 +247,6 @@ int main(int argc, char* argv[]) {
     conv1D<int16_t>(input_width, mask_width, repeat);
   }
 
+  if (!ok) return 1;
   return 0;
 }

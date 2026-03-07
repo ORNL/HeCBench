@@ -283,7 +283,6 @@ int main(int argc, char* argv[])
   }
   checksum += memcmp(count, count_ref, count_size_bytes);
   printf("%s\n", checksum == 0 ? "PASS" : "FAIL");
-  if (checksum != 0) exit(1);
 
   hipFree(d_indices);
   hipFree(d_count);
@@ -294,5 +293,6 @@ int main(int argc, char* argv[])
   free(count_ref);
   free(scores);
 
+  if (checksum != 0) return 1;
   return 0;
 }

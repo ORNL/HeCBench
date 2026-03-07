@@ -152,7 +152,6 @@ int bpnn_train_kernel(BPNN *net, float *eo, float *eh)
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
 #ifdef OUTPUT
   for (int i = 0; i < (in+1); i++) 
@@ -165,5 +164,6 @@ int bpnn_train_kernel(BPNN *net, float *eo, float *eh)
   free(input_weights_one_dim);
   free(input_weights_one_dim_r);
 
+  if (!ok) return 1;
   return 0;
 }

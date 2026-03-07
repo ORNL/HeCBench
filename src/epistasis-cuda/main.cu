@@ -352,7 +352,6 @@ int main(int argc, char **argv)
   
   bool ok = (p1 == p2) && (fabsf(scores[p1] - scores_ref[p2]) < 1e-3f);
   std::cout << (ok ? "PASS" : "FAIL") << std::endl;
-  if (!ok) exit(1);
 
   cudaFree(d_data_zeros);
   cudaFree(d_data_ones);
@@ -367,5 +366,6 @@ int main(int argc, char **argv)
   mem_free(SNP_Data);
   mem_free(SNP_Data_trans);
   mem_free(Ph_Data);
+  if (!ok) return 1;
   return 0;
 }

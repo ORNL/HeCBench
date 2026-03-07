@@ -118,7 +118,6 @@ int main(int argc, char *argv[])
     }
   }
   printf("fp16_hmax2 %s\n", ok ?  "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   for (int i = 0; i < repeat; i++)
     hmax<half><<<NUM_OF_BLOCKS, NUM_OF_THREADS>>>(
@@ -155,7 +154,6 @@ int main(int argc, char *argv[])
   }
 
   printf("fp16_hmax %s\n", ok ?  "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   cudaFree(d_a);
   cudaFree(d_b);
@@ -164,5 +162,7 @@ int main(int argc, char *argv[])
   free(b);
   free(r);
 
+  if (!ok) return 1;
+  if (!ok) return 1;
   return EXIT_SUCCESS;
 }

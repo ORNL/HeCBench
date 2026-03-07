@@ -421,7 +421,6 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   if (ok) {
     const int vals = 16;
@@ -444,5 +443,6 @@ int main(int argc, char* argv[])
 
   delete [] color;
   freeECLgraph(g);
+  if (!ok) return 1;
   return 0;
 }

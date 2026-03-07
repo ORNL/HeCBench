@@ -140,7 +140,6 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   sycl::free(d_Ksat, q);
   sycl::free(d_psi, q);
@@ -157,5 +156,6 @@ int main(int argc, char* argv[])
   delete[] theta_ref;
   delete[] K_ref;
 
+  if (!ok) return 1;
   return 0;
 }

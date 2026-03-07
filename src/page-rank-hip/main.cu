@@ -261,7 +261,6 @@ int main(int argc, char *argv[]) {
   }
   bool ok = fabsf(max_diff - max_diff_ref) < 1e-3f;
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   free(pages);
   free(maps);
@@ -269,5 +268,6 @@ int main(int argc, char *argv[]) {
   free(noutlinks);
   free(diffs);
 
+  if (!ok) return 1;
   return 0;
 }

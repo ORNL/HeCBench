@@ -336,7 +336,6 @@ void fused_softmax(int batches, int attn_heads, int query_seq_len,
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   q.wait();
   auto start = std::chrono::steady_clock::now();
@@ -382,5 +381,6 @@ int main(int argc, char *argv[]) {
   fused_softmax<BFloat16>(batches, attn_heads, query_seq_len, key_seq_len, 0, repeat);
   fused_softmax<BFloat16>(batches, attn_heads, query_seq_len, key_seq_len, 1, repeat);
 
+  if (!ok) return 1;
   return 0;
 }

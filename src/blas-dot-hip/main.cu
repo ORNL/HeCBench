@@ -79,7 +79,6 @@ void dot (const size_t iNumElements, const int iNumIterations)
   hipMemcpy(&dst, d_dst, sizeof(T), hipMemcpyDeviceToHost);
   printf("Host: %lf  Device: %lf\n", sum, double(dst));
   printf("%s\n\n", (fabs(double(dst) - sum) < 1e-1) ? "PASS" : "FAIL");
-  if (!(fabs(double(dst) - sum) < 1e-1)) exit(1);
 
   hipFree(d_dst);
   hipFree(d_srcA);
@@ -108,5 +107,6 @@ int main(int argc, char **argv)
   printf("\nBF16 Dot\n");
   dot<__hip_bfloat16>(iNumElements, iNumIterations);
 
+  if (!(fabs(double(dst) - sum) < 1e-1)) return 1;
   return EXIT_SUCCESS;
 }

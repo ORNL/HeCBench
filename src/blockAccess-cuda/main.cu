@@ -124,7 +124,6 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", error ? "FAIL" : "PASS");
-  if (error) exit(1);
 
   auto start = std::chrono::steady_clock::now();
 
@@ -154,5 +153,6 @@ int main(int argc, char* argv[])
   free(A);
   free(out);
   free(out_ref);
+  if (error) return 1;
   return 0;
 }

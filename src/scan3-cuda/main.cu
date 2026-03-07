@@ -107,7 +107,6 @@ int main(int argc, char * argv[])
     std::cout << "PASS" << std::endl;
   else
     std::cout << "FAIL" << std::endl;
-  if (!(compare<float>(output, verificationOutput, length, (float)0.001))) exit(1);
 
   // include the overhead of allocating temporary device storage
   start = std::chrono::steady_clock::now();
@@ -143,7 +142,6 @@ int main(int argc, char * argv[])
     std::cout << "PASS" << std::endl;
   else
     std::cout << "FAIL" << std::endl;
-  if (!(compare<float>(output, verificationOutput, length, (float)0.001))) exit(1);
 
   cudaFree(inputBuffer);
   cudaFree(outputBuffer);
@@ -151,5 +149,7 @@ int main(int argc, char * argv[])
   free(input);
   free(output);
   free(verificationOutput);
+  if (!(compare<float>(output, verificationOutput, length, (float)0.001))) return 1;
+  if (!(compare<float>(output, verificationOutput, length, (float)0.001))) return 1;
   return 0;
 }

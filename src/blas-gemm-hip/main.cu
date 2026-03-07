@@ -100,7 +100,6 @@ void run_gemm_example(int m, int k, int n, int repeat) {
   hipMemcpy(r, dr, C_size, hipMemcpyDeviceToHost);
   int error = memcmp(c, r, C_size);
   std::cout << (error ? "FAIL" : "PASS") << std::endl;
-  if (error) exit(1);
 
   hipDeviceSynchronize();
   auto start = std::chrono::steady_clock::now();
@@ -175,5 +174,6 @@ int main (int argc, char ** argv) {
   std::cout << "\tRunning with double precision data type:" << std::endl;
   run_gemm_example<double>(m, k, n, repeat);
 
+  if (error) return 1;
   return 0;
 }

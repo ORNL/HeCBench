@@ -174,7 +174,6 @@ int main(int argc, char* argv[])
     bool ok = test_correctness(insert_kvs, delete_kvs, kvs);
 
     printf("%s\n", ok ? "PASS" : "FAIL");
-    if (!ok) exit(1);
   }
 
   free(pHashTable);
@@ -183,5 +182,6 @@ int main(int argc, char* argv[])
   free(iter_kvs);
 
 
+  if (!ok) return 1;
   return 0;
 }

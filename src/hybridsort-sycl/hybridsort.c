@@ -170,7 +170,6 @@ int main(int argc, char** argv)
   }
   if(count == 0) printf("PASSED.\n");
   else printf("FAILED.\n");
-  if (count != 0) exit(1);
 
 #ifdef OUTPUT
   FILE *tp1;
@@ -190,5 +189,6 @@ int main(int argc, char** argv)
   free(nullElements);
   free(origOffsets);
 
+  if (count != 0) return 1;
   return 0;
 }

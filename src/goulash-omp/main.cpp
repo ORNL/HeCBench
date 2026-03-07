@@ -99,10 +99,10 @@ int main(int argc, char* argv[])
   }
 
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   if (m_gate != NULL) free(m_gate);
   if (m_gate_h != NULL) free(m_gate_h);
   if (Vm != NULL) free(Vm);
+  if (!ok) return 1;
   return 0;
 }

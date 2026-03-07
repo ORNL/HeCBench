@@ -139,7 +139,6 @@ int32_t main(int32_t argc, char* argv[])
       }
 
       printf("%s\n", ok ? "PASS" : "FAIL");
-      if (!ok) exit(1);
 
       GPU_CHECK(hipFree(d_x));
       GPU_CHECK(hipFree(d_topk_ids));
@@ -147,5 +146,6 @@ int32_t main(int32_t argc, char* argv[])
     }
   }
 
+  if (!ok) return 1;
   return 0;
 }

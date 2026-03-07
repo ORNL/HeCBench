@@ -194,7 +194,6 @@ int main(int argc, char* argv[])
       if (!ok) break;
     }
     printf("%s\n", ok ? "PASS" : "FAIL");
-    if (!ok) exit(1);
   }
 
   sycl::free(d_noop, q);
@@ -205,5 +204,6 @@ int main(int argc, char* argv[])
     }
   }
 
+  if (!ok) return 1;
   return 0;
 }

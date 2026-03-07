@@ -263,7 +263,6 @@ int main(int argc, char ** argv) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   free(Af);
   free(dAf);
@@ -292,5 +291,6 @@ int main(int argc, char ** argv) {
   cudaFree(d_d2a);
   cudaFree(d_d2b);
   cudaFree(d_d2c);
+  if (!ok) return 1;
   return 0;
 }

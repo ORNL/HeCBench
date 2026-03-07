@@ -229,7 +229,6 @@ void surfelRenderTest(sycl::queue &q, int n, int w, int h, int repeat)
     if (!ok) break;
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   free(r_dst);
   free(h_dst);
@@ -259,5 +258,6 @@ int main(int argc, char *argv[]) {
   printf("-------------------------------------\n");
   surfelRenderTest<float>(q, n, w, h, repeat);
 
+  if (!ok) return 1;
   return 0;
 }

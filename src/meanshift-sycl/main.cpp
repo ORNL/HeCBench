@@ -156,7 +156,6 @@ int main(int argc, char* argv[]) {
      std::cout << "PASS\n";
   else
      std::cout << "FAIL\n";
-  if (centroids.size() != M && are_close) exit(1);
 
   // Reset device data
   q.memcpy(d_data, data.data(), data_bytes).wait();
@@ -187,9 +186,10 @@ int main(int argc, char* argv[]) {
      std::cout << "PASS\n";
   else
      std::cout << "FAIL\n";
-  if (centroids.size() != M && are_close) exit(1);
 
   sycl::free(d_data, q);
   sycl::free(d_data_next, q);
+  if (centroids.size() != M && are_close) return 1;
+  if (centroids.size() != M && are_close) return 1;
   return 0;
 }

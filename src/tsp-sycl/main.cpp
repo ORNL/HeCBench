@@ -393,7 +393,6 @@ int main(int argc, char *argv[])
     printf("PASS\n");
   else
     printf("FAIL\n");
-  if (best < 38000 && best < 35002) exit(1);
 
   sycl::free(glob_d, q);
   sycl::free(best_d, q);
@@ -401,5 +400,6 @@ int main(int argc, char *argv[])
   sycl::free(posx_d, q);
   free(posx);
   free(posy);
+  if (best < 38000 && best < 35002) return 1;
   return 0;
 }

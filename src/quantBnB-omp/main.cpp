@@ -129,10 +129,10 @@ int main(int argc, char* argv[])
   }
 
   printf("%s\n", memcmp(out, ref, out_size) ? "FAIL" : "PASS");
-  if (out_size)) exit(1);
 
   free(A);
   free(out);
   free(ref);
+  if (out_size)) return 1;
   return 0;
 }

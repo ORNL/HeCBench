@@ -113,10 +113,10 @@ int main(int argc, char* argv[])
     std::cout << "PASS\n";
   else
     std::cout << "FAIL\n";
-  if (!ok) exit(1);
 
   free(input);
   free(result);
   free(result_h);
+  if (!ok) return 1;
   return 0;
 }

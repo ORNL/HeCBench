@@ -115,7 +115,6 @@ void surfelRenderTest(int n, int w, int h, int repeat)
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   free(r_dst);
   free(h_dst);
@@ -137,5 +136,6 @@ int main(int argc, char *argv[]) {
   printf("-------------------------------------\n");
   surfelRenderTest<float>(n, w, h, repeat);
 
+  if (!ok) return 1;
   return 0;
 }

@@ -345,7 +345,6 @@ int main(int argc, char **argv){
   nw_host(input_itemsets, reference, max_cols, penalty);
   int err = memcmp(input_itemsets, output_itemsets, max_cols * max_rows * sizeof(int));
   printf("%s\n", err ? "FAIL" : "PASS");
-  if (err) exit(1);
 
 #ifdef TRACEBACK
 
@@ -413,6 +412,7 @@ int main(int argc, char **argv){
   free(output_itemsets);
   cudaFree(d_input_itemsets);
   cudaFree(d_reference);
+  if (err) return 1;
   return 0;
 }
 

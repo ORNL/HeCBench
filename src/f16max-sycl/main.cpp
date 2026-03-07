@@ -150,7 +150,6 @@ int main(int argc, char *argv[])
     }
   }
   printf("fp16_hmax2 %s\n", ok ?  "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   // run hmax (the size is doubled)
   for (int i = 0; i < repeat; i++) {
@@ -198,7 +197,6 @@ int main(int argc, char *argv[])
   }
 
   printf("fp16_hmax %s\n", ok ?  "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   sycl::free(d_a, q);
   sycl::free(d_b, q);
@@ -207,5 +205,7 @@ int main(int argc, char *argv[])
   free(b);
   free(r);
 
+  if (!ok) return 1;
+  if (!ok) return 1;
   return EXIT_SUCCESS;
 }

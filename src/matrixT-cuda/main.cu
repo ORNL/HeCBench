@@ -503,7 +503,6 @@ int main(int argc, char **argv)
   }
 
   printf("%s\n", success ? "PASS" : "FAIL");
-  if (!success) exit(1);
 
   // cleanup
   free(h_idata);
@@ -512,5 +511,6 @@ int main(int argc, char **argv)
   cudaFree(d_idata);
   cudaFree(d_odata);
 
+  if (!success) return 1;
   return 0;
 }

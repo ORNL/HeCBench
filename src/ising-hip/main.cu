@@ -302,7 +302,6 @@ int main(int argc, char **argv) {
     if (!ok) break;
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
 #ifndef HIPRAND
   free(randvals_host);
@@ -316,5 +315,6 @@ int main(int argc, char **argv) {
   hipFree(lattice_w);
   hipFree(randvals);
 
+  if (!ok) return 1;
   return 0;
 }

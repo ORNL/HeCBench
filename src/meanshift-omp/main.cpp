@@ -147,7 +147,6 @@ int main(int argc, char* argv[]) {
        std::cout << "PASS\n";
     else
        std::cout << "FAIL\n";
-    if (centroids.size() != M && are_close) exit(1);
 
     // Reset device data
     result = data;
@@ -171,9 +170,10 @@ int main(int argc, char* argv[]) {
        std::cout << "PASS\n";
     else
        std::cout << "FAIL\n";
-    if (centroids.size() != M && are_close) exit(1);
   }
 
   free(d_data_next);
+  if (centroids.size() != M && are_close) return 1;
+  if (centroids.size() != M && are_close) return 1;
   return 0;
 }

@@ -248,7 +248,6 @@ int main(int argc, char* argv[]) {
 
   int error = memcmp(ref_result_lengths, result_lengths, num_history * sizeof(int));
   printf("%s\n", error ? "FAIL" : "PASS");
-  if (error) exit(1);
 
   hipFree(d_history);
   hipFree(d_history_lengths);
@@ -264,5 +263,6 @@ int main(int argc, char* argv[]) {
   free(result_lengths);
   free(ref_result_lengths);
 
+  if (error) return 1;
   return 0;
 }

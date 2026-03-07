@@ -87,7 +87,6 @@ int main(int argc, char* argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   q.wait();
   auto start = std::chrono::steady_clock::now();
@@ -109,5 +108,6 @@ int main(int argc, char* argv[]) {
   sycl::free(d_rngChi2Corrections, q);
   sycl::free(d_randomNumbers, q);
   sycl::free(d_Pool, q);
+  if (!ok) return 1;
   return 0;
 }

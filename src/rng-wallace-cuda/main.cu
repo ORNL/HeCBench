@@ -81,7 +81,6 @@ int main(int argc, char* argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   cudaDeviceSynchronize();
   auto start = std::chrono::steady_clock::now();
@@ -104,5 +103,6 @@ int main(int argc, char* argv[]) {
   cudaFree(devicerngChi2Corrections);
   cudaFree(device_randomNumbers);
   cudaFree(devPool);
+  if (!ok) return 1;
   return 0;
 }

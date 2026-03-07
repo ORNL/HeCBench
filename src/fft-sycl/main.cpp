@@ -177,7 +177,6 @@ int main(int argc, char** argv)
     }
   }
   std::cout << "FFT " << (error ? "FAIL" : "PASS")  << std::endl;
-  if (error) exit(1);
 
   auto ifft_kernel = [&](sycl::handler& cgh) {
     sycl::local_accessor <T, 1> smem (sycl::range<1>(8*8*9), cgh);
@@ -204,7 +203,6 @@ int main(int argc, char** argv)
     }
   }
   std::cout << "iFFT " << (error ? "FAIL" : "PASS")  << std::endl;
-  if (error) exit(1);
 
   auto start = std::chrono::steady_clock::now();
 
@@ -223,5 +221,7 @@ int main(int argc, char** argv)
   free(reference);
   free(source);
 
+  if (error) return 1;
+  if (error) return 1;
   return 0;
 }

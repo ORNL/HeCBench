@@ -160,7 +160,6 @@ int main(int argc, char *argv[])
 
   bool ok = ((length - misses) == besthits);
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
   
 #ifdef DEBUG
   // print FSM state assignment in R's ncol format
@@ -181,5 +180,6 @@ int main(int argc, char *argv[])
   cudaFree(d_smax);
   cudaFree(d_sbest);
   cudaFree(d_oldmax);
+  if (!ok) return 1;
   return 0;
 }

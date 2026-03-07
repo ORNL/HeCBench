@@ -73,7 +73,6 @@ int main(int argc, char* argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   auto start = std::chrono::steady_clock::now();
   for (int i = 0; i < repeat; i++) {
@@ -88,5 +87,6 @@ int main(int argc, char* argv[]) {
   cudaFree(d_image);
   free(image);
   free(image_ref);
+  if (!ok) return 1;
   return 0;
 }

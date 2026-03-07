@@ -185,7 +185,6 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   free(x);
   free(y);
@@ -200,5 +199,6 @@ int main(int argc, char* argv[])
   hipFree(d_u_new);
   hipFree(d_v_new);
 
+  if (!ok) return 1;
   return 0;
 }

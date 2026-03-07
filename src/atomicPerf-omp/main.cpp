@@ -139,7 +139,6 @@ void atomicPerf (int n, int t, int repeat)
       BlockRangeAtomicOnGlobalMem_ref<T>(r_data, n);
     fail = memcmp(data, r_data, data_size);
     printf("%s\n", fail ? "FAIL" : "PASS");
-    if (fail) exit(1);
 
     memcpy(data, h_data, data_size);
     #pragma omp target update to (data[0:t])
@@ -159,7 +158,6 @@ void atomicPerf (int n, int t, int repeat)
       WarpRangeAtomicOnGlobalMem_ref<T>(r_data, n);
     fail = memcmp(data, r_data, data_size);
     printf("%s\n", fail ? "FAIL" : "PASS");
-    if (fail) exit(1);
 
     memcpy(data, h_data, data_size);
     #pragma omp target update to (data[0:t])
@@ -179,7 +177,6 @@ void atomicPerf (int n, int t, int repeat)
       SingleRangeAtomicOnGlobalMem_ref<T>(r_data, i % BLOCK_SIZE, n);
     fail = memcmp(data, r_data, data_size);
     printf("%s\n", fail ? "FAIL" : "PASS");
-    if (fail) exit(1);
 
     memcpy(data, h_data, data_size);
     #pragma omp target update to (data[0:t])
@@ -196,7 +193,6 @@ void atomicPerf (int n, int t, int repeat)
     #pragma omp target update from (data[0:t])
     fail = memcmp(h_data, data, data_size);
     printf("%s\n", fail ? "FAIL" : "PASS");
-    if (fail) exit(1);
 
     memcpy(data, h_data, data_size);
     #pragma omp target update to (data[0:t])
@@ -213,7 +209,6 @@ void atomicPerf (int n, int t, int repeat)
     #pragma omp target update from (data[0:t])
     fail = memcmp(h_data, data, data_size);
     printf("%s\n", fail ? "FAIL" : "PASS");
-    if (fail) exit(1);
 
     memcpy(data, h_data, data_size);
     #pragma omp target update to (data[0:t])
@@ -230,7 +225,6 @@ void atomicPerf (int n, int t, int repeat)
     #pragma omp target update from (data[0:t])
     fail = memcmp(h_data, data, data_size);
     printf("%s\n", fail ? "FAIL" : "PASS");
-    if (fail) exit(1);
 
   }
   free(data);
@@ -258,5 +252,11 @@ int main(int argc, char* argv[])
   printf("\nFP32 atomic add\n");
   atomicPerf<float>(n, len, repeat); 
 
+  if (fail) return 1;
+  if (fail) return 1;
+  if (fail) return 1;
+  if (fail) return 1;
+  if (fail) return 1;
+  if (fail) return 1;
   return 0;
 }

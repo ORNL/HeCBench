@@ -164,7 +164,6 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   hipFree(d_zp);
   hipFree(d_scale);
@@ -178,5 +177,6 @@ int main(int argc, char* argv[])
   free(min);
   free(max);
 
+  if (!ok) return 1;
   return 0;
 }

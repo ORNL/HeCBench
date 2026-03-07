@@ -99,7 +99,6 @@ void run_benchmark(const int repeat)
   printf("Total kernel execution time (mr32_simple  ): %f (ms)\n", mr32_sf_time * 1e-6);
   printf("Total kernel execution time (mr32_efficent): %f (ms)\n", mr32_eff_time * 1e-6);
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   // device results are not included
   print_results(bits32, SIZES_CNT32, BASES_CNT32, time_vals);
@@ -131,5 +130,6 @@ int main(int argc, char *argv[])
   set_nintegers();
   run_benchmark(repeat);
 
+  if (!ok) return 1;
   return 0;
 }

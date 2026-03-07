@@ -213,7 +213,6 @@ int sptrsv_syncfree (
   printf("|x-xref|/|xref| = %8.2e\n", res);
 
   printf("%s\n", (res < accuracy) ? "PASS" : "FAIL");
-  if (!(res < accuracy)) exit(1);
 
   free(warp_num);
   sycl::free(d_csrRowPtr, q);
@@ -224,6 +223,7 @@ int sptrsv_syncfree (
   sycl::free(d_x, q);
   sycl::free(d_warp_num, q);
 
+  if (!(res < accuracy)) return 1;
   return 0;
 }
 

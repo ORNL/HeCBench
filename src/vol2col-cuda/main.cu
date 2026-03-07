@@ -236,7 +236,6 @@ void eval (
 
   int error = memcmp(h_data_col_ref, h_data_col, col_size_bytes);
   printf("%s\n", error ? "FAIL" : "PASS");
-  if (error) exit(1);
 
   cudaDeviceSynchronize();
   start = std::chrono::steady_clock::now();
@@ -279,7 +278,6 @@ void eval (
     }
   }
   printf("%s\n", error ? "FAIL" : "PASS");
-  if (error) exit(1);
 
   cudaFree(d_data_vol);
   cudaFree(d_data_col);
@@ -329,5 +327,7 @@ int main(int argc, char* argv[])
                  dilation_t, dilation_h, dilation_w);
   }
 
+  if (error) return 1;
+  if (error) return 1;
   return 0;
 }

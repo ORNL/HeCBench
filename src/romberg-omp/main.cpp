@@ -118,8 +118,8 @@ int main( int argc, char** argv)
   // verify
   double ref_sum = reference(f, A, B, ROW_SIZE, EPS);
   printf("%s\n", (fabs(d_sum - ref_sum) > EPS) ? "FAIL" : "PASS");
-  if ((fabs(d_sum - ref_sum) > EPS)) exit(1);
 
   free(result);
+  if ((fabs(d_sum - ref_sum) > EPS)) return 1;
   return 0;
 }

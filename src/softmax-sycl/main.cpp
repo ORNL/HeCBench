@@ -147,12 +147,12 @@ int main(int argc, char* argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
 
   free(input);
   free(output_cpu);
   free(output_gpu);
   sycl::free(d_input, q);
   sycl::free(d_output, q);
+  if (!ok) return 1;
   return 0;
 }
