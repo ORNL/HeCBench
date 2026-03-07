@@ -160,5 +160,6 @@ int main(int argc, char** argv) {
   sycl::free(d_count, q);
 
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   return 0;
 }

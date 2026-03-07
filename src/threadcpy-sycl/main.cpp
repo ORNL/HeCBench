@@ -2,6 +2,7 @@
 #include <chrono>
 #include <cstring>
 #include <sycl/sycl.hpp>
+#include <cstdlib>
 
 template <typename T, int VEC_SIZE>
 struct alignas(sizeof(T) * VEC_SIZE) data_t {
@@ -58,6 +59,7 @@ void test_threads_copy(sycl::queue &q, size_t n, int repeat) try {
 
     int s = memcmp(out_h, in_h, sizeof(scalar_t) * n);
     std::cout << (s ? "FAIL" : "PASS") << std::endl;
+    if (s) exit(1);
 
     auto start = std::chrono::steady_clock::now();
 

@@ -6,6 +6,7 @@
 #include <numeric>
 #include <random>
 #include <omp.h>
+#include <cstdlib>
 
 template <typename T>
 void store_kv_cache(int32_t repeat)
@@ -127,6 +128,7 @@ void store_kv_cache(int32_t repeat)
              (memcmp(r_v_cache, h_v_cache, elem_size * kvc_size) == 0);
         #endif
         printf("%s\n", ok ? "PASS" : "FAIL");
+        if (!ok) exit(1);
 
         free(h_k);
         free(h_v);

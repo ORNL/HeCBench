@@ -654,6 +654,7 @@ int main(int argc, char* argv[])
            }
          }
          printf("%s\n", ok ? "PASS" : "FAIL");
+         if (!ok) exit(1);
 
          GPU_CHECK(hipFree(topk_ids));
          GPU_CHECK(hipFree(sorted_ids));

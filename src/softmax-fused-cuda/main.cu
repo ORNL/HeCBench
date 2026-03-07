@@ -322,6 +322,7 @@ void fused_softmax(int batches, int attn_heads, int query_seq_len,
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   cudaDeviceSynchronize();
   auto start = std::chrono::steady_clock::now();

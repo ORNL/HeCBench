@@ -1,4 +1,5 @@
 #include "kernel.h"
+#include <cstdlib>
 
 int main(int argc, char* argv[])
 {
@@ -57,6 +58,7 @@ int main(int argc, char* argv[])
   }
 
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   free(positions);
   free(velocities);

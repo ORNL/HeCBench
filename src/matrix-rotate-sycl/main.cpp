@@ -105,6 +105,7 @@ int main(int argc, char** argv) {
   }
 
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   free(serial_res);
   free(matrix);

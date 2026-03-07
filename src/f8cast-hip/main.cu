@@ -6,6 +6,7 @@
 #include <hip/hip_fp8.h>
 #include "kernels.h"
 #include "utils.h"
+#include <cstdlib>
 
 #define HIP_CHECK(ans)                                                                  \
     {                                                                                   \
@@ -111,6 +112,7 @@ void convert(bool isE4M3, int nelems, int niters)
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   HIP_CHECK(hipFree(src));
   HIP_CHECK(hipFree(dst));

@@ -575,6 +575,7 @@ int main(int argc, char** argv)
         std::cout << std::endl;
       }
       std::cout << ((rate == FLT_MAX) ? "FAIL" : "PASS") << std::endl;
+      if (rate == FLT_MAX) exit(1);
     }
   }
 

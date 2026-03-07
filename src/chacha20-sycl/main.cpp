@@ -129,6 +129,7 @@ int main(int argc, char* argv[])
 
   int error = memcmp(result, raw_keystream, result_len);
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   free(result);
   free(raw_keystream);

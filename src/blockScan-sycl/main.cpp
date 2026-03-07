@@ -32,6 +32,7 @@
 #include "block_load.hpp"
 #include "block_store.hpp"
 #include "block_scan.hpp"
+#include <cstdlib>
 
 int grid_size = 1;
 int repeat = 100;
@@ -181,11 +182,13 @@ void Test(sycl::queue &q) try {
       printf("\tOutput items: ");
       int compare = CompareDeviceResults(q, h_reference, d_out, TILE_SIZE);
       printf("%s\n", compare ? "FAIL" : "PASS");
+      if (compare) exit(1);
 
       // Check total aggregate
       printf("\tAggregate: ");
       compare = CompareDeviceResults(q, &h_aggregate, d_out + TILE_SIZE, 1);
       printf("%s\n", compare ? "FAIL" : "PASS");
+      if (compare) exit(1);
     }
   }
   q.wait();

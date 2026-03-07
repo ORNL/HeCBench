@@ -33,6 +33,7 @@
 #include <vector>
 #include <sycl/sycl.hpp>
 #include "oneapi/mkl.hpp"
+#include <cstdlib>
 
 using namespace oneapi::mkl::rng;
 
@@ -174,6 +175,7 @@ int main(int argc, char *argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   return EXIT_SUCCESS;
 }

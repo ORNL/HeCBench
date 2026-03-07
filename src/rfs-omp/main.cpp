@@ -152,6 +152,7 @@ int main(int argc, char* argv[]) {
     #pragma omp target update from (result[0:nArrays])
     ok = !memcmp(result_ref, result, narray_size);
     printf("%s\n", ok ? "PASS" : "FAIL");
+    if (!ok) exit(1);
     
     start = std::chrono::steady_clock::now();
 
@@ -166,6 +167,7 @@ int main(int argc, char* argv[]) {
     #pragma omp target update from (result[0:nArrays])
     ok = !memcmp(result_ref, result, narray_size);
     printf("%s\n", ok ? "PASS" : "FAIL");
+    if (!ok) exit(1);
   }
 
   free(arrays);

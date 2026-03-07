@@ -185,6 +185,7 @@ void eval(const int nrows, const int repeat) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   hipFree(d_a);
   hipFree(d_b);

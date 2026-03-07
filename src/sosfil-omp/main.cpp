@@ -215,6 +215,7 @@ void filtering (const int repeat, const int n_signals, const int n_samples,
     bool ok = compare_results<T>(x_ref, x_in, n_signals * n_samples, 1e-4, 1e-4);
 
     printf("%s\n", ok ? "PASS" : "FAIL");
+    if (!ok) exit(1);
 
     auto start = std::chrono::steady_clock::now();
 

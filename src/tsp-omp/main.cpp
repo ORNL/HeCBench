@@ -374,6 +374,7 @@ int main(int argc, char *argv[])
     printf("PASS\n");
   else
     printf("FAIL\n");
+  if (best[0] < 38000 && best[0] < 35002) exit(1);
 
   }
 

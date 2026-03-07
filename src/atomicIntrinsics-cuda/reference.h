@@ -128,4 +128,5 @@ void computeGold(T *gpuData, const size_t len)
   }
 
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 }

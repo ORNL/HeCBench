@@ -137,6 +137,7 @@ int main(int argc, char **argv) {
     status = memcmp(cpu_distance, gpu_distance, INSTANCES * INSTANCES * sizeof(int));
     if (status != 0) printf("FAIL\n");
     else printf("PASS\n");
+    if (status != 0) exit(1);
   
     elapsedTime = 0; 
     for (int n = 0; n < iterations; n++) {
@@ -216,6 +217,7 @@ int main(int argc, char **argv) {
     status = memcmp(cpu_distance, gpu_distance, INSTANCES * INSTANCES * sizeof(int));
     if (status != 0) printf("FAIL\n");
     else printf("PASS\n");
+    if (status != 0) exit(1);
   }
 
   free(cpu_distance);

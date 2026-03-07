@@ -17,6 +17,7 @@ void verify(const T* ref_out, const T* out, int64_t n)
     }
   }
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 }
 
 // bank conflict aware optimization

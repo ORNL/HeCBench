@@ -65,6 +65,7 @@ void scatter(int64_t num_elems, int repeat) {
     }
   }
   printf("%s\n\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   CHECK_HIP( hipFree(d_src) )
   CHECK_HIP( hipFree(d_idx) )

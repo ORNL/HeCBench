@@ -5,6 +5,7 @@
 #include <vector>
 #include <hip/hip_runtime.h>
 #include "topk_per_row_kernels.h"
+#include <cstdlib>
 
 __device__ __forceinline__ uint32_t xorshift32(uint32_t& state) {
   state ^= state << 13;
@@ -138,6 +139,7 @@ int32_t main(int32_t argc, char* argv[])
       }
 
       printf("%s\n", ok ? "PASS" : "FAIL");
+      if (!ok) exit(1);
 
       GPU_CHECK(hipFree(d_x));
       GPU_CHECK(hipFree(d_topk_ids));

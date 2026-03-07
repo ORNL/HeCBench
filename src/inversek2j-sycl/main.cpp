@@ -310,6 +310,7 @@ int main(int argc, char* argv[])
     std::cout << "FAIL\n";
   else 
     std::cout << "PASS\n";
+  if (error) exit(1);
 
   return 0;
 }

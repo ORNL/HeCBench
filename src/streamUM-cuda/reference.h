@@ -45,4 +45,5 @@ void check(std::vector<Task<T> > &TaskList) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 }

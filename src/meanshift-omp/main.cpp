@@ -5,6 +5,7 @@
 #include <omp.h>
 #include "utils.h"
 #include "constants.h"
+#include <cstdlib>
 
 namespace mean_shift::gpu {
   void mean_shift(const float *data, float *data_next,
@@ -146,6 +147,7 @@ int main(int argc, char* argv[]) {
        std::cout << "PASS\n";
     else
        std::cout << "FAIL\n";
+    if (centroids.size() != M && are_close) exit(1);
 
     // Reset device data
     result = data;
@@ -169,6 +171,7 @@ int main(int argc, char* argv[]) {
        std::cout << "PASS\n";
     else
        std::cout << "FAIL\n";
+    if (centroids.size() != M && are_close) exit(1);
   }
 
   free(d_data_next);

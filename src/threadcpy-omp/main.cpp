@@ -2,6 +2,7 @@
 #include <chrono>
 #include <cstring>
 #include <omp.h>
+#include <cstdlib>
 
 template <typename T, int VEC_SIZE>
 struct alignas(sizeof(T) * VEC_SIZE) data_t {
@@ -60,6 +61,7 @@ void test_threads_copy(size_t n, int repeat) {
 
       int s = memcmp(out, in, sizeof(scalar_t) * n);
       std::cout << (s ? "FAIL" : "PASS") << std::endl;
+      if (s) exit(1);
 
       auto start = std::chrono::steady_clock::now();
 

@@ -69,6 +69,7 @@ int main(int argc, char const *argv[])
     std::cout << "PASS\n";
   } else {
     std::cout << "FAIL\n";
+    exit(1);
   }
 
   free(sequence);

@@ -216,6 +216,7 @@ void RunBenchmark(OptionParser &op)
         std::cout << "PASS\n";
       else
         std::cout << "FAIL\n";
+      if (!ok) exit(1);
     }
   }
 

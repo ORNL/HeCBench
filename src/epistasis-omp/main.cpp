@@ -5,6 +5,7 @@
 #include <chrono>
 #include <omp.h>
 #include "reference.h"
+#include <cstdlib>
 
 using namespace std::chrono;
 typedef high_resolution_clock myclock;
@@ -322,6 +323,7 @@ int main(int argc, char **argv)
   
   bool ok = (p1 == p2) && (fabsf(scores[p1] - scores_ref[p2]) < 1e-3f);
   std::cout << (ok ? "PASS" : "FAIL") << std::endl;
+  if (!ok) exit(1);
 
   mem_free(bin_data_zeros);
   mem_free(bin_data_ones);

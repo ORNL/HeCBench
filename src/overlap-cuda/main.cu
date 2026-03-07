@@ -110,6 +110,7 @@ int main(int argc, char *argv[]) {
   // Verify the results, we will use the results for final output
   bool bResults = check();
   printf("\n%s\n", bResults ? "PASS" : "FAIL");
+  if (!bResults) exit(1);
 
   // Free resources
   for (int i = 0; i < STREAM_COUNT; ++i) {

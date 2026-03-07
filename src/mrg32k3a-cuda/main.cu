@@ -33,6 +33,7 @@
 #include <vector>
 #include <cuda_runtime.h>
 #include <curand.h>
+#include <cstdlib>
 
 // CUDA API error checking
 #define CUDA_CHECK(err)                                                        \
@@ -183,6 +184,7 @@ int main(int argc, char *argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   return EXIT_SUCCESS;
 }

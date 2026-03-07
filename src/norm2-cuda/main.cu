@@ -113,5 +113,6 @@ int main (int argc, char* argv[]){
   }
 
   if (ok) printf("PASS\n");
+  if (!ok) exit(1);
   return 0;
 }

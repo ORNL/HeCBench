@@ -135,5 +135,6 @@ int main(int argc, char** argv) {
   cudaFree(d_count);
 
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   return 0;
 }

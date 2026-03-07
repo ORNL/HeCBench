@@ -657,6 +657,7 @@ int main(int argc, char **argv)
   }
 
   printf("%s\n", success ? "PASS" : "FAIL");
+  if (!success) exit(1);
 
   // cleanup
   free(h_idata);

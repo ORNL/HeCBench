@@ -142,6 +142,7 @@ int main(int argc, char **argv){
     }
     printf("\n RMS error = %f \n", sqrtf(err/ NX*NY*NZ));
     printf(" %s\n", ok ? "PASS" : "FAIL");
+    if (!ok) exit(1);
   }
 
  // Release GPU and CPU memory

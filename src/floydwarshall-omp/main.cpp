@@ -255,6 +255,7 @@ int main(int argc, char** argv) {
   else
   {
     printf("FAIL\n");
+    exit(1);
     if (numNodes <= 8) 
     {
       for (unsigned int i = 0; i < numNodes; i++) {

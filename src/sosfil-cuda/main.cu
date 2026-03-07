@@ -225,6 +225,7 @@ void filtering (const int repeat,
 
   bool ok = compare_results<T>(x_ref, x, n_signals * n_samples, 1e-4, 1e-4);
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   cudaCheck(cudaDeviceSynchronize());
   auto start = std::chrono::steady_clock::now();

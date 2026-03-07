@@ -242,6 +242,7 @@ template<class TData> int runTest(
                      packedElementSize);
 
   printf("\tTEST %s\n", flag ? "PASS" : "FAIL");
+  if (!flag) exit(1);
 
   return !flag;
 }

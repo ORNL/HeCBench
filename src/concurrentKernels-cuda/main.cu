@@ -156,6 +156,7 @@ int main(int argc, char **argv) {
   long sum = 0;
   for (int i = 0; i < time_clocks; i++) sum += i % 3;
   printf("%s\n", a[0] == nkernels * sum ? "PASS" : "FAIL");
+  if (a[0] != nkernels * sum) exit(1);
 
   // release resources
   for (int i = 0; i < nkernels; i++) {

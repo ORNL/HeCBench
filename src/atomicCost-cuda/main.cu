@@ -85,6 +85,7 @@ void atomicCost (int length, int size, int repeat)
 
   int diff = memcmp(result_wi, result_wo, result_size);
   printf("%s\n", diff ? "FAIL" : "PASS");
+  if (diff) exit(1);
 
   free(result_wi);
   free(result_wo);

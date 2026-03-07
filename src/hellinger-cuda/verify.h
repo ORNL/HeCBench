@@ -1,5 +1,6 @@
 #ifdef VERIFY
 #include <limits>
+#include <cstdlib>
 
 /**
  * Perform matrix multiplication on host to verify results from device.
@@ -57,6 +58,7 @@ void VerifyResult(FP (*a_host)[N], FP (*b_host)[P],
     std::cout << "PASS\n";
   } else {
     std::cout << "FAIL\n";
+    exit(1);
   }
 }
 #endif

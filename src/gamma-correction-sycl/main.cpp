@@ -9,6 +9,7 @@
 #include <chrono>
 #include <sycl/sycl.hpp>
 #include "utils.hpp"
+#include <cstdlib>
 
 int main(int argc, char* argv[]) {
   if (argc != 5) {
@@ -101,6 +102,7 @@ int main(int argc, char* argv[]) {
     std::cout << "PASS\n";
   } else {
     std::cout << "FAIL\n";
+    exit(1);
   }
 
 #ifdef DEBUG

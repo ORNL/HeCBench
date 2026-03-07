@@ -12,6 +12,7 @@
 #include <chrono>
 #include <omp.h>
 #include "shrUtils.h"
+#include <cstdlib>
 
 typedef struct __attribute__((__aligned__(4)))
 {
@@ -118,6 +119,7 @@ int main(int argc, char** argv)
     printf("PASS\n");
   else
     printf("FAIL\n");
+  if (bMatch != shrTRUE) exit(1);
 
   return EXIT_SUCCESS;
 }

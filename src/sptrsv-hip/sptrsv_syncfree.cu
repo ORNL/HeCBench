@@ -4,6 +4,7 @@
 #include <chrono>
 #include <hip/hip_runtime.h>
 #include "sptrsv.h"
+#include <cstdlib>
 
 // reference
 // https://stackoverflow.com/questions/32341081/how-to-have-atomic-load-in-cuda
@@ -227,6 +228,7 @@ int sptrsv_syncfree (
   printf("|x-xref|/|xref| = %8.2e\n", res);
 
   printf("%s\n", (res < accuracy) ? "PASS" : "FAIL");
+  if (!(res < accuracy)) exit(1);
 
   free(warp_num);
   hipFree(d_csrRowPtr);

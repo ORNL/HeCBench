@@ -304,6 +304,7 @@ int main(int argc, char* argv[])
   }
   checksum += memcmp(count, count_ref, count_size_bytes);
   printf("%s\n", checksum == 0 ? "PASS" : "FAIL");
+  if (checksum != 0) exit(1);
 
 
   sycl::free(d_indices, q);

@@ -23,6 +23,7 @@
 #include "attention_kernels.h"
 #include "kvcache.h"
 #include "reference.h"
+#include <cstdlib>
 
 // Add a template parameter WARP_SIZE 
 #define LAUNCH_PAGED_ATTENTION_V1(HEAD_SIZE) \
@@ -312,6 +313,7 @@ void attention_page(sycl::queue &Q, int num_seqs, int num_query_heads, int num_k
       }
     }
     printf("%s\n", ok ? "PASS" : "FAIL");
+    if (!ok) exit(1);
 
     free(query_h);
     free(out_h);

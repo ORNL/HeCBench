@@ -4,6 +4,7 @@
 #include <thrust/device_vector.h>
 #include <hipcub/hipcub.hpp>
 #include "scan.h"
+#include <cstdlib>
 
 /*
  * Scan for verification
@@ -96,6 +97,7 @@ int main(int argc, char * argv[])
     std::cout << "PASS" << std::endl;
   else
     std::cout << "FAIL" << std::endl;
+  if (!(compare<float>(output, verificationOutput, length, (float)0.001))) exit(1);
 
   // include the overhead of allocating temporary device storage
   start = std::chrono::steady_clock::now();
@@ -131,6 +133,7 @@ int main(int argc, char * argv[])
     std::cout << "PASS" << std::endl;
   else
     std::cout << "FAIL" << std::endl;
+  if (!(compare<float>(output, verificationOutput, length, (float)0.001))) exit(1);
 
   hipFree(inputBuffer);
   hipFree(outputBuffer);

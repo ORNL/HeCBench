@@ -85,4 +85,5 @@ void verify(T *src, T *dst, int numel) {
     if (!ok) break;
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 }

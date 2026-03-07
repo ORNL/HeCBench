@@ -1,6 +1,7 @@
 #include <chrono>
 #include <cuda.h>
 #include "utils.h"
+#include <cstdlib>
 
 __global__ void winograd_conv2d(
     const DATA_TYPE *__restrict__ input,
@@ -178,6 +179,7 @@ int main(int argc, char* argv[]) {
   } // sweep
 
   printf("%s\n", pass ? "PASS" : "FAIL");
+  if (!pass) exit(1);
 
   cudaFree(d_A);
   cudaFree(d_B);

@@ -59,6 +59,7 @@ void coordinates_transform(const int num_coords, const int repeat)
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 }
 
 int main(int argc, char* argv[])

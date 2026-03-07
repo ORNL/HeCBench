@@ -320,6 +320,7 @@ int main(int argc, char **argv){
   nw_host(h_input_itemsets, reference, max_cols, penalty);
   int err = memcmp(input_itemsets, h_input_itemsets, max_cols * max_rows * sizeof(int));
   printf("%s\n", err ? "FAIL" : "PASS");
+  if (err) exit(1);
 
 #ifdef TRACEBACK
   int *output_itemsets = input_itemsets;

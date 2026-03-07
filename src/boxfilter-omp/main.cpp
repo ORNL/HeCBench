@@ -14,6 +14,7 @@
 #include <iostream>
 #include <omp.h>
 #include "shrUtils.h"
+#include <cstdlib>
 
 typedef struct __attribute__((__aligned__(4)))
 {
@@ -282,6 +283,7 @@ int main(int argc, char** argv)
     }
   }
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   free(uiInput);
   free(uiTmp);

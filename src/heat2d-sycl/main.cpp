@@ -161,6 +161,7 @@ int main(int argc, char *argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   sycl::free(d_in, q);
   sycl::free(d_out, q);

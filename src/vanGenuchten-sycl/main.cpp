@@ -140,6 +140,7 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   sycl::free(d_Ksat, q);
   sycl::free(d_psi, q);

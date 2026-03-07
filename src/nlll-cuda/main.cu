@@ -143,6 +143,7 @@ void eval(const int64_t nframe,
     ok = false;
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   cudaFree(d_output);
   cudaFree(d_total_weight);

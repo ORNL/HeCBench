@@ -97,6 +97,7 @@ int main(int argc, char *argv[])
   else {
     printf("FAIL\n");
 
+    exit(1);
     // output MTF result
     if (len < 16) {
       printf("host: ");

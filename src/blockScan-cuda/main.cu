@@ -31,6 +31,7 @@
 #include <cub/block/block_load.cuh>
 #include <cub/block/block_store.cuh>
 #include <cub/block/block_scan.cuh>
+#include <cstdlib>
 
 using namespace cub;
 
@@ -190,11 +191,13 @@ void Test()
       printf("\tOutput items: ");
       int compare = CompareDeviceResults(h_reference, d_out, TILE_SIZE);
       printf("%s\n", compare ? "FAIL" : "PASS");
+      if (compare) exit(1);
 
       // Check total aggregate
       printf("\tAggregate: ");
       compare = CompareDeviceResults(&h_aggregate, d_out + TILE_SIZE, 1);
       printf("%s\n", compare ? "FAIL" : "PASS");
+      if (compare) exit(1);
     }
   }
   GPU_CHECK(cudaDeviceSynchronize());

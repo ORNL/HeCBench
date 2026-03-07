@@ -22,6 +22,7 @@
 #include <cstdio>
 #include "vec_2d.hpp"
 #include "utils.hpp"
+#include <cstdlib>
 
 template <typename T>
 struct compare
@@ -97,6 +98,7 @@ template <typename T> void eval(const T bounding_box_size, const int repeat) {
   bool ok = (min_point[0] == r_min_point) && (max_point[0] == r_max_point);
   ok &= (min_point[1] == r_min_point) && (max_point[1] == r_max_point);
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 }
 
 int main(int argc, char* argv[])

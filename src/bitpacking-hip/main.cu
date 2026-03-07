@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <cstdlib>
 
 template <typename T>
 void toGPU(T* const output, T const* const input, size_t const num)
@@ -144,6 +145,7 @@ int main() {
       }
     }
     printf("%s\n", ok ? "PASS" : "FAIL");  
+    if (!ok) exit(1);
   }
 
   free(inputHost);

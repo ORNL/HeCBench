@@ -109,6 +109,7 @@ int main(int argc, char* argv[])
     hipMemcpy (outp, d_outp, outp_size_bytes, hipMemcpyDeviceToHost);
     int error = memcmp(outp_ref, outp, outp_size_bytes);
     printf("%s\n", error ? "FAIL" : "PASS");
+    if (error) exit(1);
 
     auto start = std::chrono::steady_clock::now();
 

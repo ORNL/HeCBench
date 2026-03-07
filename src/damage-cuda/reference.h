@@ -1,4 +1,5 @@
 #include <math.h>
+#include <cstdlib>
 
 void validate (
   const int block_size,
@@ -36,6 +37,7 @@ void validate (
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   free(damage_ref);
   free(n_neigh_ref);

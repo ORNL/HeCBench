@@ -7,6 +7,7 @@
 #include <vector>
 #include <chrono>
 #include "linearprobing.h"
+#include <cstdlib>
 
 // Create random keys/values in the range [0, kEmpty)
 // kEmpty is used to indicate an empty slot
@@ -173,6 +174,7 @@ int main(int argc, char* argv[])
   bool ok = test_correctness(insert_kvs, delete_kvs, kvs);
 
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   printf("Success\n");
 

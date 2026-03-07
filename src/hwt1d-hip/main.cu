@@ -15,6 +15,7 @@
  ********************************************************************/
 
 #include "hwt.h"
+#include <cstdlib>
 
 // rounds to a power of 2
 template<typename T>
@@ -119,6 +120,7 @@ int main(int argc, char * argv[])
     std::cout << "PASS" << std::endl;
   else
     std::cout << "FAIL" << std::endl;
+  if (!ok) exit(1);
 
   return 0;
 }

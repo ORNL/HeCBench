@@ -4,6 +4,7 @@
 #include <cuda.h>
 #include "utils.h"
 #include "constants.h"
+#include <cstdlib>
 
 namespace mean_shift::gpu {
   __global__ void mean_shift(const float *data, float *data_next) {
@@ -142,6 +143,7 @@ int main(int argc, char* argv[]) {
      std::cout << "PASS\n";
   else
      std::cout << "FAIL\n";
+  if (centroids.size() != M && are_close) exit(1);
 
   // Reset device data
   cudaMemcpy(d_data, data.data(), data_bytes, cudaMemcpyHostToDevice);
@@ -166,6 +168,7 @@ int main(int argc, char* argv[]) {
      std::cout << "PASS\n";
   else
      std::cout << "FAIL\n";
+  if (centroids.size() != M && are_close) exit(1);
 
   cudaFree(d_data);
   cudaFree(d_data_next);

@@ -190,6 +190,7 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   hipFree(d_X1);
   hipFree(d_X2);

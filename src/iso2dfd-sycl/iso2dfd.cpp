@@ -20,6 +20,7 @@
 #include <iostream>
 #include <sycl/sycl.hpp>
 #include "iso2dfd.h"
+#include <cstdlib>
 
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 
@@ -303,6 +304,7 @@ int main(int argc, char* argv[]) {
             << std::endl;
   error = within_epsilon(next_base, next_cpu, nRows, nCols, HALF_LENGTH, 0.1f);
   std::cout << (error ? "FAIL" : "PASS") << std::endl;
+  if (error) exit(1);
 
   // Output final wavefield (computed by CPU) to binary file
   outFile.open("wavefield_snapshot_cpu.bin", std::ios::out | std::ios::binary);

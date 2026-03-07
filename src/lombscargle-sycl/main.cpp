@@ -196,6 +196,7 @@ int main(int argc, char* argv[]) {
   }
 
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   sycl::free(d_x, q);
   sycl::free(d_y, q);

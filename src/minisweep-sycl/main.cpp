@@ -407,6 +407,7 @@ int main( int argc, char** argv )
           normsq,
           normsqdiff,
           normsqdiff== (P)0 ? "PASS" : "FAIL",
+  if (normsqdiff != (P)0) exit(1);
           time * 1e-6, ktime * 1e-6);
 
   printf( "GF/s (host): %.3f\nGF/s (device): %.3f\n", floprate_h, floprate_d );

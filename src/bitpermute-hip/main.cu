@@ -9,6 +9,7 @@
 #include <hip/hip_runtime.h>
 #include "kernels.h"
 #include "reference.h"
+#include <cstdlib>
 
 void hip_check(hipError_t error, const char *file, int line) {
     if (error != hipSuccess) {
@@ -69,6 +70,7 @@ void bit_permute(const int lg_domain_size, const int repeat)
   hipCheck(hipMemcpy(inout, d_inout, domain_size_bytes, hipMemcpyDeviceToHost));
   int error = memcmp(out, inout, domain_size_bytes);
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   auto start = std::chrono::steady_clock::now();
 

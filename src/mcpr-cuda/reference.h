@@ -7,6 +7,7 @@ void verify(const double *probs, const double *probs_ref, int alphas_size) {
     }
   }
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 }
 
 void reference(

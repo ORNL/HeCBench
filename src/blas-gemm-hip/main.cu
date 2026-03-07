@@ -100,6 +100,7 @@ void run_gemm_example(int m, int k, int n, int repeat) {
   hipMemcpy(r, dr, C_size, hipMemcpyDeviceToHost);
   int error = memcmp(c, r, C_size);
   std::cout << (error ? "FAIL" : "PASS") << std::endl;
+  if (error) exit(1);
 
   hipDeviceSynchronize();
   auto start = std::chrono::steady_clock::now();

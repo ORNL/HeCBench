@@ -40,6 +40,7 @@
 #include <chrono>
 #include <iostream>
 #include <cuda.h>
+#include <cstdlib>
 
 
 #if DOUBLE_PRECISION
@@ -286,6 +287,7 @@ void run(XYZ *in, int in_size_i, int in_size_j, int out_size_i, int out_size_j, 
   // Verify
   int status = compare_output(gpu_out, cpu_out, in_size_i, in_size_j, out_size_i, out_size_j);
   printf("%s\n", (status == 0) ? "PASS" : "FAIL");
+  if (!(status == 0)) exit(1);
 
   free(cpu_out);
   free(gpu_out);

@@ -134,6 +134,7 @@ int main(int argc, char* argv[]) {
   printf("Checksum: %d\n", checksum);
 
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   free(vertex);
   free(point);

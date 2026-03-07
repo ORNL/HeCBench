@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cuda.h>
 #include "utils.hpp"
+#include <cstdlib>
 
 __global__ 
 void gamma_correction(ImgPixel* pixel) {
@@ -99,6 +100,7 @@ int main(int argc, char* argv[]) {
     std::cout << "PASS\n";
   } else {
     std::cout << "FAIL\n";
+    exit(1);
   }
 
 #ifdef DEBUG

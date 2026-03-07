@@ -78,5 +78,6 @@ int main(int argc, char *argv[]) {
   free(h_result);
 
   if (ok) printf("PASS\n");
+  if (!ok) exit(1);
   return 0;
 }

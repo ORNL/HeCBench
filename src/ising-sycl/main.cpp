@@ -33,6 +33,7 @@
 #include <sycl/sycl.hpp>
 
 #include "reference.h"
+#include <cstdlib>
 
 #define TCRIT    2.26918531421f
 #define THREADS  128
@@ -341,6 +342,7 @@ int main(int argc, char **argv) {
     if (!ok) break;
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
 #ifndef MKLRAND
   free(randvals_host);

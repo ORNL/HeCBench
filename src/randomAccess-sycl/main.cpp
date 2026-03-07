@@ -161,6 +161,7 @@ int main(int argc, char** argv) {
 
   fprintf(stdout, "Found %llu errors in %llu locations (%s).\n",
           temp, TableSize, (temp <= 0.01*TableSize) ? "PASS" : "FAIL");
+  if (temp > 0.01*TableSize) exit(1);
   if (temp <= 0.01*TableSize) failure = 0;
   else failure = 1;
 

@@ -277,6 +277,7 @@ void verify(
   bool ok = true;
   if(flag0 || flag1234 || flag5678) ok = false;
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 }
 
 #endif

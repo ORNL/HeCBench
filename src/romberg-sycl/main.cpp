@@ -133,6 +133,7 @@ int main( int argc, char** argv)
 
   double ref_sum = reference(f, A, B, ROW_SIZE, EPS);
   printf("%s\n", (fabs(sum - ref_sum) > EPS) ? "FAIL" : "PASS");
+  if ((fabs(sum - ref_sum) > EPS)) exit(1);
 
   free(h_result);
   sycl::free(d_result, q);

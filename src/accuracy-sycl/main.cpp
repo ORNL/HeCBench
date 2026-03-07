@@ -179,6 +179,8 @@ int main(int argc, char* argv[])
 
     int count;
     q.memcpy(&count, d_count, sizeof(int)).wait();
+	bool ok = (count == count_ref);
+	if (!ok) exit(1);
     printf("%s\n", (count == count_ref) ? "PASS" : "FAIL");
 
     // printf("Accuracy = %f\n", (float)count / nrows);

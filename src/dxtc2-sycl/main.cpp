@@ -373,6 +373,7 @@ int main(int argc, char** argv)
     printf("PASS\n"); 
   else
     printf("FAIL\n");
+  if (rms > ERROR_THRESHOLD) exit(1);
 
   return 0;
 }

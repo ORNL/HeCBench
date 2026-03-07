@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <cuda.h>
 #include <chrono>
+#include <cstdlib>
 
 #define P1 55
 #define P2 119
@@ -258,6 +259,7 @@ int main(int argc, char**argv) {
       }
     }
     printf("check = %s\n", ok ? "PASS" : "FAIL");
+    if (!ok) exit(1);
 
     free(z);
     cudaFree(x_d);

@@ -91,6 +91,7 @@ void verify (
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   if (ok) {
     printf("Distribution of box sizes:\n");
     for (int j = 1; j < MaxRad; j++)

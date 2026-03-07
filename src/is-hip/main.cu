@@ -335,6 +335,7 @@ int main(int argc, char** argv){
   /* the final printout  */
   if(passed_verification != 5*MAX_ITERATIONS+1) {passed_verification = 0;}
   printf("%s\n", passed_verification ? "PASS" : "FAIL");
+  if (!passed_verification) exit(1);
 
   hipFree(key_array_device);
   hipFree(key_buff1_device);

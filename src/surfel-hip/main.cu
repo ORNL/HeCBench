@@ -212,6 +212,7 @@ void surfelRenderTest(int n, int w, int h, int repeat)
     if (!ok) break;
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   free(r_dst);
   free(h_dst);

@@ -182,4 +182,5 @@ void Print_Param(void)
 void Verify_results(void)
 {
   printf("%s\n", isEqual_KS(Kstate_cpu, Kstate_gpu) ? "PASS" : "FAIL");
+  if (!(Kstate_gpu))) exit(1);
 }

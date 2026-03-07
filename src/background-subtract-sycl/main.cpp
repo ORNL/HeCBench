@@ -213,6 +213,7 @@ int main(int argc, char* argv[]) {
   printf("Max error is %d\n", max_error);
 
   printf("%s\n", max_error ? "FAIL" : "PASS");
+  if (max_error) exit(1);
 
   free(Img);
   free(Img1);

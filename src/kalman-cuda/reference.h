@@ -277,6 +277,7 @@ void reference (
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   free(fc);
   free(F_fc);

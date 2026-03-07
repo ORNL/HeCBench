@@ -5,6 +5,7 @@
 #include <sycl/sycl.hpp>
 #include "kernels.h"
 #include "utils.h"
+#include <cstdlib>
 
 template <typename Td, typename Ts>
 void convert(sycl::queue &q, bool isE4M3, int nelems, int niters)
@@ -110,6 +111,7 @@ void convert(sycl::queue &q, bool isE4M3, int nelems, int niters)
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   sycl::free(src, q);
   sycl::free(dst, q);

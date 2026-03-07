@@ -5,6 +5,7 @@
 
 #include "gpu_solver.h"
 #include "reference.h"
+#include <cstdlib>
 
 void generate_data(int size, int min, int max, float *data) {
   std::mt19937_64 generator{1993764};
@@ -103,6 +104,7 @@ int main(int argc, char *argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   avg = 0;
 
@@ -131,6 +133,7 @@ int main(int argc, char *argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   sycl::free(A, q);
   sycl::free(B, q);

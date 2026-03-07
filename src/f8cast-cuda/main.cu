@@ -6,6 +6,7 @@
 #include <cuda_fp8.h>
 #include "kernels.h"
 #include "utils.h"
+#include <cstdlib>
 
 #define CUDA_CHECK(ans)                                                                  \
     {                                                                                    \
@@ -111,6 +112,7 @@ void convert(bool isE4M3, int nelems, int niters)
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   CUDA_CHECK(cudaFree(src));
   CUDA_CHECK(cudaFree(dst));

@@ -24,6 +24,7 @@
 #include "attention_kernels.cuh"
 #include "kvcache.h"
 #include "reference.h"
+#include <cstdlib>
 
 
 #define LAUNCH_PAGED_ATTENTION_V1(HEAD_SIZE)                          \
@@ -284,6 +285,7 @@ void attention_page (int num_seqs,
       }
     }
     printf("%s\n", ok ? "PASS" : "FAIL");
+    if (!ok) exit(1);
 
     free(query_h);
     free(out_h);

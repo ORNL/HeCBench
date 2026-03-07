@@ -21,6 +21,7 @@
 #include <math.h>
 #include <chrono>
 #include <cuda_runtime.h>
+#include <cstdlib>
 
 #define CUDACHECK(error)                                                                       \
 {                                                                                              \
@@ -92,6 +93,7 @@ void prefetch (const int gpuDeviceId, const int numElements, const int repeat)
 
   bool testResult = (maxError == 0.0f);
   printf("%s\n", testResult ? "PASS" : "FAIL");
+  if (!testResult) exit(1);
 }
 
 void naive (const int numElements, const int repeat)
@@ -137,6 +139,7 @@ void naive (const int numElements, const int repeat)
 
   bool testResult = (maxError == 0.0f);
   printf("%s\n", testResult ? "PASS" : "FAIL");
+  if (!testResult) exit(1);
 }
 
 int main(int argc, char *argv[])

@@ -153,6 +153,7 @@ int main(int argc, char* argv[]) {
     if (std::fabs(cpu_results[k] - h_results[k]) > 1e-4) error++;
   }
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   free(dataT);
   free(h_results);

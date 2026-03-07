@@ -41,6 +41,7 @@
 #include "interval.h"
 #include "gpu_interval.h"
 #include "cpu_interval.h"
+#include <cstdlib>
 
 int main(int argc, char *argv[]) {
   if (argc != 3) {
@@ -120,6 +121,7 @@ int main(int argc, char *argv[]) {
   bool bTestResult =
       checkAgainstHost(h_nresults, h_nresults_cpu, h_result, h_result_cpu);
   std::cout << (bTestResult ? "PASS" : "FAIL") << "\n";
+  if (!bTestResult) exit(1);
 
   delete[] h_result_cpu;
   delete[] h_nresults_cpu;

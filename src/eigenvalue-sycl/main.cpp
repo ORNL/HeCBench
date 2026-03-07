@@ -285,6 +285,7 @@ int main(int argc, char * argv[])
   else
   {
     std::cout<<"FAIL\n" << std::endl;
+    exit(1);
   }
 
   // release program resources

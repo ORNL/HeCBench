@@ -152,6 +152,7 @@ int main(int argc, char* argv[])
   }
 
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   printf("Checksum: %lf %lf\n", cr / vector_size, cp / vector_size);
 
   free(p);

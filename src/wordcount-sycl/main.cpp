@@ -2,6 +2,7 @@
 #include <cstring>
 #include <iostream>
 #include <vector>
+#include <cstdlib>
 
 int word_count(const std::vector<char> &input);
 int word_count_reference(const std::vector<char> &input);
@@ -51,6 +52,7 @@ int main(int argc, char* argv[])
     }
   }
   std::cout << (ok ? "PASS" : "FAIL") << std::endl;
+  if (!ok) exit(1);
       
   // may take a few seconds to initialize
   const size_t len = 1024*1024*256;  

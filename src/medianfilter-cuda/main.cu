@@ -9,6 +9,7 @@
 #include <cuda.h>
 #include "shrUtils.h"
 #include "MedianFilter.cu"
+#include <cstdlib>
 
 #ifndef min
 #define min(a,b) (a < b ? a : b)
@@ -113,6 +114,7 @@ int main(int argc, char** argv)
     printf("PASS\n");
   else
     printf("FAIL\n");
+  if (bMatch != shrTRUE) exit(1);
 
   return EXIT_SUCCESS;
 }

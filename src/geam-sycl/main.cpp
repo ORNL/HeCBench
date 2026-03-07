@@ -77,6 +77,7 @@ void transpose(sycl::queue &q, int nrow, int ncol, int repeat) {
   }
 
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   sycl::free(d_matrix, q);
   sycl::free(d_matrixT, q);

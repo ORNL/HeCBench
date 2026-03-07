@@ -73,6 +73,7 @@ __device__ __forceinline__ void DecodePixel(uchar1 pixel, unsigned int (&bins)[A
 
 #include "histogram_gmem_atomics.h"
 #include "histogram_smem_atomics.h"
+#include <cstdlib>
 //---------------------------------------------------------------------
 // Globals, constants, and type declarations
 //---------------------------------------------------------------------
@@ -408,6 +409,7 @@ void RunTest(
 
     int compare = CompareDeviceResults(h_hist, d_hist, ACTIVE_CHANNELS * NUM_BINS, true, g_verbose);
     if (!g_report) printf("\t%s\n", compare ? "FAIL" : "PASS"); fflush(stdout);
+    if (compare) exit(1);
 
     double elapsed_ms = 0;
     for (int i = 0; i < timing_iterations; i++)

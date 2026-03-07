@@ -1,4 +1,5 @@
 #include <cmath>
+#include <cstdlib>
 
 void reference (
   const float*__restrict__ d_x,
@@ -77,6 +78,7 @@ void reference (
   }
 
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   free(h_y);
 }
 

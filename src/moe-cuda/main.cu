@@ -109,6 +109,7 @@ void topk_softmax(int num_tokens, int num_experts, int topk, int repeat)
     }
   }
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   auto start = std::chrono::steady_clock::now();
 

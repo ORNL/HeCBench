@@ -18,6 +18,7 @@
 #include <omp.h>
 #include "sobel.h"
 #include "kernels.cpp"
+#include <cstdlib>
 
 
 static bool compare(const float *refData, const float *data,
@@ -175,6 +176,7 @@ int main(int argc, char * argv[])
     printf("PASS\n");
   else
     printf("FAIL\n");
+  if (!(compare(outputReference, outputDevice, imageSize))) exit(1);
 
   free(outputDevice);
   free(outputReference);

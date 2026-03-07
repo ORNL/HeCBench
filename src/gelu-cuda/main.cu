@@ -122,6 +122,7 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   cudaMemcpy(d_output, input, src_size_bytes, cudaMemcpyHostToDevice);
   gelu_bias_loop <<<grid, block>>> (d_output, d_bias, hidden_dim, seq_len);
@@ -135,6 +136,7 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   cudaDeviceSynchronize();
   auto start = std::chrono::steady_clock::now();

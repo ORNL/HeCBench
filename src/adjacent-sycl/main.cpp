@@ -31,6 +31,7 @@
 #include <iostream>
 #include <sycl/sycl.hpp>
 #include "block.h"
+#include <cstdlib>
 
 //---------------------------------------------------------------------
 // Kernels
@@ -137,6 +138,7 @@ void Test(sycl::queue &q, int num_items, int repeat)
 
   int compare = memcmp(r_out, h_out, sizeof(int) * num_items);
   printf("%s\n", compare ? "FAIL" : "PASS");
+  if (compare) exit(1);
 
   q.memcpy(d_in, h_in, sizeof(int) * num_items);
   for (int i = 0; i < repeat; i++) {
@@ -157,6 +159,7 @@ void Test(sycl::queue &q, int num_items, int repeat)
 
   compare = memcmp(r_out, h_out, sizeof(int) * num_items);
   printf("%s\n", compare ? "FAIL" : "PASS");
+  if (compare) exit(1);
 
   auto start = std::chrono::steady_clock::now();
 

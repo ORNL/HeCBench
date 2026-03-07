@@ -4,6 +4,7 @@
 #include <chrono>
 #include <sycl/sycl.hpp>
 #include "reference.h"
+#include <cstdlib>
 
 using namespace std::chrono;
 typedef high_resolution_clock myclock;
@@ -352,6 +353,7 @@ int main(int argc, char **argv)
   
   bool ok = (p1 == p2) && (fabsf(scores[p1] - scores_ref[p2]) < 1e-3f);
   std::cout << (ok ? "PASS" : "FAIL") << std::endl;
+  if (!ok) exit(1);
 
   sycl::free(d_data_zeros, q);
   sycl::free(d_data_ones, q);

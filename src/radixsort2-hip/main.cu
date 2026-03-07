@@ -9,6 +9,7 @@
 #include <thrust/detail/type_traits.h>
 
 #include "helper_string.h"
+#include <cstdlib>
 
 
 template <typename T, bool floatKeys>
@@ -140,4 +141,5 @@ int main(int argc, char **argv) {
     bTestResult = testSort<unsigned int, false>(argc, argv);
 
   printf(bTestResult ? "PASS\n" : "FAIL\n");
+  if (!bTestResult) exit(1);
 }

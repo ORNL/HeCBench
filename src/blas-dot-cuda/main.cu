@@ -79,6 +79,7 @@ void dot (const size_t iNumElements, const int iNumIterations)
   cudaMemcpy(&dst, d_dst, sizeof(T), cudaMemcpyDeviceToHost);
   printf("Host: %lf  Device: %lf\n", sum, double(dst));
   printf("%s\n\n", (fabs(double(dst) - sum) < 1e-1) ? "PASS" : "FAIL");
+  if (!(fabs(double(dst) - sum) < 1e-1)) exit(1);
 
   cudaFree(d_dst);
   cudaFree(d_srcA);

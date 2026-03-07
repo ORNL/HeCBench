@@ -121,6 +121,7 @@ int main(int argc, char* argv[])
     }
     stop:
     printf("%s\n", ok ? "PASS" : "FAIL");
+    if (!ok) exit(1);
   }
 
   hipFree(d_A);

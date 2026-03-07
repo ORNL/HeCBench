@@ -2,6 +2,7 @@
 #include <sys/time.h>
 #include <cuda.h>
 #include "gaussianElim.h"
+#include <cstdlib>
 
 #define BLOCK_SIZE_0 256
 #define BLOCK_SIZE_1_X 16
@@ -162,6 +163,7 @@ int main(int argc, char *argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   free(m);
   free(a);

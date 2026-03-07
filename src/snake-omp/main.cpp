@@ -210,6 +210,7 @@ int main(int argc, const char * const argv[])
           F_ErrorThreshold, elapsed_time / repeat, D_accepted, NumReads - D_accepted);
   }
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   }
 

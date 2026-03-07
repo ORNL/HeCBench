@@ -116,6 +116,7 @@ void dot (const size_t iNumElements, const int iNumIterations) try {
   printf("Average kernel execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
   q.memcpy(&dst, d_dst, sizeof(T)).wait();
   printf("%s\n\n", dst == dst_ref ? "PASS" : "FAIL");
+  if (dst != dst_ref) exit(1);
 
   // warmup
   for (i = 0; i < 100; i++) {
@@ -135,6 +136,7 @@ void dot (const size_t iNumElements, const int iNumIterations) try {
   printf("Average oneMKL::dot execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
   q.memcpy(&dst, d_dst, sizeof(T)).wait();
   printf("%s\n\n", dst == dst_ref ? "PASS" : "FAIL");
+  if (dst != dst_ref) exit(1);
 
   // warmup
   for (i = 0; i < 100; i++)
@@ -152,6 +154,7 @@ void dot (const size_t iNumElements, const int iNumIterations) try {
   time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average std::transform_reduce execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
   printf("%s\n\n", dst == dst_ref ? "PASS" : "FAIL");
+  if (dst != dst_ref) exit(1);
 
   sycl::free(d_dst, q);
   sycl::free(d_srcA, q);

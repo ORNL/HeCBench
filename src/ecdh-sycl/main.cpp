@@ -96,6 +96,7 @@ int main(int argc, char **argv)
   bool fail_pk_x = memcmp(pk_slow_x, pk_fast_x, pk_x_size);
   bool fail_pk_y = memcmp(pk_slow_y, pk_fast_y, pk_x_size);
   printf("%s\n", (fail_pk_x || fail_pk_y) ? "FAIL" : "PASS");
+  if ((fail_pk_x || fail_pk_y)) exit(1);
 
   sycl::free(d_pk_x, q);
   sycl::free(d_pk_y, q);

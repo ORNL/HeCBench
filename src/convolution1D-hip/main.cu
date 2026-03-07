@@ -133,6 +133,7 @@ void reference(const T *h_in,
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 }
 
 template <typename T>

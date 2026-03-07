@@ -4,6 +4,7 @@
 #include "OptionParser.h"
 #include "Timer.h"
 #include "Utility.h"
+#include <cstdlib>
 
 // ****************************************************************************
 // Function: addBenchmarkSpecOptions
@@ -221,6 +222,7 @@ void RunBenchmark(OptionParser &op)
       std::cout << "PASS\n";
     else
       std::cout << "FAIL\n";
+    if (!ok) exit(1);
 
     // Zero out the test host memory
     for (int j=0; j<numMaxFloats; ++j) h_mem[j] = 0.0f;

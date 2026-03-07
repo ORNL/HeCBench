@@ -175,6 +175,7 @@ int main(int argc, char* argv[]) {
 
   bool ok = !memcmp(result_ref, result, narray_size);
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   start = std::chrono::steady_clock::now();
 
@@ -195,6 +196,7 @@ int main(int argc, char* argv[]) {
 
   ok = !memcmp(result_ref, result, narray_size);
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   sycl::free(d_arrays, q);
   sycl::free(d_maxVal, q);

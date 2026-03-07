@@ -54,6 +54,7 @@ void compare(const float *arr, const float *arr2, int ngrid) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 }
 
 void run_gpu_kernel(

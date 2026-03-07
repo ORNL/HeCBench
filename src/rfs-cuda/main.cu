@@ -158,6 +158,7 @@ int main(int argc, char* argv[]) {
   cudaMemcpy(result, d_result, narray_size, cudaMemcpyDeviceToHost);
   bool ok = !memcmp(result_ref, result, narray_size);
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   
   start = std::chrono::steady_clock::now();
 
@@ -173,6 +174,7 @@ int main(int argc, char* argv[]) {
   cudaMemcpy(result, d_result, narray_size, cudaMemcpyDeviceToHost);
   ok = !memcmp(result_ref, result, narray_size);
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   cudaFree(d_arrays);
   cudaFree(d_maxVal);

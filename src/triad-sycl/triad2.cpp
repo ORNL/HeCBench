@@ -222,6 +222,7 @@ void RunBenchmark(OptionParser &op)
       cout << "PASS\n";
     else
       cout << "FAIL\n";
+    if (!ok) exit(1);
 
     // Zero out the test host memory
     for (int j=0; j<numMaxFloats; ++j) h_mem[j] = 0.0f;

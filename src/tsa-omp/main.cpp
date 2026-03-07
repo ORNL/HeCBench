@@ -6,6 +6,7 @@
 #include <omp.h>
 #include "kernels.h"
 #include "reference.h"
+#include <cstdlib>
 
 template <typename T>
 static void init_p(T *p_real, T *p_imag, int width, int height) {
@@ -108,6 +109,7 @@ void tsa(int width, int height, int repeat) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   delete[] d_real[0];
   delete[] d_imag[0];

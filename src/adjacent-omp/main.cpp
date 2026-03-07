@@ -30,6 +30,7 @@
 #include <cstring>
 #include <iostream>
 #include <omp.h>
+#include <cstdlib>
 
 /**
  * Simple kernel for performing a block-wide adjacent difference.
@@ -100,6 +101,7 @@ void Test(int num_items, int repeat)
 
     int compare = memcmp(r_out, h_out, sizeof(int) * num_items);
     printf("%s\n", compare ? "FAIL" : "PASS");
+    if (compare) exit(1);
 
     for (int i = 0; i < repeat; i++) {
       BlockAdjDiffKernel<BLOCK_THREADS>(h_in, h_out, false, num_items);
@@ -116,6 +118,7 @@ void Test(int num_items, int repeat)
 
     compare = memcmp(r_out, h_out, sizeof(int) * num_items);
     printf("%s\n", compare ? "FAIL" : "PASS");
+    if (compare) exit(1);
 
     auto start = std::chrono::steady_clock::now();
 

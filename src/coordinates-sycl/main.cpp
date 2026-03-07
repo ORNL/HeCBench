@@ -69,6 +69,7 @@ void coordinates_transform(sycl::queue &q, const int num_coords, const int repea
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 }
 
 int main(int argc, char* argv[])

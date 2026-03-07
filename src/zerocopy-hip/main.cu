@@ -163,6 +163,7 @@ void eval (bool warmup, bool bPinGenericMemory, const int repeat) {
       refNorm = (float)sqrt((double)refNorm);
 
       printf("%s\n", (errorNorm / refNorm < 1.e-6f) ? "SUCCESS" : "FAILURE");
+      if (!(errorNorm / refNorm < 1.e-6f)) exit(1);
     }
 
     // Memory clean up

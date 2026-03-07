@@ -313,6 +313,7 @@ int main(int argc, char** argv) {
   printf("fpc2: average device offload time %f (s)\n", (time * 1e-9f) / repeat);
 
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   free(values);
   free(cbuffer);

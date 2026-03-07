@@ -158,6 +158,7 @@ int main(int argc, char **argv) {
 
   bool match = check(d_nres, d_output, h_flt_count, h_output);
   printf("%s\n", match ? "PASS" : "FAIL");
+  if (!match) exit(1);
 
   start = std::chrono::steady_clock::now();
 
@@ -174,6 +175,7 @@ int main(int argc, char **argv) {
 
   match = check(d_nres, d_output, h_flt_count, h_output);
   printf("%s\n", match ? "PASS" : "FAIL");
+  if (!match) exit(1);
 
   cudaFree(d_input);
   cudaFree(d_output);

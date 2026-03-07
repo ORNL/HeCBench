@@ -55,6 +55,7 @@ void VerifyResult(float (*a_host)[N], float (*b_host)[K],
     cout << "PASS\n";
   } else {
     cout << "FAIL\n";
+    exit(1);
   }
 }
 #endif

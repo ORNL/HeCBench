@@ -7,6 +7,7 @@
 #include <random>
 #include <unordered_set>
 #include <vector>
+#include <cstdlib>
 
 namespace facebook { namespace cuda {
 
@@ -186,12 +187,15 @@ int main(int argc, char** argv) {
   bool ok;
   ok = test_sort(q, repeat);
   printf("test_sort: %s\n\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   ok = test_sortInRegisters(q, repeat);
   printf("test_sortInRegisters: %s\n\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   ok = test_sortIndicesInRegisters(q, repeat);
   printf("test_sortIndicesInRegisters: %s\n\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   return 0;
 }

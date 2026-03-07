@@ -14,6 +14,7 @@
 #include <iostream>
 #include <sycl/sycl.hpp>
 #include "shrUtils.h"
+#include <cstdlib>
 
 extern
 void BoxFilterHost( unsigned int* uiInputImage, unsigned int* uiTempImage, unsigned int* uiOutputImage,
@@ -262,6 +263,7 @@ int main(int argc, char** argv)
     }
   }
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   free(uiInput);
   free(uiTmp);

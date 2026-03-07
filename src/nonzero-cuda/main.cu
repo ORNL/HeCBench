@@ -207,6 +207,7 @@ void nonzero (int nrows, int ncols, int repeat) {
          idx_time * 1e-3 / repeat);
 
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 }
 
 int main(int argc, char* argv[])

@@ -8,6 +8,7 @@
 #include <numeric> // iota
 #include <random>
 #include <vector>
+#include <cstdlib>
 
 template <typename T>
 void sort_key_value (sycl::queue &q, int n, int repeat, bool verify) {
@@ -50,6 +51,7 @@ void sort_key_value (sycl::queue &q, int n, int repeat, bool verify) {
       }
     }
     printf("%s\n", ok ? "PASS" : "FAIL");
+    if (!ok) exit(1);
   }
 }
 

@@ -25,6 +25,7 @@ class MaxPoolGrad {
 };
 
 #include "reference.h"
+#include <cstdlib>
 
 // forward declaration
 template <typename T>
@@ -232,6 +233,7 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   delete[] input;
   delete[] output;

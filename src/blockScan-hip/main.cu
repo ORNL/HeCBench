@@ -32,6 +32,7 @@
 #include <hipcub/block/block_load.hpp>
 #include <hipcub/block/block_store.hpp>
 #include <hipcub/block/block_scan.hpp>
+#include <cstdlib>
 
 using namespace hipcub;
 
@@ -191,11 +192,13 @@ void Test()
       printf("\tOutput items: ");
       int compare = CompareDeviceResults(h_reference, d_out, TILE_SIZE);
       printf("%s\n", compare ? "FAIL" : "PASS");
+      if (compare) exit(1);
 
       // Check total aggregate
       printf("\tAggregate: ");
       compare = CompareDeviceResults(&h_aggregate, d_out + TILE_SIZE, 1);
       printf("%s\n", compare ? "FAIL" : "PASS");
+      if (compare) exit(1);
     }
   }
   GPU_CHECK(hipDeviceSynchronize());

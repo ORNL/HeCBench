@@ -156,6 +156,7 @@ int main(int argc, char* argv[]) {
     if (!ok) break;
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
  
   free(input);
   free(output);

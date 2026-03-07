@@ -345,6 +345,7 @@ int main(int argc, char** argv)
       }
     }
     std::cout << "FFT " << (error ? "FAIL" : "PASS")  << std::endl;
+    if (error) exit(1);
 
     ifft1D_512(source, n_ffts);
 
@@ -363,6 +364,7 @@ int main(int argc, char** argv)
       }
     }
     std::cout << "iFFT " << (error ? "FAIL" : "PASS")  << std::endl;
+    if (error) exit(1);
 
     auto start = std::chrono::steady_clock::now();
 

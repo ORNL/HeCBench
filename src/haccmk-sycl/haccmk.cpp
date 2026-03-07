@@ -277,6 +277,7 @@ int main( int argc, char *argv[] )
   free(vz2_hw);
 
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   return 0;
 }

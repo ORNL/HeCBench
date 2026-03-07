@@ -91,6 +91,7 @@ void mixbenchGPU(long size, int compute_iterations, int repeat) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   free(cd);
 }

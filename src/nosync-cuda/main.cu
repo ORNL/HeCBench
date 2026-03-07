@@ -6,6 +6,7 @@
 #include <thrust/sequence.h>
 #include <thrust/reduce.h>
 #include <cuda_runtime.h>
+#include <cstdlib>
 
 // This example shows how to execute a Thrust device algorithm on an explicit
 // CUDA stream. The simple program below fills a vector with the numbers
@@ -115,6 +116,7 @@ int main(int argc, char* argv[])
 
   // Print the sum:
   std::cout << ((sum == 0) ? "PASS" : "FAIL") << "\n";
+  if (sum != 0) exit(1);
 
   return 0;
 }

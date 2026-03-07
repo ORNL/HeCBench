@@ -128,6 +128,7 @@ int test_case (int *a, long gridsize, int repeat) {
   // verify
   cudaMemcpy(&c, cd, sizeof(int), cudaMemcpyDeviceToHost);
   printf("%s\t", (c == VECTOR_SIZE) ? "PASS" : "FAIL");
+  if (!(c == VECTOR_SIZE)) exit(1);
 
   cudaFree(cd);
 

@@ -112,6 +112,7 @@ void conv3D(const int N, const int C, const int M, const int Win, const int Hin,
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   free(X);
   free(W);

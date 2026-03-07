@@ -138,6 +138,7 @@ void flip (const int64_t num_dims, const int64_t num_flip_dims,
   cudaMemcpy(output, d_output, output_size_bytes, cudaMemcpyDeviceToHost);
   int error = memcmp(output, output_ref, output_size_bytes);
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
 #ifdef EXAMPLE
   for (int i = 0; i < n; i++) {

@@ -4,6 +4,7 @@
 #include <numeric>  // iota
 #include <vector>
 #include <hip/hip_runtime.h>
+#include <cstdlib>
 
 // Send data in a circular manner in all GPU devices (non-P2P)
 // Original author: Thomas Applencourt
@@ -82,6 +83,7 @@ int main(int argc, char* argv[])
       }
     }
     printf("%s\n", ok ? "PASS" : "FAIL");
+    if (!ok) exit(1);
 
     for (int i = 0; i < num_devices; i++) {
       hipFree(device_ptr[i]);

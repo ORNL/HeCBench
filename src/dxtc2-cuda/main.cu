@@ -764,6 +764,7 @@ int main(int argc, char **argv) {
 
   printf("RMS(reference, result) = %f\n\n", rms);
   printf(rms <= ERROR_THRESHOLD ? "PASS\n" : "FAIL\n");
+  if (rms > ERROR_THRESHOLD) exit(1);
   /* Return zero if test passed, one otherwise */
   return rms > ERROR_THRESHOLD;
 }

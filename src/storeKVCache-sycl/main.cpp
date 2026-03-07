@@ -7,6 +7,7 @@
 #include <random>
 #include <sycl/sycl.hpp>
 #include "kernels.h"
+#include <cstdlib>
 
 template <typename T> void store_kv_cache(sycl::queue &q, int32_t repeat) try {
    uint32_t num_layers = 8; // H
@@ -194,6 +195,7 @@ template <typename T> void store_kv_cache(sycl::queue &q, int32_t repeat) try {
             (memcmp(r_v_cache, h_v_cache, elem_size * kvc_size) == 0);
 #endif
        printf("%s\n", ok ? "PASS" : "FAIL");
+       if (!ok) exit(1);
 
        sycl::free(k, q);
        sycl::free(v, q);

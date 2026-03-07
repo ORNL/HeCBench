@@ -21,6 +21,7 @@
 #include <iostream>
 #include <vector>
 #include <hip/hip_runtime.h>
+#include <cstdlib>
 
 using namespace std;
 
@@ -369,6 +370,7 @@ void jaccard_weight (const int iteration, const int n, const int e,
   if (error > 1e-5) {
     for (int i = 0; i < e; i++) printf("wj: %d %f\n", i, weight_j[i]);
     printf("FAILED");
+    exit(1);
   } else {
     printf("PASSED");
   }

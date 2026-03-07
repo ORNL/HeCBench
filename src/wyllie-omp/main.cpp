@@ -96,6 +96,7 @@ int main(int argc, char* argv[]) {
 #endif
 
   printf("%s\n", (h_res == d_res) ? "PASS" : "FAIL");
+  if (!(h_res == d_res)) exit(1);
    
   return 0;
 }

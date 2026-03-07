@@ -30,6 +30,7 @@
 #include <cstring>
 #include <iostream>
 #include <cub/cub.cuh>
+#include <cstdlib>
 
 //---------------------------------------------------------------------
 // Kernels
@@ -131,6 +132,7 @@ void Test(int num_items, int repeat)
 
   int compare = memcmp(r_out, h_out, sizeof(int) * num_items);
   printf("%s\n", compare ? "FAIL" : "PASS");
+  if (compare) exit(1);
 
   // verify the SubtractRight
   cudaMemcpy(d_in, h_in, sizeof(int) * num_items, cudaMemcpyHostToDevice);
@@ -148,6 +150,7 @@ void Test(int num_items, int repeat)
   }
   compare = memcmp(r_out, h_out, sizeof(int) * num_items);
   printf("%s\n", compare ? "FAIL" : "PASS");
+  if (compare) exit(1);
 
   auto start = std::chrono::steady_clock::now();
 

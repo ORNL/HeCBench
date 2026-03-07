@@ -334,6 +334,7 @@ int main(int argc, char* argv[]) {
   float index_accuracy = nb_correct_indexes / ((float)query_nb * k);
   printf("Precision accuracy %f\nIndex accuracy %f\n", precision_accuracy, index_accuracy);
   printf("%s\n", (precision_accuracy == 1.f) ? "PASS" : "FAIL");
+  if (!(precision_accuracy == 1.f)) exit(1);
 
   free(ind);
   free(dist);

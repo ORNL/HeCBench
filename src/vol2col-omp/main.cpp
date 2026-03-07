@@ -219,6 +219,7 @@ void eval (
 
     int error = memcmp(data_col_ref, data_col, col_size_bytes);
     printf("%s\n", error ? "FAIL" : "PASS");
+    if (error) exit(1);
 
     start = std::chrono::steady_clock::now();
 
@@ -258,6 +259,7 @@ void eval (
       }
     }
     printf("%s\n", error ? "FAIL" : "PASS");
+    if (error) exit(1);
   }
 
   free(data_vol);

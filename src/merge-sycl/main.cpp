@@ -144,6 +144,7 @@ void mergeType(sycl::queue &q, const uint64_t size, const uint32_t runs) {
 
   PV(errors); // Print error info
   printf("%s. ", errors ? "FAIL" : "PASS");
+  if (errors) exit(1);
 
   if (timing)
     printf("Average kernel execution time: %f (us).\n", (total_time * 1e-3f) / runs);

@@ -218,6 +218,7 @@ void eval(const int nrows, const int repeat) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   sycl::free(d_a, q);
   sycl::free(d_b, q);

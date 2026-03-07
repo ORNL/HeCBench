@@ -27,6 +27,7 @@
 #include <cstring>
 #include <omp.h>
 #include "reference.h"
+#include <cstdlib>
 
 #define TCRIT 2.26918531421f
 #define THREADS  128
@@ -249,6 +250,7 @@ int main(int argc, char **argv) {
     if (!ok) break;
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   free(randvals);
   free(lattice_b);
   free(lattice_w);

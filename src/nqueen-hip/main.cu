@@ -259,6 +259,7 @@ int main(int argc, char *argv[])
       printf("PASS\n");
     else
       printf("FAIL\n");
+    if (qtd_sols_global != 2279184 && tree_size == 171129071) exit(1);
   }
 
   free(root_prefixes_h);

@@ -1,4 +1,5 @@
 #include <cstring>
+#include <cstdlib>
 
 void L2_norm_ref (const float *x, float &l2_norm, int n)
 {
@@ -123,6 +124,7 @@ void reference (Classification_Data_CRS &A,
   bool ok = (fabsf(obj_val - h_obj_val) < 1e-3f) &&
             (fabsf(train_error - h_train_error) < 1e-3f);
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   free(h_row_ptr);
   free(h_col_index);

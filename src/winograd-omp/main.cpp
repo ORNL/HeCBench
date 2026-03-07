@@ -1,6 +1,7 @@
 #include <chrono>
 #include <omp.h>
 #include "utils.h"
+#include <cstdlib>
 
 int main(int argc, char* argv[]) {
 
@@ -170,6 +171,7 @@ int main(int argc, char* argv[]) {
 }  // #pragma
 
   printf("%s\n", pass ? "PASS" : "FAIL");
+  if (!pass) exit(1);
 
   free(A);
   free(B);

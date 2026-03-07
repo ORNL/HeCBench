@@ -127,6 +127,7 @@ int main(void) {
   }
 
   std::cout << (ok ? "PASS" : "FAIL") << std::endl;
+  if (!ok) exit(1);
 
   img -= GCF_DIM + IMG_SIZE*GCF_DIM;
 

@@ -17,6 +17,7 @@ void verify(const T* cpu_out, const T* gpu_out, int64_t n)
     }
   }
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 }
 
 // bank conflict aware optimization

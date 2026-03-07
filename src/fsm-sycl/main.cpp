@@ -187,6 +187,7 @@ int main(int argc, char *argv[])
 
   bool ok = ((length - misses) == besthits);
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   
 #ifdef DEBUG
   // print FSM state assignment in R's ncol format

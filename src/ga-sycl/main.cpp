@@ -133,6 +133,7 @@ int main(int argc, char* argv[])
   }
   printf("Total kernel execution time %f (s)\n", total_time * 1e-9f);
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   sycl::free(d_target, q);
   sycl::free(d_query, q);

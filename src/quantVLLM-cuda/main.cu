@@ -8,6 +8,7 @@
 #include <cub/cub.cuh>
 #include "utils.h"
 #include "reference.h"
+#include <cstdlib>
 
 template <typename scalar_t, typename scale_type>
 __global__ void static_scaled_int8_quant_kernel(
@@ -265,6 +266,7 @@ void quant(int num_tokens, int hidden_size, int repeat) {
   error += memcmp(h_output, h_output_r, output_size_bytes);
 
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   cudaFree(d_input);
   cudaFree(d_output);

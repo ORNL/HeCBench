@@ -19,6 +19,7 @@
 #include <limits>
 #include <utility>
 #include <cuda.h>
+#include <cstdlib>
 
 // A multiple of thread block size
 #define N 2048
@@ -203,6 +204,7 @@ int main () {
   }
   else {
     std::cout << "FAIL" << std::endl;
+    exit(1);
     return -1;
   }
 

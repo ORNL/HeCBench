@@ -6,6 +6,7 @@
 #include <chrono>
 #include <climits>
 #include "helper_string.h"
+#include <cstdlib>
 
 template <typename T, bool floatKeys> bool testSort(int argc, char **argv) {
   int cmdVal;
@@ -148,4 +149,5 @@ int main(int argc, char **argv) {
     bTestResult = testSort<unsigned int, false>(argc, argv);
 
   printf(bTestResult ? "PASS\n" : "FAIL\n");
+  if (!bTestResult) exit(1);
 }

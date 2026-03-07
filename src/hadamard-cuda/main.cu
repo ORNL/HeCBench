@@ -299,6 +299,7 @@ void hadamard_transform(int batch_size, int dim, int repeat) {
       }
     }
     printf("%s\n", ok ? "PASS" : "FAIL");
+    if (!ok) exit(1);
 
     GPU_CHECK(cudaFree(d_x));
     GPU_CHECK(cudaFree(d_out));

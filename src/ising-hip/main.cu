@@ -34,6 +34,7 @@
 #endif
 
 #include "hipmacro.h"
+#include <cstdlib>
 
 #define TCRIT 2.26918531421f
 #define THREADS  128
@@ -301,6 +302,7 @@ int main(int argc, char **argv) {
     if (!ok) break;
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
 #ifndef HIPRAND
   free(randvals_host);

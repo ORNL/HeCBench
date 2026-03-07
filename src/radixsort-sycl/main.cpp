@@ -12,6 +12,7 @@
 #include <chrono>
 #include "RadixSort.h"
 #include "Scan.h"
+#include <cstdlib>
 
 void makeRandomUintVector(uint *a, uint numElements, uint keybits);
 bool verifySortUint(uint *keysSorted,
@@ -105,6 +106,7 @@ int main(int argc, const char **argv)
     printf("PASS\n");
   else
     printf("FAIL\n");
+  if (!passed) exit(1);
 
   return 0;
 }

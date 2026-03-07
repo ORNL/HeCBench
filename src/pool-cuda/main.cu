@@ -27,6 +27,7 @@ class MaxPoolGrad {
 };
 
 #include "reference.h"
+#include <cstdlib>
 
 template <typename PoolProcess, typename T,
           int ksize_height,
@@ -216,6 +217,7 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   delete[] input;
   delete[] output;

@@ -140,6 +140,7 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
  
   hipFree(d_grad_in);
   hipFree(d_grad_out);

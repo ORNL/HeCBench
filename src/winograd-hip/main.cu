@@ -1,6 +1,7 @@
 #include <chrono>
 #include <hip/hip_runtime.h>
 #include "utils.h"
+#include <cstdlib>
 
 __global__ void winograd_conv2d(
     const DATA_TYPE *__restrict__ input,
@@ -178,6 +179,7 @@ int main(int argc, char* argv[]) {
   } // sweep
 
   printf("%s\n", pass ? "PASS" : "FAIL");
+  if (!pass) exit(1);
 
   hipFree(d_A);
   hipFree(d_B);

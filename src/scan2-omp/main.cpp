@@ -17,6 +17,7 @@
 #include <chrono>
 #include <omp.h>
 #include "scan.h"
+#include <cstdlib>
 
 void bScan(const unsigned int blockSize,
            const unsigned int len,
@@ -294,6 +295,7 @@ int main(int argc, char * argv[])
     std::cout << "PASS" << std::endl;
   else
     std::cout << "FAIL" << std::endl;
+  if (!(compare<float>(outputBuffer, verificationOutput, length, (float)0.001))) exit(1);
 
   free(verificationOutput);
   free(inputBuffer);

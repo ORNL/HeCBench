@@ -574,6 +574,7 @@ int main(int argc, char** argv) {
     printf("FAIL\n");
   else
     printf("PASS\n");
+  if (h_checksum != d_checksum) exit(1);
 
   free(h_plain);
   free(h_key);

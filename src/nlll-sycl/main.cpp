@@ -154,6 +154,7 @@ void eval(const int64_t nframe,
     ok = false;
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   sycl::free(d_output, q);
   sycl::free(d_total_weight, q);

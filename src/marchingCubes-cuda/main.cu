@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cuda.h>
 #include "tables.h"
+#include <cstdlib>
 
 // problem size
 constexpr unsigned int N(1024);
@@ -555,6 +556,7 @@ int main(int argc, char* argv[])
   bool ok = (countedBlockNumLv1 == 8296 && countedBlockNumLv2 == 240380 &&
              countedVerticesNum == 4856560 && countedTrianglesNum == 6101640);
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   cudaFree(minMaxLv1Device);
   cudaFree(blockIndicesLv1Device);

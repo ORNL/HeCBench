@@ -236,6 +236,7 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", fail ? "FAIL" : "PASS");
+  if (fail) exit(1);
 
   half_count = divup(count, VectorSize);
   kBlock = divup(half_count, kThreadInBlock);
@@ -264,6 +265,7 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", fail ? "FAIL" : "PASS");
+  if (fail) exit(1);
 
   //-------------------------------------------------------------------------------
   // RELU
@@ -308,6 +310,7 @@ int main(int argc, char* argv[])
 
   fail = memcmp(h_out, r_out, size);
   printf("%s\n", fail ? "FAIL" : "PASS");
+  if (fail) exit(1);
 
   start = std::chrono::steady_clock::now();
 
@@ -324,6 +327,7 @@ int main(int argc, char* argv[])
 
   fail = memcmp(h_out, r_out, size);
   printf("%s\n", fail ? "FAIL" : "PASS");
+  if (fail) exit(1);
 
   cudaFree(d_out);
   cudaFree(d_in);

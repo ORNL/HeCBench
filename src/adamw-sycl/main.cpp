@@ -135,6 +135,7 @@ int main(int argc, char* argv[])
   }
   printf("Absolute maximum error: %f\n", absmax_error);
   printf("%s\n", absmax_error > 1e-3f ? "FAIL" : "PASS");
+  if (absmax_error > 1e-3f) exit(1);
 
   auto start = std::chrono::steady_clock::now();
 

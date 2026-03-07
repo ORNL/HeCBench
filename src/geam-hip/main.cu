@@ -78,6 +78,7 @@ void transpose_f64(int nrow, int ncol, int repeat) {
   }
 
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   hipblasDestroy(handle);
   free(h_matrixT);
@@ -158,6 +159,7 @@ void transpose_f32(int nrow, int ncol, int repeat) {
   }
 
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   hipblasDestroy(handle);
   free(matrixT);

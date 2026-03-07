@@ -36,6 +36,7 @@ void verify (const T* Y, T* Y_ref, size_t Y_size)
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 }
 
 template<typename T>

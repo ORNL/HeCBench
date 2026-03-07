@@ -301,6 +301,7 @@ int main(int argc, char* argv[]) {
     if (map[i] != map_ref[i]) count++; 
   }
   std::cout << (count <= 2 ? "PASS" : "FAIL") << std::endl;
+  if (count > 2) exit(1);
 
 #ifdef DEBUG
   // Displays final grid only if grid small.

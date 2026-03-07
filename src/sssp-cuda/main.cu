@@ -41,6 +41,7 @@
 #include "support/common.h"
 #include "support/timer.h"
 #include "support/verify.h"
+#include <cstdlib>
 
 
 // Params
@@ -621,5 +622,6 @@ int main(int argc, char **argv) {
   timer.print("Host/Device Deallocation", 1);
 
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   return 0;
 }

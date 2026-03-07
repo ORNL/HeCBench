@@ -176,6 +176,7 @@ int main(int argc, char* argv[])
     int32_t rc = memcmp(output, output_vec4, output_size_bytes);
 
     printf("%s\n", rc ? "FAIL" : "PASS");
+    if (rc) exit(1);
 
     GPU_CHECK(cudaFree(d_input));
     free(input);

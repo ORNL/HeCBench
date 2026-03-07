@@ -5,6 +5,7 @@
 #include <sstream>
 #include <chrono>
 #include <hip/hip_runtime.h>
+#include <cstdlib>
 
 using namespace std;
 
@@ -613,6 +614,7 @@ int main(int argc, char** argv)
         cout << endl;
       }
       cout << ((rate == FLT_MAX) ? "FAIL" : "PASS") << endl;
+      if (rate == FLT_MAX) exit(1);
     }
   }
 

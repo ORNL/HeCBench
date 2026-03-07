@@ -30,6 +30,7 @@ extern "C" void BoxMullerRef(float *h_Rand, int nPerRng);
 #endif
 
 #include <chrono>
+#include <cstdlib>
 using namespace std::chrono;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -198,6 +199,7 @@ int main(int argc, const char **argv)
 
   // finish
   printf("%s\n", (L1norm < 1e-6) ? "PASS" : "FAIL");
+  if (!(L1norm < 1e-6)) exit(1);
 
   return 0;
 }

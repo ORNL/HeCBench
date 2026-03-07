@@ -177,6 +177,7 @@ int main(int argc, char **argv) {
   printf("d_te:   %le\n" , d_te);
   bool ok = check_output(d_mass, d_te);
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   finalize();
 }

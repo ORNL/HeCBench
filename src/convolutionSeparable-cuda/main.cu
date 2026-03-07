@@ -120,5 +120,6 @@ int main(int argc, char **argv)
   cudaFree(d_Output);
 
   printf("%s\n", L2norm < 1e-6 ? "PASS" : "FAIL");
+  if (L2norm >= 1e-6) exit(1);
   return 0;
 }

@@ -141,6 +141,7 @@ int main(int argc, char* argv[])
 
         printf("Average time of channel sum (nhwc): %f (ms)\n", (time * 1e-6f) / repeat);
         printf("Verification %s for channel sum (nhwc)\n", ok ? "PASS" : "FAIL");
+        if (!ok) exit(1);
 
         ComputeChannelSumNCHW (N, C, W*H, h_X, h_sum, h_sumsq, time, repeat);
 
@@ -150,6 +151,7 @@ int main(int argc, char* argv[])
         
         printf("Average time of channel sum (nchw): %f (ms)\n", (time * 1e-6f) / repeat);
         printf("Verification %s for channel sum (nchw)\n", ok ? "PASS" : "FAIL");
+        if (!ok) exit(1);
       }
 
       free(h_X);

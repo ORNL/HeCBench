@@ -216,6 +216,7 @@ int main(int argc, char* argv[])
   error += memcmp(h_out4, r_out4, 4 * output_size_bytes);
 
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
   
   free(h_xyz);
   free(h_out);

@@ -8,6 +8,7 @@
 #include <sycl/sycl.hpp>
 #include <chrono>
 #include <iostream>
+#include <cstdlib>
 
 int main(int argc, char *argv[]) try {
   if (argc != 3) {
@@ -85,6 +86,7 @@ int main(int argc, char *argv[]) try {
 
   // Print the sum:
   std::cout << ((sum == 0) ? "PASS" : "FAIL") << "\n";
+  if (sum != 0) exit(1);
 
   return 0;
 }

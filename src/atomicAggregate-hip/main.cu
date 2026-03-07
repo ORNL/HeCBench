@@ -1,6 +1,7 @@
 #include <chrono>
 #include <stdio.h>
 #include <hip/hip_runtime.h>
+#include <cstdlib>
 
 // reference
 // https://stackoverflow.com/questions/59879285/whats-the-alternative-for-match-any-sync-on-compute-capability-6
@@ -106,6 +107,7 @@ int main(int argc, char* argv[]) {
       }
     }
     printf("%s\n", ok ? "PASS" : "FAIL");
+    if (!ok) exit(1);
     hipFree(d_d);
     delete [] h_d;
   }

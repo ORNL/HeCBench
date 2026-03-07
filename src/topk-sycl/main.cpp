@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <vector>
 #include "topk_per_row_kernels.h"
+#include <cstdlib>
 
 inline uint32_t xorshift32(uint32_t &state) {
   state ^= state << 13;
@@ -149,6 +150,7 @@ int32_t main(int32_t argc, char *argv[]) try {
       }
 
       printf("%s\n", ok ? "PASS" : "FAIL");
+      if (!ok) exit(1);
 
       sycl::free(d_x, q);
       sycl::free(d_topk_ids, q);

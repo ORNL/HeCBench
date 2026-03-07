@@ -185,6 +185,7 @@ int main(int argc, char* argv[])
   cudaMemcpy(out.data(), d_out, out_size, cudaMemcpyDeviceToHost);
 
   printf("%s\n", out == ref ? "PASS" : "FAIL");
+  if (out != ref) exit(1);
   
   cudaFree(d_A);
   cudaFree(d_code);

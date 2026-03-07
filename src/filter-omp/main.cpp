@@ -110,6 +110,7 @@ int main(int argc, char **argv) {
 
   printf("\nFilter using shared memory %s \n",
          equal ? "PASS" : "FAIL");
+  if (!equal) exit(1);
 
   return 0;
 }

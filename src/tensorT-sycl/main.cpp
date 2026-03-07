@@ -32,6 +32,7 @@ void verify(double *input, double *output) {
     }
   }
   if (!error) printf("PASS\n");
+  if (error) exit(1);
 }
 
 int main(int argc, char **argv) {

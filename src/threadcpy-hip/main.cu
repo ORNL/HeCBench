@@ -2,6 +2,7 @@
 #include <chrono>
 #include <cstring>
 #include <hip/hip_runtime.h>
+#include <cstdlib>
 
 #define GPU_CHECK(x) do { \
   hipError_t err = x; \
@@ -59,6 +60,7 @@ void test_threads_copy(size_t n, int repeat) {
 
     int s = memcmp(out_h, in_h, sizeof(scalar_t) * n);
     std::cout << (s ? "FAIL" : "PASS") << std::endl;
+    if (s) exit(1);
 
     auto start = std::chrono::steady_clock::now();
 

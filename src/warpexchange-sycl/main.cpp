@@ -146,6 +146,7 @@ int main(int argc, char* argv[])
     }
     stop:
     printf("%s\n", ok ? "PASS" : "FAIL");
+    if (!ok) exit(1);
   }
 
   sycl::free(d_A, q);

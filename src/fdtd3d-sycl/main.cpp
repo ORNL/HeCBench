@@ -16,6 +16,7 @@
 #include "FDTD3dGPU.h"
 #include "shrUtils.h"
 #include "cmd_arg_reader.h"
+#include <cstdlib>
 
 // Forward declarations
 bool runTest(int argc, const char **argv);
@@ -37,6 +38,7 @@ int main(int argc, char **argv)
     printf("PASS\n");
   else
     printf("FAIL\n");
+  if (bTestResult != true) exit(1);
 
   return 0;
 }

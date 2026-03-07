@@ -106,6 +106,7 @@ int main(int argc, char** argv)
 
   int status = memcmp(h_output, d_output, sizeof(DTYPE)*i_img_count*o_img_height*o_img_width);
   printf("%s\n", (status == 0) ? "PASS" : "FAIL");
+  if (!(status == 0)) exit(1);
 
   free(h_image);
   free(h_output);

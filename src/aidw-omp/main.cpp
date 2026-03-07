@@ -229,6 +229,7 @@ int main(int argc, char *argv[])
     if (check) {
       bool ok = verify (iz.data(), h_iz.data(), inum, EPS);
       printf("%s\n", ok ? "PASS" : "FAIL");
+      if (!ok) exit(1);
     }
 
     AIDW_Kernel_Tiled(d_dx, d_dy, d_dz, dnum, d_ix, d_iy, d_iz, inum, area, d_avg_dist);
@@ -236,6 +237,7 @@ int main(int argc, char *argv[])
     if (check) {
       bool ok = verify (iz.data(), h_iz.data(), inum, EPS);
       printf("%s\n", ok ? "PASS" : "FAIL");
+      if (!ok) exit(1);
     }
 
     auto start = std::chrono::steady_clock::now();

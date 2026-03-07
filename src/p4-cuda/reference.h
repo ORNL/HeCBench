@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstdlib>
 
 int reference (
   const float *__restrict__ cls_input,
@@ -175,6 +176,7 @@ void verify (
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   free(score_output_r);
   free(bndbox_output_r);
 }

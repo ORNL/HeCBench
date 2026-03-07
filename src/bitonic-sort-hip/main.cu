@@ -40,6 +40,7 @@
 #include <iostream>
 #include <limits>
 #include <hip/hip_runtime.h>
+#include <cstdlib>
 
 #define BLOCK_SIZE 256
 
@@ -216,6 +217,7 @@ int main(int argc, char *argv[]) {
   // Verify
   int unequal = memcmp(data_gpu, data_cpu, size_bytes);
   std::cout << (unequal ? "FAIL" : "PASS") << std::endl;
+  if (unequal) exit(1);
 
   // Clean CPU memory.
   free(data_cpu);

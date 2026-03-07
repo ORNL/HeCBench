@@ -24,6 +24,7 @@ using float4 = sycl::float4;
  
 #include "SDKBitMap.h"
 #include "kernels.cpp"
+#include <cstdlib>
 
 void reference (uchar4 *verificationOutput,
                 const uchar4 *inputImageData,
@@ -185,6 +186,7 @@ int main(int argc, char * argv[])
     printf("PASS\n");
   else
     printf("FAIL\n");
+  if (!(compare(outputReference, outputDevice, imageSize))) exit(1);
 
   free(outputDevice);
   free(outputReference);

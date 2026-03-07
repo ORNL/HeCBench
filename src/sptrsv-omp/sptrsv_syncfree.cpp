@@ -4,6 +4,7 @@
 #include <chrono>
 #include <omp.h>
 #include "sptrsv.h"
+#include <cstdlib>
 
 #pragma omp declare target
 int atomicLoad(const int *addr)
@@ -204,6 +205,7 @@ int sptrsv_syncfree (
   printf("|x-xref|/|xref| = %8.2e\n", res);
 
   printf("%s\n", (res < accuracy) ? "PASS" : "FAIL");
+  if (!(res < accuracy)) exit(1);
 
   free(get_value);
   free(warp_num);

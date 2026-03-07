@@ -152,6 +152,7 @@ int bpnn_train_kernel(BPNN *net, float *eo, float *eh)
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
 #ifdef OUTPUT
   for (int i = 0; i < (in+1); i++) 

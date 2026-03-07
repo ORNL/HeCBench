@@ -18,6 +18,7 @@
 #include "sobel.h"
 #include "SDKBitMap.h"
 #include "kernels.cu"
+#include <cstdlib>
 
 static bool compare(const float *refData, const float *data,
                     const int length, const float epsilon = 1e-6f)
@@ -164,6 +165,7 @@ int main(int argc, char * argv[])
     printf("PASS\n");
   else
     printf("FAIL\n");
+  if (!(compare(outputReference, outputDevice, imageSize))) exit(1);
 
   free(outputDevice);
   free(outputReference);

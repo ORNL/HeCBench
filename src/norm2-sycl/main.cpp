@@ -106,5 +106,6 @@ int main(int argc, char *argv[]) {
   sycl::free(d_result, q);
 
   if (ok) printf("PASS\n");
+  if (!ok) exit(1);
   return 0;
 }

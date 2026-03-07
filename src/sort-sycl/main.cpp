@@ -31,6 +31,7 @@ void verifySort(const T *keys, const size_t size)
     std::cout << "PASS" << std::endl;
   else
     std::cout << "FAIL" << std::endl;
+  if (!passed) exit(1);
 }
 
 int main(int argc, char** argv)

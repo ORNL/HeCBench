@@ -21,6 +21,7 @@
 #include <math.h>
 #include <chrono>
 #include <sycl/sycl.hpp>
+#include <cstdlib>
 
 //constexpr int MEM_ADVISE_READ_MOSTLY = PI_MEM_ADVICE_CUDA_SET_READ_MOSTLY;
 
@@ -84,6 +85,7 @@ void prefetch(sycl::queue &q, const int numElements, const int repeat)
 
   bool testResult = (maxError == 0.0f);
   printf("%s\n", testResult ? "PASS" : "FAIL");
+  if (!testResult) exit(1);
 }
 
 void naive(sycl::queue &q, const int numElements, const int repeat)
@@ -130,6 +132,7 @@ void naive(sycl::queue &q, const int numElements, const int repeat)
 
   bool testResult = (maxError == 0.0f);
   printf("%s\n", testResult ? "PASS" : "FAIL");
+  if (!testResult) exit(1);
 }
 
 int main(int argc, char *argv[])

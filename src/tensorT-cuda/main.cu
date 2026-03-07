@@ -32,6 +32,7 @@ void verify(double *input, double *output) {
     }
   }
   if (!error) printf("PASS\n");
+  if (error) exit(1);
 }
 
 __global__ void tensor_transpose(

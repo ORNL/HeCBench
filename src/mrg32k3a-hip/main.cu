@@ -33,6 +33,7 @@
 #include <vector>
 #include <hip/hip_runtime.h>
 #include <hiprand/hiprand.h>
+#include <cstdlib>
 
 // HIP API error checking
 #define HIP_CHECK(err)                                                        \
@@ -183,6 +184,7 @@ int main(int argc, char *argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   return EXIT_SUCCESS;
 }

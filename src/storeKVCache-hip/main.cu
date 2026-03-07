@@ -7,6 +7,7 @@
 #include <random>
 #include <hip/hip_runtime.h>
 #include "kernels.h"
+#include <cstdlib>
 
 #define GPU_CHECK(call) \
 { \
@@ -191,6 +192,7 @@ void store_kv_cache(int32_t repeat)
             (memcmp(r_v_cache, h_v_cache, elem_size * kvc_size) == 0);
 #endif
        printf("%s\n", ok ? "PASS" : "FAIL");
+       if (!ok) exit(1);
 
        GPU_CHECK(hipFree(k));
        GPU_CHECK(hipFree(v));

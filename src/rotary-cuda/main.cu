@@ -7,6 +7,7 @@
 
 #include "Array.h"
 #include "FunctionTraits.h"
+#include <cstdlib>
 
 #ifndef GPU_LAMBDA
 #define GPU_LAMBDA __host__ __device__
@@ -309,6 +310,7 @@ void gpu_kernel_multiple_outputs_impl(const int repeat, const func_t& f) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   cudaFree(d_x1);
   cudaFree(d_x2);
   cudaFree(d_cos);

@@ -1,6 +1,7 @@
 #include <chrono>
 #include <stdio.h>
 #include <sycl/sycl.hpp>
+#include <cstdlib>
 
 // reference
 // https://stackoverflow.com/questions/59879285/whats-the-alternative-for-match-any-sync-on-compute-capability-6
@@ -139,6 +140,7 @@ int main(int argc, char *argv[]) {
       }
     }
     printf("%s\n", ok ? "PASS" : "FAIL");
+    if (!ok) exit(1);
     sycl::free(d_d, q);
     delete [] h_d;
   }

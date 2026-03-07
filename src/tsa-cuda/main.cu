@@ -6,6 +6,7 @@
 #include <cuda.h>
 #include "kernels.h"
 #include "reference.h"
+#include <cstdlib>
 
 template <typename T>
 void init_p(T *p_real, T *p_imag, int width, int height) {
@@ -107,6 +108,7 @@ void tsa(int width, int height, int repeat) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   delete[] p_real;
   delete[] p_imag;

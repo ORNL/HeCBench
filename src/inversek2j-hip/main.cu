@@ -311,6 +311,7 @@ int main(int argc, char* argv[])
     cout << "FAIL\n";
   else 
     cout << "PASS\n";
+  if (error) exit(1);
 
   return 0;
 }

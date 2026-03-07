@@ -37,6 +37,7 @@
 #include "sobol.h"
 #include "sobol_gold.h"
 #include "sobol_gpu.h"
+#include <cstdlib>
 
 #define L1ERROR_TOLERANCE (1e-6)
 
@@ -186,6 +187,7 @@ int main(int argc, char *argv[])
       std::cout << "PASS" << std::endl;
     else
       std::cout << "FAIL" << std::endl;
+    if (l1error >= L1ERROR_TOLERANCE) exit(1);
 
     return 0;
 }

@@ -143,6 +143,7 @@ void eval(const int64_t nframe,
     ok = false;
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   hipFree(d_output);
   hipFree(d_total_weight);
