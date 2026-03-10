@@ -16,7 +16,10 @@ HEADERS = sigma.h vector.h lsqt.h hamiltonian.h model.h anderson.h charge.h comm
 ODIR = obj_gpu
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-all: main
+all: builddir main
+
+builddir:
+	mkdir -p $(ODIR)
 
 $(ODIR)/%.o: %.cu $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@

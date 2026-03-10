@@ -19,7 +19,7 @@ HIP_ARCH  = gfx908
 # Program name & source code list
 #===============================================================================
 
-program = main
+program = main vj-cpu
 
 source = main.cpp
 
@@ -98,7 +98,7 @@ vj-cpu: main.o haar-cpu.o image.o stdio-wrapper.o rectangles.o
 vj-gpu: main.o haar-gpu.o image.o stdio-wrapper.o rectangles.o
 	$(CC) $(CFLAGS) -o $@ $+ $(LDFLAGS)
 
-$(program): main.o haar-gpu.o image.o stdio-wrapper.o rectangles.o
+main: main.o haar-gpu.o image.o stdio-wrapper.o rectangles.o
 	$(CC) $(CFLAGS) -o $@ $+ $(LDFLAGS)
 
 clean:

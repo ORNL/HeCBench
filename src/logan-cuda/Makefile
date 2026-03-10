@@ -24,7 +24,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 \
+CFLAGS := $(EXTRA_CFLAGS) -std=c++14 \
           -Xcompiler -Wall -Xcompiler -fopenmp \
           -arch=$(ARCH) -Isrc 
 
@@ -65,7 +65,7 @@ src/logan_functions.o: src/logan_functions.cu \
 clean:
 	rm -rf $(program) $(obj)
 
-main: $(program)
+demo: $(program)
 	./$(program) inputs/example.txt 17 21 1
 
 run: $(program)

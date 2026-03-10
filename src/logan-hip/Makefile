@@ -63,7 +63,7 @@ src/logan_functions.o: src/logan_functions.cu \
 clean:
 	rm -rf $(program) $(obj)
 
-main: $(program)
+demo: $(program)
 	./$(program) ../logan-cuda/inputs/example.txt 17 21 1
 
 run: $(program)

@@ -19,7 +19,7 @@ HIP_ARCH  = gfx908
 # Program name & source code list
 #===============================================================================
 
-program = main
+program = main multimat multimat_F
 
 source=compact.cpp full_matrix.cpp multimat.cpp
 
@@ -66,12 +66,24 @@ endif
 # Targets to Build
 #===============================================================================
 
-$(program): $(source)
+all: $(program)
+
+multimat: $(source)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+
+multimat_F: $(source)
+	$(CC) $(CFLAGS) -DFUSED $^ -o $@ $(LDFLAGS)
+
+main: $(source)
 	$(CC) $(CFLAGS) -DFUSED -DLINKED $^ -o $@ $(LDFLAGS)
 
 clean:
 	rm -rf $(program)
 
 run: $(program)
-	$(LAUNCHER) ./$(program) 2000 2000
-	$(LAUNCHER) ./$(program) 2000 2000 0.3 0.05 0.05
+	$(LAUNCHER) ./main 2000 2000
+	$(LAUNCHER) ./multimat_F 2000 2000
+	$(LAUNCHER) ./multimat 2000 2000
+	$(LAUNCHER) ./main 2000 2000 0.3 0.05 0.05
+	$(LAUNCHER) ./multimat_F 2000 2000 0.3 0.05 0.05
+	$(LAUNCHER) ./multimat 2000 2000 0.3 0.05 0.05

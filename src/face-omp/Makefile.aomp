@@ -70,7 +70,7 @@ vj-cpu: main.o haar-cpu.o image.o stdio-wrapper.o rectangles.o
 	$(CC) $(CFLAGS) -o $@ $+ 
 
 main: main.o haar-gpu.o image.o stdio-wrapper.o rectangles.o
-	$(CC) $(CFLAGS) $(OMP_TARGET_FLAGS) -o $@ $+ 
+	$(CC) $(CFLAGS) $(OMP_TARGET_FLAGS) -o $@ $+
 
 clean:
 	rm -f $(program) *.o Output-cpu.pgm Output-gpu.pgm
