@@ -1200,7 +1200,7 @@ static double binomial_tree(int num_timesteps, const Payoff &payoff, double dt, 
 }
 
 // Calculate the standard normal cumulative distribution function
-inline double normcdf (double x) {
+inline double my_normcdf (double x) {
   return (1.0 + sycl::erf(x / sycl::sqrt(2.0))) / 2.0;
 }
 
@@ -1209,7 +1209,7 @@ static double black_scholes_merton_put(double T, double K, double S0, double r, 
   double d1 = (std::log(S0 / K) + (r + 0.5*sigma*sigma)*T) / (sigma*std::sqrt(T));
   double d2 = d1 - sigma*std::sqrt(T);
   
-  return K*std::exp(-r*T)*normcdf(-d2) - S0*normcdf(-d1);
+  return K*std::exp(-r*T)*my_normcdf(-d2) - S0*my_normcdf(-d1);
 }
 
 static double black_scholes_merton_call(double T, double K, double S0, double r, double sigma)
@@ -1217,7 +1217,7 @@ static double black_scholes_merton_call(double T, double K, double S0, double r,
   double d1 = (std::log(S0 / K) + (r + 0.5*sigma*sigma)*T) / (sigma*std::sqrt(T));
   double d2 = d1 - sigma*std::sqrt(T);
   
-  return S0*normcdf(d1) - K*std::exp(-r*T)*normcdf(d2);
+  return S0*my_normcdf(d1) - K*std::exp(-r*T)*my_normcdf(d2);
 }
 
 int main(int argc, char **argv)

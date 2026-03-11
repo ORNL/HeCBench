@@ -32,15 +32,12 @@
 #include <string.h>
 #include <chrono>
 #include <omp.h>
-
-typedef struct {
-  double i, c, h;
-} checksum;
+#include "reference.h"
 
 // Fused kernel
 void elementwise(int hiddenSize, int miniBatch,
-    const float *__restrict tmp_h, 
-    const float *__restrict tmp_i, 
+    const float *__restrict tmp_h,
+    const float *__restrict tmp_i,
     const float *__restrict bias,
     float *__restrict linearGates,
     float *__restrict h_out,
@@ -54,7 +51,7 @@ void elementwise(int hiddenSize, int miniBatch,
   for (int index = 0; index < numElements; index++) {
 
     int batch = index / hiddenSize;
-    int gateIndex = (index % hiddenSize) + 4 * batch * hiddenSize;   
+    int gateIndex = (index % hiddenSize) + 4 * batch * hiddenSize;
 
     float g[4];
 
@@ -62,7 +59,7 @@ void elementwise(int hiddenSize, int miniBatch,
       g[i] = tmp_i[i * hiddenSize + gateIndex] + tmp_h[i * hiddenSize + gateIndex];
       g[i] += bias[i * hiddenSize + index % hiddenSize] + bias[(i + 4) * hiddenSize + index % hiddenSize];
       linearGates[gateIndex + i * hiddenSize] = g[i];
-    }   
+    }
 
     float in_gate     = 1.f / (1.f + expf(-g[0]));
     float forget_gate = 1.f / (1.f + expf(-g[1]));
@@ -73,7 +70,7 @@ void elementwise(int hiddenSize, int miniBatch,
 
     c_out[index] = val;
 
-    val = out_gate * tanhf(val);                                   
+    val = out_gate * tanhf(val);
 
     h_out[index] = val;
     i_out[index] = val;
@@ -99,7 +96,8 @@ void init (float* data, int size) {
 }
 
 void test(int hiddenSize, int miniBatch, int seqLength, int numLayers,
-          checksum &cs, double &time) {
+          float *testOutputi, float *testOutputh, float *testOutputc, double &time)
+{
   float *h_data;
   float *i_data;
   float *c_data;
@@ -128,138 +126,107 @@ void test(int hiddenSize, int miniBatch, int seqLength, int numLayers,
   tmp_i = (float*) malloc (tmp_i_size * sizeof(float));
 
   // Activations
-  linearGates = (float*) malloc (act_size * sizeof(float));  
+  linearGates = (float*) malloc (act_size * sizeof(float));
 
-#pragma omp target data map (alloc: h_data[0:hc_size], \
-                                    i_data[0:i_size],\
-                                    c_data[0:hc_size],\
-                                    bias[0:bias_size],\
-                                    tmp_h[0:tmp_h_size],\
-                                    tmp_i[0:tmp_i_size],\
-                                    linearGates[0:act_size])
+  #pragma omp target data map (alloc: h_data[0:hc_size], \
+                                      i_data[0:i_size],\
+                                      c_data[0:hc_size],\
+                                      bias[0:bias_size],\
+                                      tmp_h[0:tmp_h_size],\
+                                      tmp_i[0:tmp_i_size],\
+                                      linearGates[0:act_size])
   {
-  // Initialise with random values on a device
-  init(tmp_h, tmp_h_size);
-  init(tmp_i, tmp_i_size);
-  init(c_data, hc_size);
-  init(bias, bias_size);
+    // Initialise with random values on a device
+    init(tmp_h, tmp_h_size);
+    init(tmp_i, tmp_i_size);
+    init(c_data, hc_size);
+    init(bias, bias_size);
 
-  int lStart = 0;
-  int lEnd = 0;
-  int rStart = 0;
-  int rEnd = 0;
-  int recurBatchSize = 2;
+    int lStart = 0;
+    int lEnd = 0;
+    int rStart = 0;
+    int rEnd = 0;
+    int recurBatchSize = 2;
 
-  double ktime = 0.0;
+    double ktime = 0.0;
 
-  while (true) {
-    // Many layer "scheduling".
-    if (lEnd == 0) {
-      lStart = 0;
-      lEnd = 1;
-      rStart = 0;
-    }
-    else {
-      // Move "up" and "left"
-      lStart++;
-      lEnd++;
-
-      rStart -= recurBatchSize;
-
-      // Over the top or off the left, reset to layer 0
-      if (lEnd > numLayers || rStart < 0) {
-        rStart += (lStart + 1) * recurBatchSize;
-
+    while (true) {
+      // Many layer "scheduling".
+      if (lEnd == 0) {
         lStart = 0;
         lEnd = 1;
+        rStart = 0;
       }
-
-      // Off the right, step up
-      while (rStart >= seqLength && lEnd <= numLayers) {
+      else {
+        // Move "up" and "left"
         lStart++;
         lEnd++;
+
         rStart -= recurBatchSize;
+
+        // Over the top or off the left, reset to layer 0
+        if (lEnd > numLayers || rStart < 0) {
+          rStart += (lStart + 1) * recurBatchSize;
+
+          lStart = 0;
+          lEnd = 1;
+        }
+
+        // Off the right, step up
+        while (rStart >= seqLength && lEnd <= numLayers) {
+          lStart++;
+          lEnd++;
+          rStart -= recurBatchSize;
+        }
+
+        // Over the top or off the left, done!
+        if (lEnd > numLayers || rStart < 0) {
+          break;
+        }
       }
 
-      // Over the top or off the left, done!
-      if (lEnd > numLayers || rStart < 0) {
-        break;
+      rEnd = rStart + recurBatchSize;
+      if (rEnd > seqLength) rEnd = seqLength;
+
+      auto start = std::chrono::steady_clock::now();
+
+      for (int layer = lStart; layer < lEnd; layer++) {
+        for (int i = rStart; i < rEnd; i++)
+          elementwise
+          (hiddenSize, miniBatch,
+           tmp_h + 4 * layer * numElements,
+           tmp_i + 4 * i * numElements,
+           bias + 8 * layer * hiddenSize,
+           linearGates + 4 * (i * numElements + layer * seqLength * numElements),
+           h_data + (i + 1) * numElements + layer * (seqLength + 1) * numElements,
+           i_data + i * numElements + (layer + 1) * seqLength * numElements,
+           c_data + i * numElements + layer * (seqLength + 1) * numElements,
+           c_data + (i + 1) * numElements + layer * (seqLength + 1) * numElements);
       }
+
+      auto end = std::chrono::steady_clock::now();
+      ktime += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     }
 
-    rEnd = rStart + recurBatchSize;
-    if (rEnd > seqLength) rEnd = seqLength;
+    time += ktime;
+    //printf("Kernel execution time: %f (s)\n", ktime * 1e-9f);
 
-    auto start = std::chrono::steady_clock::now();
-
-    for (int layer = lStart; layer < lEnd; layer++) {
-      for (int i = rStart; i < rEnd; i++)
-        elementwise
-        (hiddenSize, miniBatch,
-         tmp_h + 4 * layer * numElements, 
-         tmp_i + 4 * i * numElements, 
-         bias + 8 * layer * hiddenSize,
-         linearGates + 4 * (i * numElements + layer * seqLength * numElements),
-         h_data + (i + 1) * numElements + layer * (seqLength + 1) * numElements,
-         i_data + i * numElements + (layer + 1) * seqLength * numElements,
-         c_data + i * numElements + layer * (seqLength + 1) * numElements,
-         c_data + (i + 1) * numElements + layer * (seqLength + 1) * numElements);
-    }
-
-    auto end = std::chrono::steady_clock::now();
-    ktime += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    #pragma omp target update from (i_data[0:i_size])
+    #pragma omp target update from (h_data[0:hc_size])
+    #pragma omp target update from (c_data[0:hc_size])
   }
 
-  time += ktime;
-  //printf("Kernel execution time: %f (s)\n", ktime * 1e-9f);
-
-  #pragma omp target update from (i_data[0:i_size])
-  #pragma omp target update from (h_data[0:hc_size])
-  #pragma omp target update from (c_data[0:hc_size])
-  }
-
-  float *testOutputi = (float*)malloc(numElements * seqLength * sizeof(float));
-  float *testOutputh = (float*)malloc(numElements * numLayers * sizeof(float));
-  float *testOutputc = (float*)malloc(numElements * numLayers * sizeof(float));
-
-  memcpy(testOutputi, i_data + numLayers * seqLength * numElements, 
+  memcpy(testOutputi, i_data + numLayers * seqLength * numElements,
     seqLength * numElements * sizeof(float));
 
   for (int layer = 0; layer < numLayers; layer++) {
-    memcpy(testOutputh + layer * numElements, 
-      h_data + seqLength * numElements + layer * (seqLength + 1) * numElements, 
+    memcpy(testOutputh + layer * numElements,
+      h_data + seqLength * numElements + layer * (seqLength + 1) * numElements,
       numElements * sizeof(float));
-    memcpy(testOutputc + layer * numElements, 
-      c_data + seqLength * numElements + layer * (seqLength + 1) * numElements, 
+    memcpy(testOutputc + layer * numElements,
+      c_data + seqLength * numElements + layer * (seqLength + 1) * numElements,
       numElements * sizeof(float));
   }
-  
-  double checksumi = 0.;
-  double checksumh = 0.;
-  double checksumc = 0.;
-
-  for (int m = 0; m < miniBatch; m++) {
-    for (int j = 0; j < seqLength; j++) {
-      for (int i = 0; i < hiddenSize; i++) {
-        checksumi += testOutputi[j * numElements + m * hiddenSize + i];
-        //if (hiddenSize <= 8) printf("i: (%d,%d): %E\n", j, i, testOutputi[j * numElements + m * hiddenSize + i]);
-      }
-    }
-    for (int j = 0; j < numLayers; j++) {
-      for (int i = 0; i < hiddenSize; i++) {         
-        checksumh += testOutputh[j * numElements + m * hiddenSize + i];
-        checksumc += testOutputc[j * numElements + m * hiddenSize + i];
-      }
-    }
-  }
-
-  free(testOutputi);
-  free(testOutputc);
-  free(testOutputh);
-
-  cs.i = checksumi;
-  cs.c = checksumc;
-  cs.h = checksumh;
 
   free(h_data);
   free(i_data);
@@ -274,15 +241,15 @@ int main(int argc, char* argv[]) {
   int seqLength;
   int numLayers;
   int hiddenSize;
-  int miniBatch; 
+  int miniBatch;
   int numRuns;
 
   if (argc == 6) {
     seqLength = atoi(argv[1]);
     numLayers = atoi(argv[2]);
     hiddenSize = atoi(argv[3]);
-    miniBatch = atoi(argv[4]);   
-    numRuns = atoi(argv[5]);   
+    miniBatch = atoi(argv[4]);
+    numRuns = atoi(argv[5]);
   }
   else if (argc == 1) {
     printf("Running with default settings\n");
@@ -294,23 +261,59 @@ int main(int argc, char* argv[]) {
   }
   else {
     printf("Usage: %s <seqLength> <numLayers> <hiddenSize> <miniBatch> <repeat>\n", argv[0]);
-    return 1;      
+    return 1;
   }
 
   printf("seqLength %d, numLayers %d, hiddenSize %d, miniBatch %d\n",
-         seqLength, numLayers, hiddenSize, miniBatch);  
+         seqLength, numLayers, hiddenSize, miniBatch);
 
-  checksum cs;
-  
+  int numElements = hiddenSize * miniBatch;
+  float *testOutputi = (float*)malloc(numElements * seqLength  * sizeof(float));
+  float *testOutputh = (float*)malloc(numElements * numLayers  * sizeof(float));
+  float *testOutputc = (float*)malloc(numElements * numLayers  * sizeof(float));
+  float *testOutputi_ref = (float*)malloc(numElements * seqLength  * sizeof(float));
+  float *testOutputh_ref = (float*)malloc(numElements * numLayers  * sizeof(float));
+  float *testOutputc_ref = (float*)malloc(numElements * numLayers  * sizeof(float));
+
   double time = 0.0;
 
   for (int run = 0; run < numRuns; run++) {
-    test(hiddenSize, miniBatch, seqLength, numLayers, cs, time);
+    test(hiddenSize, miniBatch, seqLength, numLayers,
+         testOutputi, testOutputh, testOutputc, time);
+    test_ref(hiddenSize, miniBatch, seqLength, numLayers,
+             testOutputi_ref, testOutputh_ref, testOutputc_ref);
   }
 
   printf("Average kernel execution time: %f (s)\n", (time * 1e-9f) / numRuns);
-  printf("i checksum %E     ", cs.i);
-  printf("c checksum %E     ", cs.c);
-  printf("h checksum %E\n", cs.h);
+
+  int error = 0;
+  for (int m = 0; m < miniBatch; m++) {
+    for (int j = 0; j < seqLength; j++) {
+      for (int i = 0; i < hiddenSize; i++) {
+        if (fabsf(testOutputi[j * numElements + m * hiddenSize + i] -
+                  testOutputi_ref[j * numElements + m * hiddenSize + i]) > 1e-4f)
+          error++;
+      }
+    }
+    for (int j = 0; j < numLayers; j++) {
+      for (int i = 0; i < hiddenSize; i++) {
+        if (fabsf(testOutputh[j * numElements + m * hiddenSize + i] -
+                  testOutputh_ref[j * numElements + m * hiddenSize + i]) > 1e-4f)
+          error++;
+        if (fabsf(testOutputc[j * numElements + m * hiddenSize + i] -
+                  testOutputc_ref[j * numElements + m * hiddenSize + i]) > 1e-4f)
+          error++;
+      }
+    }
+  }
+
+  printf("%s\n", (error == 0) ? "PASS" : "FAIL");
+
+  free(testOutputi);
+  free(testOutputh);
+  free(testOutputc);
+  free(testOutputi_ref);
+  free(testOutputh_ref);
+  free(testOutputc_ref);
   return 0;
 }

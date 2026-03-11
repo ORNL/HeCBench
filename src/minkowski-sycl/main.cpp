@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
           int col = index.get_global_id(1);
           if( col < K && row < M) {
             float sum = 0;
-            #pragma unroll (4)
+            //#pragma unroll (4)
             for (int i = 0; i < N; i++) {
               sum += sycl::powr(sycl::fabs(a[row * N + i] - b[i * K + col]), p);
             }

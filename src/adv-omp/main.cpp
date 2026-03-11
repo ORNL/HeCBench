@@ -1,6 +1,7 @@
 #include <iostream>
-#include <cstdlib>
 #include <chrono>
+#include <cmath>
+#include <cstdlib>
 #include <omp.h>
 
 #define p_IJWID 6
@@ -21,8 +22,10 @@
 #define p_cubNp 4096
 #define p_cubNq 16
 
+#include "reference.h"
+
 dfloat *drandAlloc(int N){
-  dfloat *v = (dfloat*) calloc(N, sizeof(dfloat));
+  dfloat *v = (dfloat*) malloc(N * sizeof(dfloat));
   for(int n = 0; n < N; ++n) v[n] = drand48();
   return v;
 }
@@ -56,6 +59,9 @@ int main(int argc, char **argv) {
   dfloat *cubInterpT     = drandAlloc(Np*cubNp);
   dfloat *u              = drandAlloc(3*Np*Nelements);
   dfloat *adv            = drandAlloc(3*Np*Nelements);
+  dfloat *adv_ref        = drandAlloc(3*Np*Nelements);
+
+  double elapsed;
 
   #pragma omp target data map(to: vgeo[0:Np*Nelements*p_Nvgeo], \
                                   cubvgeo[0:cubNp*Nelements*p_Nvgeo], \
@@ -150,6 +156,8 @@ int main(int argc, char **argv) {
             }
           }
 
+          #pragma omp barrier
+
           for (int k = 0; k < 16; ++k) {
             s_U1[j][i] = r_Ud[k];
             s_V1[j][i] = r_Vd[k];
@@ -199,6 +207,8 @@ int main(int argc, char **argv) {
             r_U[k] = Uhat * Udr + Vhat * Uds + What * Udt;
             r_V[k] = Uhat * Vdr + Vhat * Vds + What * Vdt;
             r_W[k] = Uhat * Wdr + Vhat * Wds + What * Wdt;
+
+            #pragma omp barrier
           }
 
           for (int c = 0; c < 8; ++c) {
@@ -256,27 +266,37 @@ int main(int argc, char **argv) {
     }
 
     auto end = std::chrono::high_resolution_clock::now();
-    const double elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() / Ntests;
-
-    // statistics
-    const dfloat GDOFPerSecond = (N*N*N)*Nelements/elapsed;
-    std::cout << " NRepetitions=" << Ntests
-              << " N=" << N
-              << " cubN=" << cubN
-              << " Nelements=" << Nelements
-              << " elapsed time=" << elapsed
-              << " GDOF/s=" << GDOFPerSecond
-              << "\n";
+    elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() / Ntests;
   }
 
-  double checksum = 0;
+  reference(Nelements,
+            vgeo,
+            cubvgeo,
+            cubDiffInterpT,
+            cubInterpT,
+            offset,
+            u,
+            adv_ref);
+
+  bool ok = true;
   for (int i = 0; i < 3*Np*Nelements; i++) {
-    checksum += adv[i];
-    #ifdef OUTPUT
-    std::cout << adv[i] << "\n";
-    #endif
+    if (fabs(adv[i] - adv_ref[i]) > 1e-4) {
+      std::cout << i << " : " << adv[i] << " != " << adv_ref[i] << std::endl;
+      ok = false;
+      break;
+    }
   }
-  std::cout << "Checksum=" << checksum << "\n";
+  printf("%s\n", ok ? "PASS" : "FAIL");
+
+  // statistics
+  const dfloat GDOFPerSecond = (N*N*N)*Nelements/elapsed;
+  std::cout << " NRepetitions=" << Ntests
+            << " N=" << N
+            << " cubN=" << cubN
+            << " Nelements=" << Nelements
+            << " elapsed time=" << elapsed
+            << " GDOF/s=" << GDOFPerSecond
+            << "\n";
 
   free(vgeo          );
   free(cubvgeo       );
@@ -284,5 +304,6 @@ int main(int argc, char **argv) {
   free(cubInterpT    );
   free(u             );
   free(adv           );
+  free(adv_ref       );
   return 0;
 }

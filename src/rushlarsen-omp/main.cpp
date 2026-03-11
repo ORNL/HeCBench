@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <math.h>
+#include <cmath>
 #include <omp.h>
 #include "utils.h"
 #include "kernels.cpp"

@@ -527,6 +527,7 @@ set(HECBENCH_POC_BENCHMARKS
     saxpy-ompt
     softmax-fused
     softmax-online
+    ssm
     storeKVCache
     threadcpy
     tridiagonal

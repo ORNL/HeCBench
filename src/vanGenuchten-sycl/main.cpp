@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
+#include <cmath>
 #include <chrono>
 #include <sycl/sycl.hpp>
 #include "reference.h"

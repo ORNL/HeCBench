@@ -1,6 +1,7 @@
 #include <iostream>
-#include <cstdlib>
 #include <chrono>
+#include <cmath>
+#include <cstdlib>
 #include <hip/hip_runtime.h>
 
 #define p_IJWID 6
@@ -22,10 +23,12 @@
 #define p_cubNq 16
 
 // kernel
-#include "adv.cu"
+#include "adv.h"
+
+#include "reference.h"
 
 dfloat *drandAlloc(int N){
-  dfloat *v = (dfloat*) calloc(N, sizeof(dfloat));
+  dfloat *v = (dfloat*) malloc(N * sizeof(dfloat));
   for(int n = 0; n < N; ++n) v[n] = drand48();
   return v;
 }
@@ -59,6 +62,7 @@ int main(int argc, char **argv) {
   dfloat *cubInterpT     = drandAlloc(Np*cubNp);
   dfloat *u              = drandAlloc(3*Np*Nelements);
   dfloat *adv            = drandAlloc(3*Np*Nelements);
+  dfloat *adv_ref        = drandAlloc(3*Np*Nelements);
 
   dfloat *d_vgeo, *d_cubvgeo, *d_cubDiffInterpT, *d_cubInterpT, *d_u, *d_adv;
   hipMalloc((void**)&d_vgeo, Np*Nelements*p_Nvgeo*sizeof(dfloat));
@@ -79,8 +83,8 @@ int main(int argc, char **argv) {
   auto start = std::chrono::high_resolution_clock::now();
 
   // run kernel
-  for(int test=0;test<Ntests;++test) 
-    hipLaunchKernelGGL(advCubatureHex3D, dim3(Nelements, 1), dim3(16, 16), 0, 0,
+  for(int test=0;test<Ntests;++test)
+    advCubatureHex3D<<<dim3(Nelements, 1), dim3(16, 16)>>>(
         Nelements,
         d_vgeo,
         d_cubvgeo,
@@ -103,14 +107,24 @@ int main(int argc, char **argv) {
   hipFree(d_u);
   hipFree(d_adv);
 
-  double checksum = 0;
+  reference(Nelements,
+            vgeo,
+            cubvgeo,
+            cubDiffInterpT,
+            cubInterpT,
+            offset,
+            u,
+            adv_ref);
+
+  bool ok = true;
   for (int i = 0; i < 3*Np*Nelements; i++) {
-    checksum += adv[i];
-    #ifdef OUTPUT
-    std::cout << adv[i] << "\n";
-    #endif
+    if (fabs(adv[i] - adv_ref[i]) > 1e-4) {
+      std::cout << i << " : " << adv[i] << " != " << adv_ref[i] << std::endl;
+      ok = false;
+      break;
+    }
   }
-  std::cout << "Checksum=" << checksum << "\n";
+  printf("%s\n", ok ? "PASS" : "FAIL");
 
   // statistics
   const dfloat GDOFPerSecond = (N*N*N)*Nelements/elapsed;
@@ -128,5 +142,6 @@ int main(int argc, char **argv) {
   free(cubInterpT    );
   free(u             );
   free(adv           );
+  free(adv_ref       );
   return 0;
 }

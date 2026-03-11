@@ -2,11 +2,12 @@
 #include "./../main.h"                // (in main directory)            needed to recognized input parameters
 #include "./../util/avi/avilib.h"          // (in directory)              needed by avi functions
 #include "./../util/avi/avimod.h"          // (in directory)              needed by avi functions
+#include "./../util/timer/timer.h"
 
 // CUDA kernel
 #include "kernel.h"
 
-  void 
+uint64_t 
 kernel_gpu_wrapper(  params_common common,
     int* endoRow,
     int* endoCol,
@@ -410,6 +411,8 @@ kernel_gpu_wrapper(  params_common common,
   fp* d_frame;
   hipMalloc((void**)&d_frame, sizeof(fp)*common.frame_elem);
 
+  uint64_t kernel_time = 0;
+
   for(frame_no=0; frame_no<common.frames_processed; frame_no++) {
 
     //==================================================50
@@ -429,7 +432,9 @@ kernel_gpu_wrapper(  params_common common,
     //==================================================50
     //  launch kernel
     //==================================================50
-    hipLaunchKernelGGL(hw, grids, threads, 0, 0, 
+    uint64_t start_time = get_time();
+
+    hw<<<grids, threads>>>(
         frame_no,
         common,
         d_frame, 
@@ -467,6 +472,10 @@ kernel_gpu_wrapper(  params_common common,
           ,d_checksum
 #endif
           );
+
+    hipDeviceSynchronize();
+    uint64_t end_time = get_time();
+    kernel_time += end_time - start_time;
 
     // free frame after each loop iteration, since AVI library allocates memory for every frame fetched
     free(frame);
@@ -541,6 +550,6 @@ kernel_gpu_wrapper(  params_common common,
 
   printf("\n");
   fflush(NULL);
-
+  return kernel_time;
 }
 

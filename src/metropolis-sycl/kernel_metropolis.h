@@ -149,7 +149,6 @@ kernel_metropolis(const int N, const int L, site_t *s, const int *H,
 
   item.barrier(sycl::access::fence_space::local_space);
 
-  #pragma unroll 2
   for(int i = 0; i < BLOCK_STEPS; ++i){
 
     /* -------- white update -------- */

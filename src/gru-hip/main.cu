@@ -5,6 +5,7 @@
 #include <random>
 #include <hip/hip_runtime.h>
 #include <hip/hip_fp16.h>
+#include "reference.h"
 
 #define H2F(input) static_cast<accscalar_t>(input)
 #define F2H(input) static_cast<scalar_t>(input)
@@ -25,7 +26,7 @@ __global__ void gru_cell_forward(
             scalar_t *__restrict__ Hidden,
             scalar_t *__restrict__ Bias1,
             scalar_t *__restrict__ Bias2,
-            scalar_t *__restrict__ _hx,   // h(t-1) 
+            scalar_t *__restrict__ _hx,   // h(t-1)
             scalar_t *__restrict__ _hy,   // h(t)
             scalar_t *__restrict__ storage,
             index_type hsz,
@@ -91,48 +92,52 @@ int main(int argc, char* argv[])
   const int hsz = atoi(argv[2]);
   const int repeat = atoi(argv[3]);
 
-  int input_size = 3 * vsz * hsz;
-  size_t input_size_bytes = input_size * sizeof(half);
+  const int input_size = 3 * vsz * hsz;
+  const size_t input_size_bytes = input_size * sizeof(half);
 
-  int hidden_size = 3 * vsz * hsz;
-  size_t hidden_size_bytes = hidden_size * sizeof(half);
+  const int hidden_size = 3 * vsz * hsz;
+  const size_t hidden_size_bytes = hidden_size * sizeof(half);
 
-  int bias_size = 3 * hsz;
-  size_t bias_size_bytes = bias_size * sizeof(half);
+  const int bias_size = 3 * hsz;
+  const size_t bias_size_bytes = bias_size * sizeof(half);
 
-  int store_size = 5 * vsz * hsz;
-  size_t store_size_bytes = store_size * sizeof(half);
+  const int store_size = 5 * vsz * hsz;
+  const size_t store_size_bytes = store_size * sizeof(half);
 
-  int state_size = vsz;
-  size_t state_size_bytes = state_size * sizeof(half);
-  
+  const int state_size = vsz;
+  const size_t state_size_bytes = state_size * sizeof(half);
+
   half *h_input, *h_hidden, *h_input_bias, *h_hidden_bias;
-  half *h_hy, *h_hx;
+  half *h_hy, *h_hx, *h_hy_ref, *h_store, *h_store_ref;
   h_input = (half*) malloc (input_size_bytes);
   h_hidden = (half*) malloc (hidden_size_bytes);
   h_input_bias = (half*) malloc (bias_size_bytes);
   h_hidden_bias = (half*) malloc (bias_size_bytes);
-  h_hy = (half*) malloc (state_size_bytes);
   h_hx = (half*) malloc (state_size_bytes);
+  h_hy = (half*) malloc (state_size_bytes);
+  h_store = (half*) malloc(store_size_bytes);
+
+  h_hy_ref = (half*) malloc (state_size_bytes);
+  h_store_ref = (half*) malloc(store_size_bytes);
 
   std::default_random_engine g (123);
   std::uniform_real_distribution<float> distr (-2.f, 2.f);
-  
+
   for (int i = 0; i < input_size; i++) {
-    h_input[i] = distr(g); 
+    h_input[i] = distr(g);
   }
 
   for (int i = 0; i < hidden_size; i++) {
-    h_hidden[i] = distr(g); 
+    h_hidden[i] = distr(g);
   }
 
   for (int i = 0; i < bias_size; i++) {
-    h_input_bias[i] = distr(g); 
-    h_hidden_bias[i] = distr(g); 
+    h_input_bias[i] = distr(g);
+    h_hidden_bias[i] = distr(g);
   }
 
   for (int i = 0; i < state_size; i++) {
-    h_hx[i] = distr(g); 
+    h_hx[i] = distr(g);
   }
 
   half *d_input, *d_hidden, *d_input_bias, *d_hidden_bias;
@@ -176,12 +181,26 @@ int main(int argc, char* argv[])
           (time * 1e-3f) / repeat);
 
   hipMemcpy(h_hy, d_hy, state_size_bytes, hipMemcpyDeviceToHost);
+  hipMemcpy(h_store, d_store, store_size_bytes, hipMemcpyDeviceToHost);
 
-  float checksum = 0;
+  reference<half, float, int>(
+    h_input, h_hidden, h_input_bias, h_hidden_bias,
+      h_hx, h_hy_ref, h_store_ref, hsz, vsz);
+
+  bool ok = true;
   for (int i = 0; i < state_size; i++) {
-    checksum += (float)(h_hy[i]);
+    if (fabsf((float)(h_hy[i]) - (float)(h_hy_ref[i])) > 1e-3f) {
+      ok = false;
+      break;
+    }
   }
-  printf("Checksum is %f\n", checksum / state_size);
+  for (int i = 0; i < store_size; i++) {
+    if (fabsf((float)(h_store[i]) - (float)(h_store_ref[i])) > 1e-3f) {
+      ok = false;
+      break;
+    }
+  }
+  printf("%s\n", ok ? "PASS" : "FAIL");
 
   hipFree(d_input);
   hipFree(d_hidden);
@@ -197,6 +216,9 @@ int main(int argc, char* argv[])
   free(h_hidden_bias);
   free(h_hx);
   free(h_hy);
+  free(h_store);
+  free(h_hy_ref);
+  free(h_store_ref);
 
   return 0;
 }

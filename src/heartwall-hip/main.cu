@@ -35,7 +35,7 @@
 //  KERNEL
 //======================================================================================================================================================150
 
-void 
+uint64_t 
 kernel_gpu_wrapper(params_common common,
                    int* endoRow,
                    int* endoCol,
@@ -208,7 +208,7 @@ int main(int argc, char* argv []){
   //  KERNELL WRAPPER CALL
   //======================================================================================================================================================150
 
-  kernel_gpu_wrapper(common,
+  uint64_t kernelTime = kernel_gpu_wrapper(common,
                      endoRow,
                      endoCol,
                      tEndoRowLoc,
@@ -282,6 +282,8 @@ int main(int argc, char* argv []){
       (fp) (time3-time2) / 1000000, (fp) (time3-time2) / (fp) (time5-time0) * 100);
   printf("%15.12f s, %15.12f : GPU ALLOCATION, COPYING, COMPUTATION\n",
       (fp) (time4-time3) / 1000000, (fp) (time4-time3) / (fp) (time5-time0) * 100);
+  printf("%15.12f s, %15.12f : GPU KERNELS\n",
+      (fp) (kernelTime) / 1000000, (fp) (kernelTime) / (fp) (time5-time0) * 100);
   printf("%15.12f s, %15.12f : FREE MEMORY\n",
       (fp) (time5-time4) / 1000000, (fp) (time5-time4) / (fp) (time5-time0) * 100);
   printf("Total time:\n");

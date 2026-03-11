@@ -29,12 +29,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <math.h>
+#include <chrono>
 #include <sycl/sycl.hpp>
-
-typedef struct {
-  double i, c, h;
-} checksum;
+#include "reference.h"
 
 // Device functions
 inline float sigmoidf(float in) {
@@ -101,8 +98,8 @@ void init (sycl::nd_item<1> &item, float* data, int size) {
 }
 
 void test(sycl::queue &q, int hiddenSize, int miniBatch, int seqLength, int numLayers,
-          checksum &cs, double &time) {
-
+          float *testOutputi, float *testOutputh, float *testOutputc, double &time)
+{
   // Input/output data
   int numElements = hiddenSize * miniBatch;
 
@@ -216,8 +213,7 @@ void test(sycl::queue &q, int hiddenSize, int miniBatch, int seqLength, int numL
         q.submit([&] (sycl::handler &cgh) {
           cgh.parallel_for<class pw>(sycl::nd_range<1>(gws_p, lws), [=] (sycl::nd_item<1> item) {
             elementwise
-            (item,
-	     hiddenSize, miniBatch,
+            (item, hiddenSize, miniBatch,
              tmp_h + 4 * layer * numElements,
              tmp_i + 4 * i * numElements,
              bias + 8 * layer * hiddenSize,
@@ -226,7 +222,7 @@ void test(sycl::queue &q, int hiddenSize, int miniBatch, int seqLength, int numL
              i_data + i * numElements + (layer + 1) * seqLength * numElements,
              c_data + i * numElements + layer * (seqLength + 1) * numElements,
              c_data + (i + 1) * numElements + layer * (seqLength + 1) * numElements);
-	  });
+	      });
         });
     }
 
@@ -237,12 +233,6 @@ void test(sycl::queue &q, int hiddenSize, int miniBatch, int seqLength, int numL
 
   time += ktime;
   //printf("Kernel execution time: %f (s)\n", ktime * 1e-9f);
-
-  float *testOutputi = (float*)malloc(numElements * seqLength * sizeof(float));
-  float *testOutputh = (float*)malloc(numElements * numLayers * sizeof(float));
-  float *testOutputc = (float*)malloc(numElements * numLayers * sizeof(float));
-
-  q.wait();
 
   q.memcpy(testOutputi, i_data + numLayers * seqLength * numElements,
     seqLength * numElements * sizeof(float));
@@ -256,29 +246,6 @@ void test(sycl::queue &q, int hiddenSize, int miniBatch, int seqLength, int numL
   }
   q.wait();
 
-  double checksumi = 0.;
-  double checksumh = 0.;
-  double checksumc = 0.;
-
-  for (int m = 0; m < miniBatch; m++) {
-    for (int j = 0; j < seqLength; j++) {
-      for (int i = 0; i < hiddenSize; i++) {
-        checksumi += testOutputi[j * numElements + m * hiddenSize + i];
-        //if (hiddenSize <= 8) printf("i: (%d,%d): %E\n", j, i, testOutputi[j * numElements + m * hiddenSize + i]);
-      }
-    }
-    for (int j = 0; j < numLayers; j++) {
-      for (int i = 0; i < hiddenSize; i++) {
-        checksumh += testOutputh[j * numElements + m * hiddenSize + i];
-        checksumc += testOutputc[j * numElements + m * hiddenSize + i];
-      }
-    }
-  }
-
-  free(testOutputi);
-  free(testOutputc);
-  free(testOutputh);
-
   sycl::free(h_data, q);
   sycl::free(i_data, q);
   sycl::free(c_data, q);
@@ -287,10 +254,6 @@ void test(sycl::queue &q, int hiddenSize, int miniBatch, int seqLength, int numL
   sycl::free(tmp_h, q);
   sycl::free(tmp_i, q);
   sycl::free(linearGates, q);
-
-  cs.i = checksumi;
-  cs.c = checksumc;
-  cs.h = checksumh;
 }
 
 int main(int argc, char* argv[]) {
@@ -323,7 +286,13 @@ int main(int argc, char* argv[]) {
   printf("seqLength %d, numLayers %d, hiddenSize %d, miniBatch %d\n",
          seqLength, numLayers, hiddenSize, miniBatch);
 
-  checksum cs;
+  int numElements = hiddenSize * miniBatch;
+  float *testOutputi = (float*)malloc(numElements * seqLength  * sizeof(float));
+  float *testOutputh = (float*)malloc(numElements * numLayers  * sizeof(float));
+  float *testOutputc = (float*)malloc(numElements * numLayers  * sizeof(float));
+  float *testOutputi_ref = (float*)malloc(numElements * seqLength  * sizeof(float));
+  float *testOutputh_ref = (float*)malloc(numElements * numLayers  * sizeof(float));
+  float *testOutputc_ref = (float*)malloc(numElements * numLayers  * sizeof(float));
 
 #ifdef USE_GPU
   sycl::queue q(sycl::gpu_selector_v, sycl::property::queue::in_order());
@@ -334,13 +303,42 @@ int main(int argc, char* argv[]) {
   double time = 0.0;
 
   for (int run = 0; run < numRuns; run++) {
-    test(q, hiddenSize, miniBatch, seqLength, numLayers, cs, time);
+    test(q, hiddenSize, miniBatch, seqLength, numLayers,
+         testOutputi, testOutputh, testOutputc, time);
+    test_ref(hiddenSize, miniBatch, seqLength, numLayers,
+             testOutputi_ref, testOutputh_ref, testOutputc_ref);
   }
 
   printf("Average kernel execution time: %f (s)\n", (time * 1e-9f) / numRuns);
-  printf("i checksum %E     ", cs.i);
-  printf("c checksum %E     ", cs.c);
-  printf("h checksum %E\n", cs.h);
+
+  int error = 0;
+  for (int m = 0; m < miniBatch; m++) {
+    for (int j = 0; j < seqLength; j++) {
+      for (int i = 0; i < hiddenSize; i++) {
+        if (fabsf(testOutputi[j * numElements + m * hiddenSize + i] -
+                  testOutputi_ref[j * numElements + m * hiddenSize + i]) > 1e-4f)
+          error++;
+      }
+    }
+    for (int j = 0; j < numLayers; j++) {
+      for (int i = 0; i < hiddenSize; i++) {
+        if (fabsf(testOutputh[j * numElements + m * hiddenSize + i] -
+                  testOutputh_ref[j * numElements + m * hiddenSize + i]) > 1e-4f)
+          error++;
+        if (fabsf(testOutputc[j * numElements + m * hiddenSize + i] -
+                  testOutputc_ref[j * numElements + m * hiddenSize + i]) > 1e-4f)
+          error++;
+      }
+    }
+  }
+
+  printf("%s\n", (error == 0) ? "PASS" : "FAIL");
+
+  free(testOutputi);
+  free(testOutputh);
+  free(testOutputc);
+  free(testOutputi_ref);
+  free(testOutputh_ref);
+  free(testOutputc_ref);
   return 0;
 }
-

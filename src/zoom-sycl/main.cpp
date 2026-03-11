@@ -4,13 +4,14 @@
 #include <chrono>
 #include <random>
 #include <sycl/sycl.hpp>
+#include "reference.h"
 
 void zoom_in_kernel(
     sycl::nd_item<3> &item,
     float *__restrict staging_tile,
     const float *input_tensor,float *__restrict output_tensor,
     int input_h, int input_w, int output_h, int output_w,
-    int pitch, int out_h_start, int out_h_end,
+    size_t pitch, int out_h_start, int out_h_end,
     int out_w_start, int out_w_end)
 {
   // H -> block Y, row
@@ -20,7 +21,7 @@ void zoom_in_kernel(
   int out_start_w = item.get_group(2) * item.get_local_range(2);
   int out_end_w = out_start_w + item.get_local_range(2);
 
-  int img_start_offset = item.get_group(0) * pitch;
+  size_t img_start_offset = item.get_group(0) * pitch;
 
   float ratio_h = (float)input_h / output_h;
   float ratio_w = (float)input_w / output_w;
@@ -80,7 +81,7 @@ void zoom_in_kernel(
       }
     }
 
-    output_tensor[(item.get_group(0) * pitch) +
+    output_tensor[img_start_offset +
                   ((out_pixel_h - out_h_start) * input_w) +
                   (out_pixel_w - out_w_start)] = sum_ / (del_h * del_w);
   }
@@ -92,7 +93,7 @@ void zoom_out_kernel(
     float *__restrict staging_tile,
     const float *input_tensor, float *__restrict output_tensor,
     int input_h, int input_w, int output_h, int output_w,
-    int pitch, int out_h_start, int out_h_end,
+    size_t pitch, int out_h_start, int out_h_end,
     int out_w_start, int out_w_end)
 {
   // H -> block Y, row
@@ -102,7 +103,7 @@ void zoom_out_kernel(
   int out_start_w = item.get_group(2) * item.get_local_range(2);
   int out_end_w = out_start_w + item.get_local_range(2);
 
-  int img_start_offset = item.get_group(0) * pitch;
+  size_t img_start_offset = item.get_group(0) * pitch;
 
   float ratio_h = (float)input_h / output_h;
   float ratio_w = (float)input_w / output_w;
@@ -160,7 +161,7 @@ void zoom_out_kernel(
       }
     }
 
-    output_tensor[(item.get_group(0) * pitch) +
+    output_tensor[img_start_offset +
                   ((out_pixel_h + out_h_start) * input_w) +
                   (out_pixel_w + out_w_start)] = sum_ / (del_h * del_w);
   }
@@ -171,7 +172,7 @@ void zoom_out_edge_pad(
     sycl::nd_item<3> &item,
     float *output_tensor,
     int height, int width,
-    int pitch, int no_padding_h_start,
+    size_t pitch, int no_padding_h_start,
     int no_padding_w_start,
     int no_padding_h_end, int no_padding_w_end)
 {
@@ -181,61 +182,63 @@ void zoom_out_edge_pad(
   int out_pixel_h = item.get_global_id(1);
   int out_pixel_w = item.get_global_id(2);
 
+  size_t img_start_offset = item.get_group(0) * pitch;
+
   // no_padding_h_end, no_padding_w_end --> w_cropped+wstart, same for height
   int out_location =
-      (item.get_group(0) * pitch) + (out_pixel_h * width) + out_pixel_w;
+      img_start_offset + (out_pixel_h * width) + out_pixel_w;
 
   if (out_pixel_h < height && out_pixel_w < width) {
     if (out_pixel_h < no_padding_h_start && out_pixel_w >= no_padding_w_start
         && out_pixel_w < no_padding_w_end) {
       // top pad
       output_tensor[out_location] =
-          output_tensor[(item.get_group(0) * pitch) +
+          output_tensor[img_start_offset +
                         (no_padding_h_start * width) + out_pixel_w];
     } else if (out_pixel_h >= no_padding_h_end
         && out_pixel_w >= no_padding_w_start
         && out_pixel_w < no_padding_w_end) {
       // bottom pad
       output_tensor[out_location] =
-          output_tensor[(item.get_group(0) * pitch) +
+          output_tensor[img_start_offset +
                         ((no_padding_h_end - 1) * width) + out_pixel_w];
     } else if (out_pixel_w < no_padding_w_start
         && out_pixel_h >= no_padding_h_start
         && out_pixel_h < no_padding_h_end) {
       // left pad
       output_tensor[out_location] =
-          output_tensor[(item.get_group(0) * pitch) +
+          output_tensor[img_start_offset +
                         (out_pixel_h * width) + no_padding_w_start];
     } else if (out_pixel_w >= no_padding_w_end
         && out_pixel_h >= no_padding_h_start
         && out_pixel_h < no_padding_h_end) {
       // right pad
       output_tensor[out_location] =
-          output_tensor[(item.get_group(0) * pitch) +
+          output_tensor[img_start_offset +
                         (out_pixel_h * width) + (no_padding_w_end - 1)];
     } else if (out_pixel_h < no_padding_h_start
         && out_pixel_w < no_padding_w_start) {
       // top-left corner
       output_tensor[out_location] =
-          output_tensor[(item.get_group(0) * pitch) +
+          output_tensor[img_start_offset +
                         (no_padding_h_start * width) + no_padding_w_start];
     } else if (out_pixel_h < no_padding_h_start
         && out_pixel_w >= no_padding_w_end) {
       // top-right corner
       output_tensor[out_location] =
-          output_tensor[(item.get_group(0) * pitch) +
+          output_tensor[img_start_offset +
                         (no_padding_h_start * width) + (no_padding_w_end - 1)];
     } else if (out_pixel_h >= no_padding_h_end
         && out_pixel_w < no_padding_w_start) {
       // bottom-left corner
       output_tensor[out_location] =
-          output_tensor[(item.get_group(0) * pitch) +
+          output_tensor[img_start_offset +
                         ((no_padding_h_end - 1) * width) + no_padding_w_start];
     } else if (out_pixel_h >= no_padding_h_end
         && out_pixel_w >= no_padding_w_end) {
       // bottom-right corner
       output_tensor[out_location] =
-          output_tensor[(item.get_group(0) * pitch) +
+          output_tensor[img_start_offset +
                         ((no_padding_h_end - 1) * width) +
                         (no_padding_w_end - 1)];
     }
@@ -269,18 +272,19 @@ void zoom (sycl::queue &q, int repeat, int input_sizes[4], float zoom_factor[2])
   int H = input_sizes[2];
   int W = input_sizes[3];
 
-  // {N, C, H, W}
-  int output_sizes[] = {N, C, (int)floor(H * zoom_factor[0]), (int)floor(W * zoom_factor[1])};
+  int Ho = (int)floorf(H * zoom_factor[0]);
+  int Wo = (int)floorf(W * zoom_factor[1]);
+  int output_sizes[] = {N, C, Ho, Wo};
 
-  bool is_zoom_out = output_sizes[2] < H && output_sizes[3] < W;
-  bool is_zoom_in = output_sizes[2] > H && output_sizes[3] > W;
+  bool is_zoom_out = Ho < H && Wo < W;
+  bool is_zoom_in = Ho > H && Wo > W;
   if (is_zoom_out == false && is_zoom_in == false) {
     printf("Zoom factors only handle simultaneous expansion(or shrinkage) in both dimensions. Exit\n");
     exit(1);
   }
 
   // input pitch
-  int pitch = H * W;
+  size_t pitch = (size_t)H * W;
 
   // get block size and shared memory size
   sycl::range<3> block (1, 1, 1);
@@ -293,7 +297,7 @@ void zoom (sycl::queue &q, int repeat, int input_sizes[4], float zoom_factor[2])
   int pad_dims[2][2] = {{0, 0}, {0,0}};  // zoom out
   int slice_dims[2][2] = {{0, 0}, {0,0}};  // zoom in
 
-  int diff = H - output_sizes[2];
+  int diff = H - Ho;
   int half = abs(diff) / 2;
   if (diff > 0) {
     pad_dims[0][0] = half;
@@ -303,7 +307,7 @@ void zoom (sycl::queue &q, int repeat, int input_sizes[4], float zoom_factor[2])
     slice_dims[0][1] = H + half;
   }
 
-  diff = W - output_sizes[3];
+  diff = W - Wo;
   half = abs(diff) / 2;
   if (diff > 0) {
     pad_dims[1][0] = half;
@@ -313,14 +317,18 @@ void zoom (sycl::queue &q, int repeat, int input_sizes[4], float zoom_factor[2])
     slice_dims[1][1] = W + half;
   }
 
-  size_t img_size = N * C * H * W;
+  size_t img_size = pitch * N * C;
   size_t img_size_bytes = sizeof(float) * img_size;
 
+  size_t output_img_size = img_size;
+  size_t output_img_size_bytes = sizeof(float) * output_img_size;
+
   float *input_img = (float*) malloc (img_size_bytes);
-  float *output_img = (float*) malloc (img_size_bytes);
+  float *output_img = (float*) malloc (output_img_size_bytes);
+  float *output_img_ref = (float*) calloc (output_img_size, sizeof(float));
 
   float *d_input_img = (float *)sycl::malloc_device(img_size_bytes, q);
-  float *d_output_img = (float *)sycl::malloc_device(img_size_bytes, q);
+  float *d_output_img = (float *)sycl::malloc_device(output_img_size_bytes, q);
 
   std::default_random_engine rng (123);
   std::normal_distribution<float> norm_dist(0.f, 1.f);
@@ -329,22 +337,20 @@ void zoom (sycl::queue &q, int repeat, int input_sizes[4], float zoom_factor[2])
     input_img[i] = norm_dist(rng);
   }
 
-  q.memcpy(d_input_img, input_img, img_size_bytes);
+  q.memcpy(d_input_img, input_img, img_size_bytes).wait();
 
-  long total_time = 0;
+  auto start = std::chrono::steady_clock::now();
+
   for (int i = 0; i < repeat; i++) {
 
     q.memset(d_output_img, 0, img_size_bytes);
-
-    q.wait();
-    auto start = std::chrono::steady_clock::now();
 
     if (is_zoom_in) {
       q.submit([&](sycl::handler &cgh) {
         sycl::local_accessor<float, 1> sm (sycl::range<1>(smem_size), cgh);
 
-        auto o_h = output_sizes[2];
-        auto o_w = output_sizes[3];
+        auto o_h = Ho;
+        auto o_w = Wo;
         auto o_h_start = slice_dims[0][0];
         auto o_h_end = slice_dims[0][1];
         auto o_w_start = slice_dims[1][0];
@@ -361,8 +367,8 @@ void zoom (sycl::queue &q, int repeat, int input_sizes[4], float zoom_factor[2])
       q.submit([&](sycl::handler &cgh) {
         sycl::local_accessor<float, 1> sm (sycl::range<1>(smem_size), cgh);
 
-        auto o_h = output_sizes[2];
-        auto o_w = output_sizes[3];
+        auto o_h = Ho;
+        auto o_w = Wo;
         auto o_h_start = pad_dims[0][0];
         auto o_h_end = pad_dims[0][1];
         auto o_w_start = pad_dims[1][0];
@@ -392,28 +398,54 @@ void zoom (sycl::queue &q, int repeat, int input_sizes[4], float zoom_factor[2])
         });
       });
     }
+  }
+  q.wait();
+  auto end = std::chrono::steady_clock::now();
+  auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 
-    q.wait();
-    auto end = std::chrono::steady_clock::now();
-    auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    total_time += time;
+  printf("Average execution time of the %s kernel: %f (us)\n",
+         is_zoom_in ? "zoom-in" : "zoom-out", time * 1e-3 / repeat);
+
+  q.memcpy(output_img, d_output_img, output_img_size_bytes).wait();
+
+  if (is_zoom_in) {
+    zoom_in_reference(
+        input_img, output_img_ref, H, W, Ho, Wo,
+        pitch, slice_dims[0][0],
+        slice_dims[0][1],
+        slice_dims[1][0],
+        slice_dims[1][1],
+        C * N);
+  } else if (is_zoom_out) {
+    zoom_out_reference(
+      input_img, output_img_ref, H, W, Ho, Wo,
+      pitch, pad_dims[0][0],
+      pad_dims[0][1],
+      pad_dims[1][0],
+      pad_dims[1][1],
+      C * N);
+
+    zoom_out_edge_pad_reference(
+      output_img_ref, H, W, pitch,
+      pad_dims[0][0], pad_dims[1][0],
+      pad_dims[0][0] + Ho,
+      pad_dims[1][0] + Wo,
+      C * N);
   }
 
-  q.memcpy(output_img, d_output_img, img_size_bytes).wait();
-
-  double checksum = 0;
-  for (size_t i = 0; i < img_size; i++) {
-    checksum += output_img[i];
+  bool ok = true;
+  for (size_t i = 0; i < output_img_size; i++) {
+    if (fabsf(output_img[i] - output_img_ref[i]) > 1e-4f) {
+      ok = false;
+    }
   }
+  printf("%s\n", ok ? "PASS" : "FAIL");
 
   sycl::free(d_input_img, q);
   sycl::free(d_output_img, q);
   free(input_img);
   free(output_img);
-
-  printf("Average execution time of the %s kernel: %f (us)\n",
-         is_zoom_in ? "zoom-in" : "zoom-out", total_time * 1e-3 / repeat);
-  printf("Kernel checksum: %lf\n", checksum);
+  free(output_img_ref);
 }
 
 int main(int argc, char* argv[])

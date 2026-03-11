@@ -4,230 +4,8 @@
 #include <chrono>
 #include <random>
 #include <hip/hip_runtime.h>
-
-__global__
-void zoom_in_kernel(
-    const float *input_tensor,float *output_tensor,
-    int input_h, int input_w, int output_h, int output_w,
-    int pitch, int out_h_start, int out_h_end,
-    int out_w_start, int out_w_end)
-{
-  extern __shared__ float staging_tile[];
-
-  // H -> block Y, row
-  // W -> block X, col
-  int out_start_h = blockIdx.y * blockDim.y;
-  int out_end_h   = out_start_h + blockDim.y;
-  int out_start_w = blockIdx.x * blockDim.x;
-  int out_end_w   = out_start_w + blockDim.x;
-
-  int img_start_offset = blockIdx.z * pitch;
-
-  float ratio_h = (float)input_h / output_h;
-  float ratio_w = (float)input_w / output_w;
-
-  // ideally should go in unified register
-  int smem_load_h_start = floorf(out_start_h * ratio_h);
-  int smem_load_h_end = ceilf(out_end_h * ratio_h);
-  int smem_h_load_stretch = smem_load_h_end - smem_load_h_start;
-
-  int smem_load_w_start = floorf(out_start_w * ratio_w);
-  int smem_load_w_end = ceilf(out_end_w * ratio_w);
-  int smem_w_load_stretch = smem_load_w_end - smem_load_w_start;
-
-  for (int i = threadIdx.y; i < smem_h_load_stretch; i+=blockDim.y) {
-    for (int j = threadIdx.x; j < smem_w_load_stretch; j+=blockDim.x) {
-
-      if (((i+smem_load_h_start) < input_h) &&
-          ((j+smem_load_w_start) < input_w)) {
-        staging_tile[i * smem_w_load_stretch + j] = \
-                      input_tensor[img_start_offset +
-                      (smem_load_h_start + i) * input_w +
-                      smem_load_w_start + j];
-      } else {
-        staging_tile[i * smem_w_load_stretch + j] = 0.0f;
-      }
-    }
-  }
-  __syncthreads();
-
-  int out_pixel_h = out_start_h + threadIdx.y;
-  int out_pixel_w = out_start_w + threadIdx.x;
-
-  if (out_pixel_h < output_h && out_pixel_w < output_w
-      && out_pixel_h >= out_h_start && out_pixel_h < out_h_end
-      && out_pixel_w >= out_w_start && out_pixel_w < out_w_end) {
-
-    // compute pixels oh, ow span
-    int start_h = floorf(out_pixel_h * ratio_h);
-    int end_h = ceilf((out_pixel_h+1) * ratio_h);
-
-    int start_w = floorf(out_pixel_w * ratio_w);
-    int end_w = ceilf((out_pixel_w+1) * ratio_w);
-
-    int del_h = end_h - start_h;
-    int del_w = end_w - start_w;
-
-    float sum_ = 0.0f;
-
-    for (int i = 0; i < del_h; i++) {
-      for (int j = 0; j < del_w; j++) {
-        int smem_row = (start_h + i) - smem_load_h_start;
-        int smem_col = (start_w + j) - smem_load_w_start;
-        sum_ += staging_tile[smem_row * smem_w_load_stretch + smem_col];
-      }
-    }
-
-    output_tensor[(blockIdx.z * pitch) +
-      ((out_pixel_h - out_h_start) * input_w) +
-      (out_pixel_w - out_w_start)] = sum_ / (del_h * del_w);
-  }
-}
-
-__global__
-void zoom_out_kernel(
-    const float *input_tensor, float *output_tensor,
-    int input_h, int input_w, int output_h, int output_w,
-    int pitch, int out_h_start, int out_h_end, int out_w_start,
-    int out_w_end)
-{
-  extern __shared__ float staging_tile[];
-
-  // H -> block Y, row
-  // W -> block X, col
-  int out_start_h = blockIdx.y * blockDim.y;
-  int out_end_h   = out_start_h + blockDim.y;
-  int out_start_w = blockIdx.x * blockDim.x;
-  int out_end_w   = out_start_w + blockDim.x;
-
-  int img_start_offset = blockIdx.z * pitch;
-
-  float ratio_h = (float)input_h / output_h;
-  float ratio_w = (float)input_w / output_w;
-
-  // ideally should go in unified register
-  int smem_load_h_start = floorf(out_start_h * ratio_h);
-  int smem_load_h_end = ceilf(out_end_h * ratio_h);
-  int smem_h_load_stretch = smem_load_h_end - smem_load_h_start;
-
-  int smem_load_w_start = floorf(out_start_w * ratio_w);
-  int smem_load_w_end = ceilf(out_end_w * ratio_w);
-  int smem_w_load_stretch = smem_load_w_end - smem_load_w_start;
-
-  for (int i = threadIdx.y; i < smem_h_load_stretch; i+=blockDim.y) {
-    for (int j = threadIdx.x; j < smem_w_load_stretch; j+=blockDim.x) {
-
-      if (((i+smem_load_h_start) < input_h) &&
-          ((j+smem_load_w_start) < input_w)) {
-        staging_tile[i * smem_w_load_stretch + j] = \
-                      input_tensor[img_start_offset +
-                      (smem_load_h_start + i)*input_w +
-                      smem_load_w_start + j];
-      } else {
-        staging_tile[i * smem_w_load_stretch + j] = 0.0f;
-      }
-    }
-  }
-  __syncthreads();
-
-  int out_pixel_h = out_start_h + threadIdx.y;
-  int out_pixel_w = out_start_w + threadIdx.x;
-
-  if (out_pixel_h < output_h && out_pixel_w < output_w) {
-
-    // compute pixels oh, ow span
-    int start_h = floorf(out_pixel_h * ratio_h);
-    int end_h = ceilf((out_pixel_h+1) * ratio_h);
-
-    int start_w = floorf(out_pixel_w * ratio_w);
-    int end_w = ceilf((out_pixel_w+1) * ratio_w);
-
-    int del_h = end_h - start_h;
-    int del_w = end_w - start_w;
-
-    float sum_ = 0.0f;
-
-    for (int i = 0; i < del_h; i++) {
-      for (int j = 0; j < del_w; j++) {
-        int smem_row = (start_h + i) - smem_load_h_start;
-        int smem_col = (start_w + j) - smem_load_w_start;
-        sum_ += staging_tile[smem_row * smem_w_load_stretch + smem_col];
-      }
-    }
-
-    output_tensor[(blockIdx.z * pitch) +
-      ((out_pixel_h + out_h_start) * input_w) +
-      (out_pixel_w + out_w_start)] = sum_ / (del_h * del_w);
-  }
-}
-
-__global__
-void zoom_out_edge_pad(
-    float *output_tensor,
-    int height, int width,
-    int pitch, int no_padding_h_start,
-    int no_padding_w_start,
-    int no_padding_h_end, int no_padding_w_end) {
-  // H -> block Y, row
-  // W -> block X, col
-
-  int out_pixel_h = blockIdx.y * blockDim.y + threadIdx.y;
-  int out_pixel_w = blockIdx.x * blockDim.x + threadIdx.x;
-
-  // no_padding_h_end, no_padding_w_end --> w_cropped+wstart, same for height
-  int out_location = (blockIdx.z * pitch) + (out_pixel_h * width) + out_pixel_w;
-
-  if (out_pixel_h < height && out_pixel_w < width) {
-    if (out_pixel_h < no_padding_h_start && out_pixel_w >= no_padding_w_start
-        && out_pixel_w < no_padding_w_end) {
-      // top pad
-      output_tensor[out_location] = output_tensor[(blockIdx.z * pitch) +
-        (no_padding_h_start * width) + out_pixel_w];
-    } else if (out_pixel_h >= no_padding_h_end
-        && out_pixel_w >= no_padding_w_start
-        && out_pixel_w < no_padding_w_end) {
-      // bottom pad
-      output_tensor[out_location] = output_tensor[(blockIdx.z * pitch) +
-        ((no_padding_h_end-1) * width) + out_pixel_w];
-    } else if (out_pixel_w < no_padding_w_start
-        && out_pixel_h >= no_padding_h_start
-        && out_pixel_h < no_padding_h_end) {
-      // left pad
-      output_tensor[out_location] = output_tensor[(blockIdx.z * pitch) +
-        (out_pixel_h * width) + no_padding_w_start];
-    } else if (out_pixel_w >= no_padding_w_end
-        && out_pixel_h >= no_padding_h_start
-        && out_pixel_h < no_padding_h_end) {
-      // right pad
-      output_tensor[out_location] = output_tensor[(blockIdx.z * pitch) +
-        (out_pixel_h * width) + (no_padding_w_end-1)];
-    } else if (out_pixel_h < no_padding_h_start
-        && out_pixel_w < no_padding_w_start) {
-      // top-left corner
-      output_tensor[out_location] = output_tensor[(blockIdx.z * pitch) +
-        (no_padding_h_start * width) +
-        no_padding_w_start];
-    } else if (out_pixel_h < no_padding_h_start
-        && out_pixel_w >= no_padding_w_end) {
-      // top-right corner
-      output_tensor[out_location] = output_tensor[(blockIdx.z * pitch) +
-        (no_padding_h_start * width) +
-        (no_padding_w_end-1)];
-    } else if (out_pixel_h >= no_padding_h_end
-        && out_pixel_w < no_padding_w_start) {
-      // bottom-left corner
-      output_tensor[out_location] = output_tensor[(blockIdx.z * pitch) +
-        ((no_padding_h_end-1) * width) +
-        no_padding_w_start];
-    } else if (out_pixel_h >= no_padding_h_end
-        && out_pixel_w >= no_padding_w_end) {
-      // bottom-right corner
-      output_tensor[out_location] = output_tensor[(blockIdx.z * pitch) +
-        ((no_padding_h_end-1) * width) +
-        (no_padding_w_end-1)];
-    }
-  }
-}
+#include "kernels.h"
+#include "reference.h"
 
 int get_sm_size(int *output_sizes, int H, int W, dim3 &block) {
 
@@ -256,30 +34,31 @@ void zoom (int repeat, int input_sizes[4], float zoom_factor[2])
   int H = input_sizes[2];
   int W = input_sizes[3];
 
-  // {N, C, H, W} 
-  int output_sizes[] = {N, C, (int)floor(H * zoom_factor[0]), (int)floor(W * zoom_factor[1])};
+  int Ho = (int)floorf(H * zoom_factor[0]);
+  int Wo = (int)floorf(W * zoom_factor[1]);
+  int output_sizes[] = {N, C, Ho, Wo};
 
-  bool is_zoom_out = output_sizes[2] < H && output_sizes[3] < W;
-  bool is_zoom_in = output_sizes[2] > H && output_sizes[3] > W;
+  bool is_zoom_out = Ho < H && Wo < W;
+  bool is_zoom_in = Ho > H && Wo > W;
   if (is_zoom_out == false && is_zoom_in == false) {
     printf("Zoom factors only handle simultaneous expansion(or shrinkage) in both dimensions. Exit\n");
     exit(1);
   }
 
-  // input pitch
-  int pitch = H * W;
+  // image pitch
+  size_t pitch = (size_t)H * W;
 
   // get block size and shared memory size
   dim3 block;
   int smem_size = get_sm_size(output_sizes, H, W, block);
 
-  dim3 grid (int((output_sizes[3] - 1) / block.x + 1),
-             int((output_sizes[2] - 1) / block.y + 1), C * N);
+  dim3 grid (int((Wo - 1) / block.x + 1),
+             int((Ho - 1) / block.y + 1), C * N);
 
   int pad_dims[2][2] = {{0, 0}, {0,0}};  // zoom out
   int slice_dims[2][2] = {{0, 0}, {0,0}};  // zoom in
 
-  int diff = H - output_sizes[2];
+  int diff = H - Ho;
   int half = abs(diff) / 2;
   if (diff > 0) {
     pad_dims[0][0] = half;
@@ -289,7 +68,7 @@ void zoom (int repeat, int input_sizes[4], float zoom_factor[2])
     slice_dims[0][1] = H + half;
   }
 
-  diff = W - output_sizes[3];
+  diff = W - Wo;
   half = abs(diff) / 2;
   if (diff > 0) {
     pad_dims[1][0] = half;
@@ -299,15 +78,19 @@ void zoom (int repeat, int input_sizes[4], float zoom_factor[2])
     slice_dims[1][1] = W + half;
   }
 
-  size_t img_size = N * C * H * W; 
+  size_t img_size = pitch * N * C;
   size_t img_size_bytes = sizeof(float) * img_size;
+
+  size_t output_img_size = img_size;
+  size_t output_img_size_bytes = sizeof(float) * output_img_size;
 
   float *input_img = (float*) malloc (img_size_bytes);
 
   float *d_input_img;
   hipMalloc((void**)&d_input_img, img_size_bytes);
 
-  float *output_img = (float*) malloc (img_size_bytes);
+  float *output_img = (float*) malloc (output_img_size_bytes);
+  float *output_img_ref = (float*) calloc (output_img_size, sizeof(float));
 
   float *d_output_img;
   hipMalloc((void**)&d_output_img, img_size_bytes);
@@ -321,18 +104,16 @@ void zoom (int repeat, int input_sizes[4], float zoom_factor[2])
 
   hipMemcpy(d_input_img, input_img, img_size_bytes, hipMemcpyHostToDevice);
 
-  long total_time = 0;
+  auto start = std::chrono::steady_clock::now();
+
   for (int i = 0; i < repeat; i++) {
 
-    auto start = std::chrono::steady_clock::now();
     hipMemset(d_output_img, 0, img_size_bytes);
-    hipDeviceSynchronize();
 
     if (is_zoom_in) {
       zoom_in_kernel <<<grid, block, smem_size>>> (
-          d_input_img, d_output_img, H, W, 
-          output_sizes[2],
-          output_sizes[3],
+          d_input_img, d_output_img, H, W,
+          Ho, Wo,
           pitch, slice_dims[0][0],
           slice_dims[0][1],
           slice_dims[1][0],
@@ -340,9 +121,8 @@ void zoom (int repeat, int input_sizes[4], float zoom_factor[2])
     }
     else if (is_zoom_out) {
       zoom_out_kernel <<<grid, block, smem_size>>> (
-        d_input_img, d_output_img, H, W, 
-        output_sizes[2],
-        output_sizes[3],
+        d_input_img, d_output_img, H, W,
+        Ho, Wo,
         pitch, pad_dims[0][0],
         pad_dims[0][1],
         pad_dims[1][0],
@@ -353,33 +133,59 @@ void zoom (int repeat, int input_sizes[4], float zoom_factor[2])
                   C * N);
 
       zoom_out_edge_pad <<<grid2, block>>> (
-        d_output_img, H, W, pitch, 
+        d_output_img, H, W, pitch,
         pad_dims[0][0], pad_dims[1][0],
-        pad_dims[0][0] + output_sizes[2],
-        pad_dims[1][0] + output_sizes[3]);
+        pad_dims[0][0] + Ho,
+        pad_dims[1][0] + Wo);
     }
+  }
+  hipDeviceSynchronize();
+  auto end = std::chrono::steady_clock::now();
+  auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 
-    hipDeviceSynchronize();
-    auto end = std::chrono::steady_clock::now();
-    auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    total_time += time;
+  printf("Average execution time of the %s kernel: %f (us)\n",
+         is_zoom_in ? "zoom-in" : "zoom-out", time * 1e-3 / repeat);
+
+  hipMemcpy(output_img, d_output_img, output_img_size_bytes, hipMemcpyDeviceToHost);
+
+  if (is_zoom_in) {
+    zoom_in_reference(
+        input_img, output_img_ref, H, W, Ho, Wo,
+        pitch, slice_dims[0][0],
+        slice_dims[0][1],
+        slice_dims[1][0],
+        slice_dims[1][1],
+        C * N);
+  } else if (is_zoom_out) {
+    zoom_out_reference(
+      input_img, output_img_ref, H, W, Ho, Wo,
+      pitch, pad_dims[0][0],
+      pad_dims[0][1],
+      pad_dims[1][0],
+      pad_dims[1][1],
+      C * N);
+
+    zoom_out_edge_pad_reference(
+      output_img_ref, H, W, pitch,
+      pad_dims[0][0], pad_dims[1][0],
+      pad_dims[0][0] + Ho,
+      pad_dims[1][0] + Wo,
+      C * N);
   }
 
-  hipMemcpy(output_img, d_output_img, img_size_bytes, hipMemcpyDeviceToHost);
-
-  double checksum = 0;
-  for (size_t i = 0; i < img_size; i++) {
-    checksum += output_img[i];
+  bool ok = true;
+  for (size_t i = 0; i < output_img_size; i++) {
+    if (fabsf(output_img[i] - output_img_ref[i]) > 1e-4f) {
+      ok = false;
+    }
   }
+  printf("%s\n", ok ? "PASS" : "FAIL");
 
   hipFree(d_input_img);
   hipFree(d_output_img);
   free(input_img);
   free(output_img);
-
-  printf("Average execution time of the %s kernel: %f (us)\n",
-         is_zoom_in ? "zoom-in" : "zoom-out", total_time * 1e-3 / repeat);
-  printf("Kernel checksum: %lf\n", checksum);
+  free(output_img_ref);
 }
 
 int main(int argc, char* argv[])
@@ -397,7 +203,7 @@ int main(int argc, char* argv[])
   int repeat = atoi(argv[5]);
 
   float zf[2]; // zoom factor
-  
+
   zf[0] = 1.5f; zf[1] = 2.5f;
   zoom(repeat, input_sizes, zf);
 

@@ -213,7 +213,7 @@ inline T
 ShuffleIndex(T input,      ///< [in] The value to broadcast
              int src_lane, ///< [in] Which warp lane is to do the broadcasting
              unsigned int member_mask,///< [in] 32-bit mask of participating warp lanes
-             const sycl::nd_item<3> &item) 
+             const sycl::nd_item<3> &item)
 {
     /// The 5-bit SHFL mask for logically splitting warps into sub-segments starts 8-bits up
     enum {
@@ -332,7 +332,7 @@ struct WarpScanShfl
     {
         int output = 0;
         //int shfl_c = first_lane | SHFL_C;   // Shuffle control (mask and first-lane)
-        
+
         output = input;
         //int value = shift_sub_group_right(member_mask, item.get_sub_group(), output, offset, shfl_c);
         int value = sycl::shift_group_right(item.get_sub_group(), output, offset);
@@ -369,7 +369,6 @@ struct WarpScanShfl
         unsigned int value = sycl::shift_group_right(item.get_sub_group(), output, offset);
         if (lane_id >= offset) output += value;
 #endif
-         
         return output;
     }
 
@@ -544,8 +543,7 @@ struct WarpScanShfl
         int first_lane,  ///< [in] Index of first lane in segment
         int offset)      ///< [in] Up-offset to pull from
     {
-        _T temp = ShuffleUp<LOGICAL_WARP_THREADS>(input, offset, first_lane,
-                                                  member_mask);
+        _T temp = ShuffleUp<LOGICAL_WARP_THREADS>(input, offset, first_lane, member_mask, item);
 
         // Perform scan op if from a valid peer
         _T output = scan_op(temp, input);
@@ -698,8 +696,7 @@ struct WarpScanShfl
            IsIntegerT /*is_integer*/) ///< [in]
     {
         // initial value unknown
-        exclusive = ShuffleUp<LOGICAL_WARP_THREADS>(inclusive, 1, 0,
-                                                    member_mask);
+        exclusive = ShuffleUp<LOGICAL_WARP_THREADS>(inclusive, 1, 0, member_mask, item);
     }
 
     /// Update inclusive and exclusive using input and inclusive (specialized for summation of integer types)
@@ -716,8 +713,7 @@ struct WarpScanShfl
                                 ScanOpT scan_op, T initial_value, IsIntegerT)
     {
         inclusive = scan_op(initial_value, inclusive);
-        exclusive = ShuffleUp<LOGICAL_WARP_THREADS>(inclusive, 1, 0,
-                                                    member_mask);
+        exclusive = ShuffleUp<LOGICAL_WARP_THREADS>(inclusive, 1, 0, member_mask, item);
 
         if (lane_id == 0)
             exclusive = initial_value;

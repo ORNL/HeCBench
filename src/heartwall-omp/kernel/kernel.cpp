@@ -1,12 +1,13 @@
 #include "../main.h"                // (in main directory)            needed to recognized input parameters
 #include "../util/avi/avilib.h"          // (in directory)              needed by avi functions
 #include "../util/avi/avimod.h"          // (in directory)              needed by avi functions
+#include "../util/timer/timer.h"
 #include <iostream>
 #include <omp.h>
 #include <math.h>
 
 
-void 
+uint64_t 
 kernel_gpu_wrapper(  params_common common,
     int* endoRow,
     int* endoCol,
@@ -18,8 +19,6 @@ kernel_gpu_wrapper(  params_common common,
     int* tEpiColLoc,
     avi_t* frames)
 {
-
-
   // common
   //printf("tSize is %d, sSize is %d\n", common.tSize, common.sSize);
   common.in_rows = common.tSize + 1 + common.tSize;
@@ -370,6 +369,8 @@ kernel_gpu_wrapper(  params_common common,
 
   //buffer<fp,1> d_frame(common.frame_elem);
   int allPoints = common.allPoints; 
+
+  uint64_t kernel_time = 0;
   
 #pragma omp target data map(alloc: endoT[0:common.in_elem * common.endoPoints],\
                                     epiT[0:common.in_elem * common.epiPoints],\
@@ -420,73 +421,22 @@ kernel_gpu_wrapper(  params_common common,
         1);                  // converted
 
     // copy frame to GPU memory
-    //q.submit ([&](handler &cgh) {
-     //   auto d_frame_acc = d_frame.get_access<sycl_write>(cgh);
-      //  cgh.copy(frame, d_frame_acc);
-       // });
-    #pragma omp target data map(to: frame[0:common.frame_elem])
-
-    //==================================================50
-    //  launch kernel
-    //==================================================50
-    /*
-    q.submit ([&](handler &cgh) {
-
-        // read access
-        auto d_common_acc = d_common.get_access<sycl_read>(cgh);
-        auto d_frame_acc = d_frame.get_access<sycl_read>(cgh);
-        //auto d_frame_no_acc = d_frame_no.get_access<sycl_read>(cgh);
-
-        auto d_endoRow_acc = d_endoRow.get_access<sycl_read_write>(cgh);
-        auto d_endoCol_acc = d_endoCol.get_access<sycl_read_write>(cgh);
-        auto d_tEndoRowLoc_acc = d_tEndoRowLoc.get_access<sycl_read_write>(cgh);
-        auto d_tEndoColLoc_acc = d_tEndoColLoc.get_access<sycl_read_write>(cgh);
-        auto d_epiRow_acc = d_epiRow.get_access<sycl_read_write>(cgh);
-        auto d_epiCol_acc = d_epiCol.get_access<sycl_read_write>(cgh);
-        auto d_tEpiRowLoc_acc = d_tEpiRowLoc.get_access<sycl_read_write>(cgh);
-        auto d_tEpiColLoc_acc = d_tEpiColLoc.get_access<sycl_read_write>(cgh);
-
-        // read/write or write access depending on checksum
-#ifdef TEST_CHECKSUM
-        constexpr access::mode sycl_access_mode     = sycl_read_write;
-#else
-        constexpr access::mode sycl_access_mode     = sycl_write;
-#endif
-        auto d_endoT_acc = d_endoT.get_access<sycl_access_mode>(cgh);
-        auto d_epiT_acc = d_epiT.get_access<sycl_access_mode>(cgh);
-        auto d_in2_all_acc = d_in2.get_access<sycl_access_mode>(cgh);
-        auto d_conv_all_acc = d_conv.get_access<sycl_access_mode>(cgh);
-        auto d_in2_pad_cumv_all_acc = d_in2_pad_cumv.get_access<sycl_access_mode>(cgh);
-        auto d_in2_pad_cumv_sel_all_acc = d_in2_pad_cumv_sel.get_access<sycl_access_mode>(cgh);
-        auto d_in2_sub_cumh_all_acc = d_in2_sub_cumh.get_access<sycl_access_mode>(cgh);
-        auto d_in2_sub_cumh_sel_all_acc = d_in2_sub_cumh_sel.get_access<sycl_access_mode>(cgh);
-        auto d_in2_sub2_all_acc = d_in2_sub2.get_access<sycl_access_mode>(cgh);
-        auto d_in2_sqr_all_acc = d_in2_sqr.get_access<sycl_access_mode>(cgh);
-        auto d_in2_sqr_sub2_all_acc = d_in2_sqr_sub2.get_access<sycl_access_mode>(cgh);
-        auto d_in_sqr_all_acc = d_in_sqr.get_access<sycl_access_mode>(cgh);
-        auto d_tMask_all_acc = d_tMask.get_access<sycl_access_mode>(cgh);
-        auto d_mask_conv_all_acc = d_mask_conv.get_access<sycl_access_mode>(cgh);
-        auto d_in_mod_temp_all_acc = d_in_mod_temp.get_access<sycl_access_mode>(cgh);
-        auto d_in_partial_sum_all_acc = d_in_partial_sum.get_access<sycl_access_mode>(cgh);
-        auto d_in_sqr_partial_sum_all_acc = d_in_sqr_partial_sum.get_access<sycl_access_mode>(cgh);
-        auto par_max_val_all_acc = d_par_max_val.get_access<sycl_access_mode>(cgh);
-        auto par_max_coo_all_acc = d_par_max_coo.get_access<sycl_access_mode>(cgh);
-        auto d_in_final_sum_all_acc = d_in_final_sum.get_access<sycl_access_mode>(cgh);
-        auto d_in_sqr_final_sum_all_acc = d_in_sqr_final_sum.get_access<sycl_access_mode>(cgh);
-        auto denomT_all_acc = d_denomT.get_access<sycl_access_mode>(cgh);
-#ifdef TEST_CHECKSUM
-        auto checksum_acc = d_checksum.get_access<sycl_access_mode>(cgh);
-#endif
-*/
-
-#pragma omp target teams num_teams(allPoints) thread_limit(NUMBER_THREADS)
-{
-#pragma omp parallel
-{
-#include "kernel.h"
-}
-}
-
+    #pragma omp target data map(frame[0:common.frame_elem])
+    {
+      //==================================================50
+      //  launch kernel
+      //==================================================50
+      uint64_t start_time = get_time();
+      #pragma omp target teams num_teams(allPoints) thread_limit(NUMBER_THREADS)
+      {
+        #pragma omp parallel
+        {
+          #include "kernel.h"
+        }
+      }
+      uint64_t end_time = get_time();
+      kernel_time += end_time - start_time;
+    }
 
     // free frame after each loop iteration, since AVI library allocates memory for every frame fetched
     free(frame);
@@ -515,9 +465,8 @@ kernel_gpu_wrapper(  params_common common,
     //==================================================50
     //  End
     //==================================================50
-
   }
-}
+  }
 
 #ifdef TEST_CHECKSUM
   free(checksum);
@@ -549,8 +498,5 @@ kernel_gpu_wrapper(  params_common common,
 
   printf("\n");
   fflush(NULL);
+  return kernel_time;
 }
-
-//========================================================================================================================================================================================================200
-//  END
-//========================================================================================================================================================================================================200

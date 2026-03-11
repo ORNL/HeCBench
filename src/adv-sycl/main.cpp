@@ -1,6 +1,7 @@
 #include <iostream>
-#include <cstdlib>
 #include <chrono>
+#include <cmath>
+#include <cstdlib>
 #include <sycl/sycl.hpp>
 
 #define p_IJWID 6
@@ -21,8 +22,10 @@
 #define p_cubNp 4096
 #define p_cubNq 16
 
+#include "reference.h"
+
 dfloat *drandAlloc(int N){
-  dfloat *v = (dfloat*) calloc(N, sizeof(dfloat));
+  dfloat *v = (dfloat*) malloc(N * sizeof(dfloat));
   for(int n = 0; n < N; ++n) v[n] = drand48();
   return v;
 }
@@ -62,6 +65,7 @@ int main(int argc, char **argv) {
   dfloat *h_cubInterpT     = drandAlloc(Np*cubNp);
   dfloat *h_u              = drandAlloc(3*Np*Nelements);
   dfloat *h_adv            = drandAlloc(3*Np*Nelements);
+  dfloat *adv_ref        = drandAlloc(3*Np*Nelements);
 
 #ifdef USE_GPU
   sycl::queue q(sycl::gpu_selector_v, sycl::property::queue::in_order());
@@ -164,6 +168,8 @@ int main(int argc, char **argv) {
           }
         }
 
+        item.barrier(sycl::access::fence_space::local_space);
+
         for (int k = 0; k < 16; ++k) {
           s_U1[j][i] = r_Ud[k];
           s_V1[j][i] = r_Vd[k];
@@ -213,6 +219,8 @@ int main(int argc, char **argv) {
           r_U[k] = Uhat * Udr + Vhat * Uds + What * Udt;
           r_V[k] = Uhat * Vdr + Vhat * Vds + What * Vdt;
           r_W[k] = Uhat * Wdr + Vhat * Wds + What * Wdt;
+
+          item.barrier(sycl::access::fence_space::local_space);
         }
 
         for (int c = 0; c < 8; ++c) {
@@ -282,14 +290,24 @@ int main(int argc, char **argv) {
   sycl::free(u             , q);
   sycl::free(adv           , q);
 
-  double checksum = 0;
+  reference(Nelements,
+            h_vgeo,
+            h_cubvgeo,
+            h_cubDiffInterpT,
+            h_cubInterpT,
+            offset,
+            h_u,
+            adv_ref);
+
+  bool ok = true;
   for (int i = 0; i < 3*Np*Nelements; i++) {
-    checksum += h_adv[i];
-    #ifdef OUTPUT
-    std::cout << h_adv[i] << "\n";
-    #endif
+    if (fabs(h_adv[i] - adv_ref[i]) > 1e-4) {
+      std::cout << i << " : " << h_adv[i] << " != " << adv_ref[i] << std::endl;
+      ok = false;
+      break;
+    }
   }
-  std::cout << "Checksum=" << checksum << "\n";
+  printf("%s\n", ok ? "PASS" : "FAIL");
 
   // statistics
   const dfloat GDOFPerSecond = (N*N*N)*Nelements/elapsed;
@@ -307,5 +325,6 @@ int main(int argc, char **argv) {
   free(h_cubInterpT    );
   free(h_u             );
   free(h_adv           );
+  free(adv_ref       );
   return 0;
 }

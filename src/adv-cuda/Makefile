@@ -25,7 +25,8 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -Ddfloat=double -Ddlong=int -std=c++17 -Xcompiler -Wall -arch=$(ARCH)
+CFLAGS := $(EXTRA_CFLAGS) -Ddfloat=double -Ddlong=int \
+          -std=c++17 -Xcompiler -Wall -arch=$(ARCH)
 
 # Linker Flags
 LDFLAGS = 
@@ -52,7 +53,7 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu adv.cu
+%.o: %.cu adv.h reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

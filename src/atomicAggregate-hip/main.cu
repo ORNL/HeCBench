@@ -9,7 +9,7 @@
 template<unsigned int WarpSize=32>
 __device__ int atomicAggInc(int* ptr) {
   unsigned mask;
-#ifdef HIP_ENABLE_WARP_SYNC_BUILTINS
+#if __has_builtin(__match_any_sync)
   unsigned long tmask = 0xFFFFFFFFFFFFFFFF;
   mask = __match_any_sync(tmask, (unsigned long long)ptr);
 #else
@@ -32,7 +32,7 @@ __device__ int atomicAggInc(int* ptr) {
 template<unsigned int WarpSize=64>
 __device__ int atomicAggInc2(int* ptr) {
   unsigned long long mask;
-#ifdef HIP_ENABLE_WARP_SYNC_BUILTINS
+#if __has_builtin(__match_any_sync)
   mask = __match_any_sync(0xFFFFFFFFFFFFFFFF, (unsigned long long)ptr);
 #else
   for (int i = 0; i < WarpSize; i++){

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <cmath>
 #include <cuda.h>
 #include "utils.h"
 #include "kernels.cu"

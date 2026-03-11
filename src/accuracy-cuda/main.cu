@@ -42,11 +42,70 @@ void accuracy_kernel(
     }
     __syncthreads();
   }
-  if (threadIdx.x == 0) { 
+  if (threadIdx.x == 0) {
     atomicAdd(accuracy, count);
   }
 }
- 
+
+// modified from Claude Free
+__global__
+void accuracy_kernel2(
+    const int N,
+    const int D,
+    const int top_k,
+    const float* __restrict__ Xdata,
+    const int*   __restrict__ labelData,
+    int* accuracy)
+{
+  __shared__ float s_label_pred;
+  __shared__ int s_label;
+
+  int count = 0;
+
+  for (int row = blockIdx.x; row < N; row += gridDim.x) {
+
+    if (threadIdx.x == 0) {
+      s_label = labelData[row];
+      s_label_pred = Xdata[row * D + s_label];
+    }
+    __syncthreads();
+
+    const int   label      = s_label;
+    const float label_pred = s_label_pred;
+
+    int ngt = 0;
+    const float* row_ptr = Xdata + row * D;
+    int col = threadIdx.x;
+    for (; col + 3 * blockDim.x < D; col += 4 * blockDim.x) {
+      float p0 = row_ptr[col];
+      float p1 = row_ptr[col +     blockDim.x];
+      float p2 = row_ptr[col + 2 * blockDim.x];
+      float p3 = row_ptr[col + 3 * blockDim.x];
+
+      ngt += (p0 > label_pred || (p0 == label_pred && col                   <= label));
+      ngt += (p1 > label_pred || (p1 == label_pred && col +     blockDim.x  <= label));
+      ngt += (p2 > label_pred || (p2 == label_pred && col + 2 * blockDim.x  <= label));
+      ngt += (p3 > label_pred || (p3 == label_pred && col + 3 * blockDim.x  <= label));
+    }
+    for (; col < D; col += blockDim.x) {
+      float pred = row_ptr[col];
+      ngt += (pred > label_pred || (pred == label_pred && col <= label));
+    }
+
+    BlockReduce(ngt);
+
+    if (threadIdx.x == 0 && ngt <= top_k) {
+      ++count;
+    }
+    __syncthreads();
+  }
+
+  if (threadIdx.x == 0 && count > 0) {
+    atomicAdd(accuracy, count);
+  }
+}
+
+
 int main(int argc, char* argv[])
 {
   if (argc != 5) {
@@ -60,14 +119,14 @@ int main(int argc, char* argv[])
 
   const int data_size = nrows * ndims;
 
-  const int label_size_bytes = nrows * sizeof(int); 
-  const size_t data_size_bytes = data_size * sizeof(float); 
+  const int label_size_bytes = nrows * sizeof(int);
+  const size_t data_size_bytes = data_size * sizeof(float);
 
   int *label = (int*) malloc (label_size_bytes);
 
   srand(123);
   for (int i = 0; i < nrows; i++)
-    label[i] = rand() % ndims; 
+    label[i] = rand() % ndims;
 
   float *data = (float*) malloc (data_size_bytes);
 
@@ -112,9 +171,22 @@ int main(int argc, char* argv[])
 
     int count;
     cudaMemcpy(&count, d_count, sizeof(int), cudaMemcpyDeviceToHost);
-    bool ok = (count == count_ref);
-    printf("%s\n", ok ? "PASS" : "FAIL");
+    printf("%s\n", (count == count_ref) ? "PASS" : "FAIL");
     // printf("Accuracy = %f\n", (float)count / nrows);
+
+    start = std::chrono::steady_clock::now();
+
+    for (int i = 0; i < repeat; i++) {
+      cudaMemset(d_count, 0, sizeof(int));
+      accuracy_kernel2<<<grid, block>>>(nrows, ndims, top_k, d_data, d_label, d_count);
+    }
+
+    cudaDeviceSynchronize();
+    end = std::chrono::steady_clock::now();
+    time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    printf("Average execution time of accuracy kernel2: %f (us)\n", (time * 1e-3f) / repeat);
+    cudaMemcpy(&count, d_count, sizeof(int), cudaMemcpyDeviceToHost);
+    printf("%s\n", (count == count_ref) ? "PASS" : "FAIL");
   }
 
   cudaFree(d_label);

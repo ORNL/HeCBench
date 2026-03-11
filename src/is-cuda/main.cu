@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <cmath>
 #include <chrono>
 #include <cuda.h>
 #include "is.h"

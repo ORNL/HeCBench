@@ -33,7 +33,7 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -Ddfloat=double -Ddlong=int \
+CFLAGS := $(EXTRA_CFLAGS) -Ddfloat=double -Ddlong=int -I../adv-cuda \
           -std=c++17 -Wall -fsycl \
           --gcc-toolchain=$(GCC_TOOLCHAIN)
 
@@ -80,7 +80,7 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp
+%.o: %.cpp ../adv-cuda/reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

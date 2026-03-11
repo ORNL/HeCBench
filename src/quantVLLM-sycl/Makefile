@@ -31,7 +31,7 @@ obj = $(source:.cpp=.o)
 
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../quantVLLM-cuda  -fsycl \
-          -foffload-fp32-prec-div --gcc-toolchain=$(GCC_TOOLCHAIN)
+          --gcc-toolchain=$(GCC_TOOLCHAIN)
 
 ifeq ($(VENDOR), AdaptiveCpp)
     CFLAGS_TMP := $(CFLAGS)

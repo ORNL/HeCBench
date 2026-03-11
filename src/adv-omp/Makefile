@@ -25,7 +25,7 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -Ddfloat=double -Ddlong=int -std=c++17 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -Ddfloat=double -Ddlong=int -std=c++17 -Wall -I../adv-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -57,7 +57,7 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp Makefile
+%.o: %.cpp ../adv-cuda/reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
@@ -65,4 +65,3 @@ clean:
 
 run: $(program)
 	$(LAUNCHER) ./$(program) 7 15 8000 100
-

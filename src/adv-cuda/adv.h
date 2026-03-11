@@ -25,7 +25,7 @@ __global__ void advCubatureHex3D (
   const int j = threadIdx.y;
   const int id = j * 16 + i;
 
-  if (j < 8 && i < 16) s_cubInterpT[j][i] = cubInterpT[id];
+  if (id < 8 * 16) s_cubInterpT[j][i] = cubInterpT[id];
   s_cubD[j][i] = cubD[id];
 
   for (int k = 0; k < 16; ++k) {
@@ -84,6 +84,7 @@ __global__ void advCubatureHex3D (
       r_Wd[k] = r_W[k];
     }
   }
+  __syncthreads();
 
   for (int k = 0; k < 16; ++k) {
     s_U1[j][i] = r_Ud[k];
@@ -134,6 +135,8 @@ __global__ void advCubatureHex3D (
     r_U[k] = Uhat * Udr + Vhat * Uds + What * Udt;
     r_V[k] = Uhat * Vdr + Vhat * Vds + What * Vdt;
     r_W[k] = Uhat * Wdr + Vhat * Wds + What * Wdt;
+
+    __syncthreads();
   }
 
   for (int c = 0; c < 8; ++c) {

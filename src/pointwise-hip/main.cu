@@ -31,24 +31,21 @@
 #include <math.h>
 #include <chrono>
 #include <hip/hip_runtime.h>
+#include "reference.h"
 
 // Define some error checking macros.
-#define hipErrCheck(stat) { hipErrCheck_((stat), __FILE__, __LINE__); }
-void hipErrCheck_(hipError_t stat, const char *file, int line) {
+#define gpuErrCheck(stat) { gpuErrCheck_((stat), __FILE__, __LINE__); }
+void gpuErrCheck_(hipError_t stat, const char *file, int line) {
   if (stat != hipSuccess) {
     fprintf(stderr, "HIP Error: %s %s %d\n", hipGetErrorString(stat), file, line);
   }
 }
 
-typedef struct {
-  double i, c, h;
-} checksum;
-
 // Fused kernel
-__global__ 
+__global__
 void elementwise(int hiddenSize, int miniBatch,
-    const float *__restrict__ tmp_h, 
-    const float *__restrict__ tmp_i, 
+    const float *__restrict__ tmp_h,
+    const float *__restrict__ tmp_i,
     const float *__restrict__ bias,
     float *__restrict__ linearGates,
     float *__restrict__ h_out,
@@ -62,7 +59,7 @@ void elementwise(int hiddenSize, int miniBatch,
   if (index >= numElements) return;
 
   int batch = index / hiddenSize;
-  int gateIndex = (index % hiddenSize) + 4 * batch * hiddenSize;   
+  int gateIndex = (index % hiddenSize) + 4 * batch * hiddenSize;
 
   float g[4];
 
@@ -70,7 +67,7 @@ void elementwise(int hiddenSize, int miniBatch,
     g[i] = tmp_i[i * hiddenSize + gateIndex] + tmp_h[i * hiddenSize + gateIndex];
     g[i] += bias[i * hiddenSize + index % hiddenSize] + bias[(i + 4) * hiddenSize + index % hiddenSize];
     linearGates[gateIndex + i * hiddenSize] = g[i];
-  }   
+  }
 
   float in_gate     = 1.f / (1.f + expf(-g[0]));
   float forget_gate = 1.f / (1.f + expf(-g[1]));
@@ -81,7 +78,7 @@ void elementwise(int hiddenSize, int miniBatch,
 
   c_out[index] = val;
 
-  val = out_gate * tanhf(val);                                   
+  val = out_gate * tanhf(val);
 
   h_out[index] = val;
   i_out[index] = val;
@@ -105,7 +102,8 @@ void init (float* data, int size) {
 }
 
 void test(int hiddenSize, int miniBatch, int seqLength, int numLayers,
-          checksum &cs, double &time) {
+          float *testOutputi, float *testOutputh, float *testOutputc, double &time)
+{
   float *h_data;
   float *i_data;
   float *c_data;
@@ -123,17 +121,17 @@ void test(int hiddenSize, int miniBatch, int seqLength, int numLayers,
   int tmp_h_size = 4 * numLayers * numElements;
   int tmp_i_size = 4 * seqLength * numElements;
 
-  hipErrCheck(hipMalloc((void**)&h_data, hc_size * sizeof(float)));
-  hipErrCheck(hipMalloc((void**)&i_data, i_size * sizeof(float)));
-  hipErrCheck(hipMalloc((void**)&c_data, hc_size * sizeof(float)));
-  hipErrCheck(hipMalloc((void**)&bias, bias_size * sizeof(float)));
+  gpuErrCheck(hipMalloc((void**)&h_data, hc_size * sizeof(float)));
+  gpuErrCheck(hipMalloc((void**)&i_data, i_size * sizeof(float)));
+  gpuErrCheck(hipMalloc((void**)&c_data, hc_size * sizeof(float)));
+  gpuErrCheck(hipMalloc((void**)&bias, bias_size * sizeof(float)));
 
   // Workspace
-  hipErrCheck(hipMalloc((void**)&tmp_h, tmp_h_size * sizeof(float)));
-  hipErrCheck(hipMalloc((void**)&tmp_i, tmp_i_size * sizeof(float)));
+  gpuErrCheck(hipMalloc((void**)&tmp_h, tmp_h_size * sizeof(float)));
+  gpuErrCheck(hipMalloc((void**)&tmp_i, tmp_i_size * sizeof(float)));
 
   // Activations
-  hipErrCheck(hipMalloc((void**)&linearGates, 4 * seqLength * numLayers * numElements * sizeof(float)));  
+  gpuErrCheck(hipMalloc((void**)&linearGates, 4 * seqLength * numLayers * numElements * sizeof(float)));
 
   // Initialise with random values on a device
   dim3 blocks (256);
@@ -141,7 +139,7 @@ void test(int hiddenSize, int miniBatch, int seqLength, int numLayers,
   dim3 grids_b ((bias_size + 255)/256);
   dim3 grids_tmp_h ((tmp_h_size + 255)/256);
   dim3 grids_tmp_i ((tmp_i_size + 255)/256);
-          
+
   init <<< grids_tmp_h, blocks >>> (tmp_h, tmp_h_size);
   init <<< grids_tmp_i, blocks >>> (tmp_i, tmp_i_size);
   init <<< grids_hc, blocks >>> (c_data, hc_size);
@@ -156,7 +154,7 @@ void test(int hiddenSize, int miniBatch, int seqLength, int numLayers,
   int recurBatchSize = 2;
 
   dim3 grids_p ((numElements + 255)/256);
-  
+
   double ktime = 0.0;
 
   while (true) {
@@ -201,17 +199,17 @@ void test(int hiddenSize, int miniBatch, int seqLength, int numLayers,
 
     for (int layer = lStart; layer < lEnd; layer++) {
       for (int i = rStart; i < rEnd; i++)
-        elementwise <<< grids_p, blocks >>> 
+        elementwise <<< grids_p, blocks >>>
         (hiddenSize, miniBatch,
-         tmp_h + 4 * layer * numElements, 
-         tmp_i + 4 * i * numElements, 
+         tmp_h + 4 * layer * numElements,
+         tmp_i + 4 * i * numElements,
          bias + 8 * layer * hiddenSize,
          linearGates + 4 * (i * numElements + layer * seqLength * numElements),
          h_data + (i + 1) * numElements + layer * (seqLength + 1) * numElements,
          i_data + i * numElements + (layer + 1) * seqLength * numElements,
          c_data + i * numElements + layer * (seqLength + 1) * numElements,
          c_data + (i + 1) * numElements + layer * (seqLength + 1) * numElements);
-      hipErrCheck(hipGetLastError());
+      gpuErrCheck(hipGetLastError());
     }
 
     hipDeviceSynchronize();
@@ -222,73 +220,40 @@ void test(int hiddenSize, int miniBatch, int seqLength, int numLayers,
   time += ktime;
   //printf("Kernel execution time: %f (s)\n", ktime * 1e-9f);
 
-  float *testOutputi = (float*)malloc(numElements * seqLength * sizeof(float));
-  float *testOutputh = (float*)malloc(numElements * numLayers * sizeof(float));
-  float *testOutputc = (float*)malloc(numElements * numLayers * sizeof(float));
-
-  hipDeviceSynchronize();
-  
-  hipErrCheck(hipMemcpy(testOutputi, i_data + numLayers * seqLength * numElements, 
+  gpuErrCheck(hipMemcpy(testOutputi, i_data + numLayers * seqLength * numElements,
     seqLength * numElements * sizeof(float), hipMemcpyDeviceToHost));
   for (int layer = 0; layer < numLayers; layer++) {
-    hipErrCheck(hipMemcpy(testOutputh + layer * numElements, 
-      h_data + seqLength * numElements + layer * (seqLength + 1) * numElements, 
+    gpuErrCheck(hipMemcpy(testOutputh + layer * numElements,
+      h_data + seqLength * numElements + layer * (seqLength + 1) * numElements,
       numElements * sizeof(float), hipMemcpyDeviceToHost));
-    hipErrCheck(hipMemcpy(testOutputc + layer * numElements, 
-      c_data + seqLength * numElements + layer * (seqLength + 1) * numElements, 
+    gpuErrCheck(hipMemcpy(testOutputc + layer * numElements,
+      c_data + seqLength * numElements + layer * (seqLength + 1) * numElements,
       numElements * sizeof(float), hipMemcpyDeviceToHost));
   }
 
-  double checksumi = 0.0;
-  double checksumh = 0.0;
-  double checksumc = 0.0;
+  gpuErrCheck(hipFree(h_data));
+  gpuErrCheck(hipFree(i_data));
+  gpuErrCheck(hipFree(c_data));
 
-  for (int m = 0; m < miniBatch; m++) {
-    for (int j = 0; j < seqLength; j++) {
-      for (int i = 0; i < hiddenSize; i++) {
-        checksumi += testOutputi[j * numElements + m * hiddenSize + i];
-        //if (hiddenSize <= 8) printf("i: (%d,%d): %E\n", j, i, testOutputi[j * numElements + m * hiddenSize + i]);
-      }
-    }
-    for (int j = 0; j < numLayers; j++) {
-      for (int i = 0; i < hiddenSize; i++) {         
-        checksumh += testOutputh[j * numElements + m * hiddenSize + i];
-        checksumc += testOutputc[j * numElements + m * hiddenSize + i];
-      }
-    }
-  }
-
-  free(testOutputi);
-  free(testOutputc);
-  free(testOutputh);
-
-  hipErrCheck(hipFree(h_data));
-  hipErrCheck(hipFree(i_data));  
-  hipErrCheck(hipFree(c_data));  
-
-  hipErrCheck(hipFree(bias));
-  hipErrCheck(hipFree(tmp_h));
-  hipErrCheck(hipFree(tmp_i));
-  hipErrCheck(hipFree(linearGates));
-
-  cs.i = checksumi;
-  cs.c = checksumc;
-  cs.h = checksumh;
+  gpuErrCheck(hipFree(bias));
+  gpuErrCheck(hipFree(tmp_h));
+  gpuErrCheck(hipFree(tmp_i));
+  gpuErrCheck(hipFree(linearGates));
 }
 
 int main(int argc, char* argv[]) {
   int seqLength;
   int numLayers;
   int hiddenSize;
-  int miniBatch; 
-  int numRuns; 
+  int miniBatch;
+  int numRuns;
 
   if (argc == 6) {
     seqLength = atoi(argv[1]);
     numLayers = atoi(argv[2]);
     hiddenSize = atoi(argv[3]);
-    miniBatch = atoi(argv[4]);   
-    numRuns = atoi(argv[5]);   
+    miniBatch = atoi(argv[4]);
+    numRuns = atoi(argv[5]);
   }
   else if (argc == 1) {
     printf("Running with default settings\n");
@@ -300,23 +265,59 @@ int main(int argc, char* argv[]) {
   }
   else {
     printf("Usage: %s <seqLength> <numLayers> <hiddenSize> <miniBatch> <repeat>\n", argv[0]);
-    return 1;      
+    return 1;
   }
 
   printf("seqLength %d, numLayers %d, hiddenSize %d, miniBatch %d\n",
-         seqLength, numLayers, hiddenSize, miniBatch);  
+         seqLength, numLayers, hiddenSize, miniBatch);
 
-  checksum cs;
-  
+  int numElements = hiddenSize * miniBatch;
+  float *testOutputi = (float*)malloc(numElements * seqLength  * sizeof(float));
+  float *testOutputh = (float*)malloc(numElements * numLayers  * sizeof(float));
+  float *testOutputc = (float*)malloc(numElements * numLayers  * sizeof(float));
+  float *testOutputi_ref = (float*)malloc(numElements * seqLength  * sizeof(float));
+  float *testOutputh_ref = (float*)malloc(numElements * numLayers  * sizeof(float));
+  float *testOutputc_ref = (float*)malloc(numElements * numLayers  * sizeof(float));
+
   double time = 0.0;
 
   for (int run = 0; run < numRuns; run++) {
-    test(hiddenSize, miniBatch, seqLength, numLayers, cs, time);
+    test(hiddenSize, miniBatch, seqLength, numLayers,
+         testOutputi, testOutputh, testOutputc, time);
+    test_ref(hiddenSize, miniBatch, seqLength, numLayers,
+             testOutputi_ref, testOutputh_ref, testOutputc_ref);
   }
 
   printf("Average kernel execution time: %f (s)\n", (time * 1e-9f) / numRuns);
-  printf("i checksum %E     ", cs.i);
-  printf("c checksum %E     ", cs.c);
-  printf("h checksum %E\n", cs.h);
+
+  int error = 0;
+  for (int m = 0; m < miniBatch; m++) {
+    for (int j = 0; j < seqLength; j++) {
+      for (int i = 0; i < hiddenSize; i++) {
+        if (fabsf(testOutputi[j * numElements + m * hiddenSize + i] -
+                  testOutputi_ref[j * numElements + m * hiddenSize + i]) > 1e-4f)
+          error++;
+      }
+    }
+    for (int j = 0; j < numLayers; j++) {
+      for (int i = 0; i < hiddenSize; i++) {
+        if (fabsf(testOutputh[j * numElements + m * hiddenSize + i] -
+                  testOutputh_ref[j * numElements + m * hiddenSize + i]) > 1e-4f)
+          error++;
+        if (fabsf(testOutputc[j * numElements + m * hiddenSize + i] -
+                  testOutputc_ref[j * numElements + m * hiddenSize + i]) > 1e-4f)
+          error++;
+      }
+    }
+  }
+
+  printf("%s\n", (error == 0) ? "PASS" : "FAIL");
+
+  free(testOutputi);
+  free(testOutputh);
+  free(testOutputc);
+  free(testOutputi_ref);
+  free(testOutputh_ref);
+  free(testOutputc_ref);
   return 0;
 }

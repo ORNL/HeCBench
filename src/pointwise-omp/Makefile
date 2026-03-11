@@ -24,7 +24,7 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall 
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../pointwise-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -53,11 +53,11 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp
+%.o: %.cpp ../pointwise-cuda/reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	$(LAUNCHER) ./$(program) 100 8 512 64 100
+	$(LAUNCHER) ./$(program) 100 8 512 64 10

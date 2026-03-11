@@ -24,7 +24,8 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -Ddfloat=double -Ddlong=int -std=c++17 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -Ddfloat=double -Ddlong=int -std=c++17 \
+          -Wall -I../adv-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -51,7 +52,7 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu adv.cu
+%.o: %.cu ../adv-cuda/adv.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

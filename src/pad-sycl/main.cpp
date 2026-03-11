@@ -221,8 +221,8 @@ int main(int argc, char **argv) {
 #else
         h_flags[0]           = 1;
         h_flags[n_tasks_cpu] = 1;
-        q.memcpy(d_in_out, h_in_out, n_tasks_gpu * p.n_gpu_threads * REGS * sizeof(DATA_TYPE));
-        q.memcpy(d_flags, h_flags, n_flags * sizeof(int));
+        q.memcpy(d_in_out, h_in_out, n_tasks_gpu * p.n_gpu_threads * REGS * sizeof(DATA_TYPE)).wait();
+        q.memcpy(d_flags, h_flags, n_flags * sizeof(int)).wait();
 #endif
 
         // Kernel launch
