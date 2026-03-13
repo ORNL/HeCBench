@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
 
   MPI_Comm local_comm;
   MPICHECK(MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED,
-                               local_rank, MPI_INFO_NULL, &local_comm));
+                               mpi_rank, MPI_INFO_NULL, &local_comm));
   MPICHECK(MPI_Comm_rank(local_comm, &local_rank));
   MPICHECK(MPI_Comm_free(&local_comm));
 
@@ -115,8 +115,8 @@ int main(int argc, char* argv[])
 
     //completing NCCL operation by synchronizing on the CUDA stream
     GPUCHECK(cudaStreamSynchronize(s));
-
-    elapsed_time = MPI_Wtime() - start_time;
+    stop_time = MPI_Wtime();
+    elapsed_time = stop_time - start_time;
 
     if (mpi_rank == 0) {
       long int num_B = sizeof(float) * size * mpi_size;
