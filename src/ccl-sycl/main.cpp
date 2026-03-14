@@ -15,6 +15,11 @@
   }                                                 \
 } while(0)
 
+void mpi_finalize() {
+  int is_finalized = 0;
+  MPI_Finalized(&is_finalized);
+  if (!is_finalized) MPI_Finalize();
+}
 
 int main(int argc, char *argv[]) {
   if (argc != 2) {
@@ -23,6 +28,7 @@ int main(int argc, char *argv[]) {
   }
   const int repeat = atoi(argv[1]);
 
+  // level-zero gpu
   auto const& gpu_devices = sycl::device::get_devices(sycl::info::device_type::gpu);
   int num_gpus = gpu_devices.size();
 
@@ -33,10 +39,14 @@ int main(int argc, char *argv[]) {
 
   int mpi_rank, mpi_size, local_rank;
 
+  ccl::init();
+
   //initializing MPI
   MPICHECK(MPI_Init(&argc, &argv));
   MPICHECK(MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank));
   MPICHECK(MPI_Comm_size(MPI_COMM_WORLD, &mpi_size));
+
+  atexit(mpi_finalize);
 
   MPI_Comm local_comm;
   MPICHECK(MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED,
@@ -129,9 +139,6 @@ int main(int argc, char *argv[]) {
 
     printf("MPI Rank %d: %s\n", mpi_rank, ok ? "PASS" : "FAIL");
   }
-
-  //finalizing MPI
-  MPICHECK(MPI_Finalize());
 
   return 0;
 }
