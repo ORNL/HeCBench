@@ -1,4 +1,5 @@
 #include <chrono>
+#include <cmath>
 #include <stdio.h>
 
 #include <hipsolver/hipsolver.h>
@@ -143,7 +144,9 @@ int main(int argc, char* argv[])
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average execution time: %f (us)\n", (time * 1e-3f) / repeat);
 
-  printf("determinant = %f\n", det * det);
+  float result = det * det;
+  printf("determinant = %f\n", result);
+  printf("%s\n", (std::fabs(result - 2048) < 0.02f) ? "PASS" : "FAIL");
 
   status = hipsolverDnDestroy(solver_handle);
 #ifdef DEBUG
