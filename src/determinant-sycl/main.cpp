@@ -2,6 +2,7 @@
 #include <oneapi/dpl/numeric>
 #include <oneapi/mkl/lapack.hpp>
 #include <chrono>
+#include <cmath>
 #include <stdio.h>
 #include <sycl/sycl.hpp>
 
@@ -159,7 +160,9 @@ int main(int argc, char* argv[])
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     printf("Average execution time: %f (us)\n", (time * 1e-3f) / repeat);
 
-    printf("determinant = %f\n", det * det);
+    float result = det * det;
+    printf("determinant = %f\n", result);
+    printf("%s\n", (std::fabs(result - 2048) < 0.02f) ? "PASS" : "FAIL");
 
 #ifdef DEBUG
   } catch(oneapi::mkl::lapack::exception const& e) {

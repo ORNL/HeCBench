@@ -25,7 +25,7 @@ Each benchmark falls into a single category. While such classification is not ac
     daphne
 
 ### Bandwidth
-    allreduce, cmembench, babelstream, ccl, memcpy, memtest, pingpong, randomAccess, shmembench, storeKVCache, threadcpy, triad
+    allreduce, cmembench, babelstream, ccl, memcpy, memtest, pingpong, randomAccess, shmembench, storeKVCache, threadcpy, triad, vadd
 
 ### Bioinformatics
     all-pairs-distance, bsw, ccs, cm, deredundancy, diamond, epistasis, extend2, frna, fsm, ga, local-ht, logan, minibude, minimap2, nbnxm, nw, pcc, prna, sa, snake
@@ -1664,6 +1664,9 @@ Early results are shown [here](results/README.md)
 ### urng (opencl)
   Uniform random noise generator (https://github.com/OpenCL/AMD_APP_samples)
   
+### vadd (cuTe)
+  Element-wise add (https://github.com/NVIDIA/cutlass/blob/main/examples/python/CuTeDSL)
+
 ### vanGenuchten (cuda)
   Genuchten conversion of soil moisture and pressure (https://github.com/HydroComplexity/Dhara)
 

@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <chrono>
+#include <cmath>
 #include <sycl/sycl.hpp>
 
 #define THREADS_PER_BLOCK 256
@@ -18,16 +19,15 @@
 
 namespace sycl_ext = sycl::ext::oneapi::experimental;
 
-void reduce(float *inputVec, double *outputVec, size_t inputSize, size_t outputSize,
+void reduce(const float *inputVec, double *outputVec, size_t inputSize, size_t outputSize,
             const sycl::nd_item<1> &item, double *tmp)
 {
-
   size_t global_tid = item.get_global_id(0);
   size_t local_tid = item.get_local_id(0);
   size_t global_gid = item.get_group(0);
 
   double temp_sum = 0.0;
-  for (int i = global_tid; i < inputSize;
+  for (size_t i = global_tid; i < inputSize;
        i += item.get_group_range(0) * item.get_local_range(0))
   {
     temp_sum += (double) inputVec[i];
@@ -62,23 +62,23 @@ void reduce(float *inputVec, double *outputVec, size_t inputSize, size_t outputS
   }
 }
 
-void reduceFinal(double *inputVec, double *result, size_t inputSize,
+void reduceFinal(const double *inputVec, double *result, size_t inputSize,
                  const sycl::nd_item<1> &item, double *tmp)
 {
 
   size_t global_tid = item.get_global_id(0);
 
   double temp_sum = 0.0;
-  for (int i = global_tid; i < inputSize;
+  for (size_t i = global_tid; i < inputSize;
        i += item.get_group_range(0) * item.get_local_range(0))
   {
-    temp_sum += (double) inputVec[i];
+    temp_sum += inputVec[i];
   }
   tmp[item.get_local_linear_id()] = temp_sum;
 
   item.barrier(sycl::access::fence_space::local_space);
 
-  sycl::sub_group tile = item.get_sub_group();
+  //sycl::sub_group tile = item.get_sub_group();
 
   // do reduction in shared mem
   if ((item.get_local_range(0) >= 512) &&
@@ -136,17 +136,20 @@ void usingGraph(sycl::queue &q, float* inputVec_h, float *inputVec_d,
     double *outputVec_d, double *result_d,
     size_t inputSize, size_t numOfBlocks)
 {
+  // compute the reference sum
+  double result_r = 0.0;
+  for (size_t i = 0; i < inputSize; i++)
+    result_r += inputVec_h[i];
 
   sycl_ext::command_graph Graph{q.get_context(), q.get_device()};
-
-  q.memset(outputVec_d, 0, sizeof(double) * numOfBlocks);
-  q.memset(result_d, 0, sizeof(double));
 
   Graph.begin_recording(q);
 
   q.memcpy(inputVec_d, inputVec_h, sizeof(float) * inputSize);
 
   for (int i = 0; i < 100; i++) {
+    q.memset(outputVec_d, 0, sizeof(double) * numOfBlocks);
+
     q.submit([&](sycl::handler &cgh) {
       sycl::local_accessor<double, 1> tmp_acc(
           sycl::range<1>(THREADS_PER_BLOCK), cgh);
@@ -155,23 +158,24 @@ void usingGraph(sycl::queue &q, float* inputVec_h, float *inputVec_d,
           sycl::nd_range<1>(sycl::range<1>(numOfBlocks) *
                             sycl::range<1>(THREADS_PER_BLOCK),
                             sycl::range<1>(THREADS_PER_BLOCK)),
-          [=](sycl::nd_item<1> item) [[sycl::reqd_sub_group_size(32)]] {
+          [=](sycl::nd_item<1> item) {
             reduce(inputVec_d, outputVec_d, inputSize, numOfBlocks, item,
                    tmp_acc.get_multi_ptr<sycl::access::decorated::no>().get());
           });
     });
-      q.submit([&](sycl::handler &cgh) {
-        sycl::local_accessor<double, 1> tmp_acc(
-            sycl::range<1>(THREADS_PER_BLOCK), cgh);
 
-        cgh.parallel_for(
-            sycl::nd_range<1>(sycl::range<1>(THREADS_PER_BLOCK),
-                              sycl::range<1>(THREADS_PER_BLOCK)),
-            [=](sycl::nd_item<1> item) [[sycl::reqd_sub_group_size(32)]] {
-              reduceFinal(outputVec_d, result_d, numOfBlocks, item,
-                          tmp_acc.get_multi_ptr<sycl::access::decorated::no>().get());
-            });
-      });
+    q.submit([&](sycl::handler &cgh) {
+      sycl::local_accessor<double, 1> tmp_acc(
+          sycl::range<1>(THREADS_PER_BLOCK), cgh);
+
+      cgh.parallel_for(
+          sycl::nd_range<1>(sycl::range<1>(THREADS_PER_BLOCK),
+                            sycl::range<1>(THREADS_PER_BLOCK)),
+          [=](sycl::nd_item<1> item) {
+            reduceFinal(outputVec_d, result_d, numOfBlocks, item,
+                        tmp_acc.get_multi_ptr<sycl::access::decorated::no>().get());
+          });
+    });
   }
 
   double result_h = 0.0;
@@ -184,23 +188,24 @@ void usingGraph(sycl::queue &q, float* inputVec_h, float *inputVec_d,
   for (int i=0; i < LAUNCH_ITERATIONS; i++)
   {
     auto start = std::chrono::steady_clock::now();
-    q.submit([&](sycl::handler &cgh) { 
+    q.submit([&](sycl::handler &cgh) {
       cgh.ext_oneapi_graph(ExecGraph);
     }).wait();
     auto end = std::chrono::steady_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    printf("[usingGraph] final reduced sum = %lf\n", result_h);
-    printf("Execution time: %f (us)\n\n", (time * 1e-3f));
+    printf("%s\n", (std::fabs(result_h - result_r) < 1e-6) ? "PASS" : "FAIL");
+    printf("Execution time of using Graph: %f (us)\n\n", (time * 1e-3f));
   }
-
 }
 
 void usingStream(sycl::queue &q, float* inputVec_h, float *inputVec_d,
     double *outputVec_d, double *result_d,
     size_t inputSize, size_t numOfBlocks)
 {
-  q.memset(outputVec_d, 0, sizeof(double) * numOfBlocks);
-  q.memset(result_d, 0, sizeof(double));
+  // compute the reference sum
+  double result_r = 0.0;
+  for (size_t i = 0; i < inputSize; i++)
+    result_r += inputVec_h[i];
 
   for (int i=0; i < LAUNCH_ITERATIONS; i++) {
 
@@ -209,6 +214,8 @@ void usingStream(sycl::queue &q, float* inputVec_h, float *inputVec_d,
     q.memcpy(inputVec_d, inputVec_h, sizeof(float) * inputSize);
 
     for (int i = 0; i < 100; i++) {
+      q.memset(outputVec_d, 0, sizeof(double) * numOfBlocks);
+
       q.submit([&](sycl::handler &cgh) {
         sycl::local_accessor<double, 1> tmp_acc(
             sycl::range<1>(THREADS_PER_BLOCK), cgh);
@@ -217,8 +224,7 @@ void usingStream(sycl::queue &q, float* inputVec_h, float *inputVec_d,
             sycl::nd_range<1>(sycl::range<1>(numOfBlocks) *
                               sycl::range<1>(THREADS_PER_BLOCK),
                               sycl::range<1>(THREADS_PER_BLOCK)),
-            [=](sycl::nd_item<1> item)
-                [[sycl::reqd_sub_group_size(32)]] {
+            [=](sycl::nd_item<1> item) {
                   reduce(inputVec_d, outputVec_d, inputSize, numOfBlocks,
                          item, tmp_acc.get_multi_ptr<sycl::access::decorated::no>().get());
                 });
@@ -230,8 +236,7 @@ void usingStream(sycl::queue &q, float* inputVec_h, float *inputVec_d,
         cgh.parallel_for(
             sycl::nd_range<1>(sycl::range<1>(THREADS_PER_BLOCK),
                               sycl::range<1>(THREADS_PER_BLOCK)),
-            [=](sycl::nd_item<1> item)
-                [[sycl::reqd_sub_group_size(32)]] {
+            [=](sycl::nd_item<1> item) {
                   reduceFinal(outputVec_d, result_d, numOfBlocks, item,
                               tmp_acc.get_multi_ptr<sycl::access::decorated::no>().get());
                 });
@@ -243,8 +248,8 @@ void usingStream(sycl::queue &q, float* inputVec_h, float *inputVec_d,
 
     auto end = std::chrono::steady_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    printf("[UsingStream] final reduced sum = %lf\n", result_h);
-    printf("Execution time: %f (us)\n\n", (time * 1e-3f));
+    printf("%s\n", (std::fabs(result_h - result_r) < 1e-6) ? "PASS" : "FAIL");
+    printf("Execution time of using Stream: %f (us)\n\n", (time * 1e-3f));
   }
 }
 
