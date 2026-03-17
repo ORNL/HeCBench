@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <chrono>
+#include <cmath>
 #include <cuda_runtime.h>
 #include <cooperative_groups.h>
 
@@ -20,15 +21,17 @@ namespace cg = cooperative_groups;
 #define LAUNCH_ITERATIONS  3
 
 
-__global__ void reduce(float *inputVec, double *outputVec, size_t inputSize, size_t outputSize)
+__global__ void reduce(const float *inputVec,
+                       double *outputVec,
+                       size_t inputSize, size_t outputSize)
 {
   __shared__ double tmp[THREADS_PER_BLOCK];
 
   cg::thread_block cta = cg::this_thread_block();
-  size_t globaltid = blockIdx.x*blockDim.x + threadIdx.x;
+  size_t globaltid = (size_t)blockIdx.x*blockDim.x + threadIdx.x;
 
   double temp_sum = 0.0;
-  for (int i=globaltid; i < inputSize; i+=gridDim.x*blockDim.x)
+  for (size_t i = globaltid; i < inputSize; i += gridDim.x*blockDim.x)
   {
     temp_sum += (double) inputVec[i];
   }
@@ -60,17 +63,19 @@ __global__ void reduce(float *inputVec, double *outputVec, size_t inputSize, siz
   }
 }
 
-__global__ void reduceFinal(double *inputVec, double *result, size_t inputSize)
+__global__ void reduceFinal(const double *inputVec,
+                            double *result,
+                            size_t inputSize)
 {
   __shared__ double tmp[THREADS_PER_BLOCK];
 
   cg::thread_block cta = cg::this_thread_block();
-  size_t globaltid = blockIdx.x*blockDim.x + threadIdx.x;
+  size_t globaltid = (size_t)blockIdx.x*blockDim.x + threadIdx.x;
 
   double temp_sum = 0.0;
-  for (int i=globaltid; i < inputSize; i+=gridDim.x*blockDim.x)
+  for (size_t i = globaltid; i < inputSize; i += gridDim.x*blockDim.x)
   {
-    temp_sum += (double) inputVec[i];
+    temp_sum += inputVec[i];
   }
   tmp[cta.thread_rank()] = temp_sum;
 
@@ -105,7 +110,7 @@ __global__ void reduceFinal(double *inputVec, double *result, size_t inputSize)
     // Fetch final intermediate sum from 2nd warp
     if (blockDim.x >=  64) temp_sum += tmp[cta.thread_rank() + 32];
     // Reduce final warp using shuffle
-    for (int offset = tile32.size()/2; offset > 0; offset /= 2) 
+    for (int offset = tile32.size()/2; offset > 0; offset /= 2)
     {
       temp_sum += tile32.shfl_down(temp_sum, offset);
     }
@@ -125,25 +130,27 @@ void usingGraph(float* inputVec_h, float *inputVec_d,
     double *outputVec_d, double *result_d,
     size_t inputSize, size_t numOfBlocks)
 {
+  // compute the reference sum
+  double result_r = 0.0;
+  for (size_t i = 0; i < inputSize; i++)
+    result_r += inputVec_h[i];
+
   cudaStream_t stream;
   cudaGraph_t graph;
 
   cudaStreamCreate(&stream);
 
-  cudaMemsetAsync(outputVec_d, 0, sizeof(double)*numOfBlocks, stream);
-  cudaMemsetAsync(result_d, 0, sizeof(double), stream);
-
   cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
 
-  cudaMemcpyAsync(inputVec_d, inputVec_h, sizeof(float)*inputSize, cudaMemcpyDefault, stream);
+  cudaMemcpyAsync(inputVec_d, inputVec_h, sizeof(float)*inputSize, cudaMemcpyHostToDevice, stream);
 
   for (int i = 0; i < 100; i++) {
+    cudaMemsetAsync(outputVec_d, 0, sizeof(double)*numOfBlocks, stream);
     reduce<<<numOfBlocks, THREADS_PER_BLOCK, 0, stream>>>(inputVec_d, outputVec_d, inputSize, numOfBlocks);
     reduceFinal<<<1, THREADS_PER_BLOCK, 0, stream>>>(outputVec_d, result_d, numOfBlocks);
   }
-
   double result_h = 0.0;
-  cudaMemcpyAsync(&result_h, result_d, sizeof(double), cudaMemcpyDefault, stream);
+  cudaMemcpyAsync(&result_h, result_d, sizeof(double), cudaMemcpyDeviceToHost, stream);
 
   cudaStreamEndCapture(stream, &graph);
 
@@ -157,8 +164,8 @@ void usingGraph(float* inputVec_h, float *inputVec_d,
     cudaStreamSynchronize(stream);
     auto end = std::chrono::steady_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    printf("[usingGraph] final reduced sum = %lf\n", result_h);
-    printf("Execution time: %f (us)\n\n", (time * 1e-3f));
+    printf("%s\n", (std::fabs(result_h - result_r) < 1e-6) ? "PASS" : "FAIL");
+    printf("Execution time of using Graph: %f (us)\n\n", (time * 1e-3f));
   }
 
   cudaGraphExecDestroy(graphExec);
@@ -170,33 +177,36 @@ void usingStream(float* inputVec_h, float *inputVec_d,
     double *outputVec_d, double *result_d,
     size_t inputSize, size_t numOfBlocks)
 {
+  // compute the reference sum
+  double result_r = 0.0;
+  for (size_t i = 0; i < inputSize; i++)
+    result_r += inputVec_h[i];
+
   cudaStream_t stream;
 
   cudaStreamCreate(&stream);
-
-  cudaMemsetAsync(outputVec_d, 0, sizeof(double)*numOfBlocks, stream);
-  cudaMemsetAsync(result_d, 0, sizeof(double), stream);
 
   for (int i=0; i < LAUNCH_ITERATIONS; i++) {
 
     auto start = std::chrono::steady_clock::now();
 
-    cudaMemcpyAsync(inputVec_d, inputVec_h, sizeof(float)*inputSize, cudaMemcpyDefault, stream);
+    cudaMemcpyAsync(inputVec_d, inputVec_h, sizeof(float)*inputSize, cudaMemcpyHostToDevice, stream);
 
     for (int i = 0; i < 100; i++) {
+      cudaMemsetAsync(outputVec_d, 0, sizeof(double)*numOfBlocks, stream);
       reduce<<<numOfBlocks, THREADS_PER_BLOCK, 0, stream>>>(inputVec_d, outputVec_d, inputSize, numOfBlocks);
       reduceFinal<<<1, THREADS_PER_BLOCK, 0, stream>>>(outputVec_d, result_d, numOfBlocks);
     }
 
     double result_h = 0.0;
-    cudaMemcpyAsync(&result_h, result_d, sizeof(double), cudaMemcpyDefault, stream);
+    cudaMemcpyAsync(&result_h, result_d, sizeof(double), cudaMemcpyDeviceToHost, stream);
 
     cudaStreamSynchronize(stream);
 
     auto end = std::chrono::steady_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    printf("[UsingStream] final reduced sum = %lf\n", result_h);
-    printf("Execution time: %f (us)\n\n", (time * 1e-3f));
+    printf("%s\n", (std::fabs(result_h - result_r) < 1e-6) ? "PASS" : "FAIL");
+    printf("Execution time of using Stream: %f (us)\n\n", (time * 1e-3f));
   }
 
   cudaStreamDestroy(stream);
