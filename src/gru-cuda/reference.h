@@ -20,7 +20,7 @@ void reference(
     index_type hsz,
     index_type totalElements)
 {
-  for (int linearIndex = 0; linearIndex < totalElements; linearIndex++) {
+  for (index_type linearIndex = 0; linearIndex < totalElements; linearIndex++) {
 
     // ------------------------------------------------------------------
     // Input / Hidden gate reads
@@ -71,7 +71,7 @@ void reference(
     // ------------------------------------------------------------------
     // Save intermediates for backward pass
     // ------------------------------------------------------------------
-    int stor_offset = batch_idx * 5 * hsz + hidden_idx;
+    index_type stor_offset = batch_idx * 5 * hsz + hidden_idx;
 
     storage[stor_offset + 0 * hsz] = ToH(rg);                 // reset gate
     storage[stor_offset + 1 * hsz] = ToH(ig);                 // update gate
