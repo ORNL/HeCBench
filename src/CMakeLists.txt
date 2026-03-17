@@ -532,6 +532,7 @@ set(HECBENCH_POC_BENCHMARKS
     threadcpy
     tridiagonal
     topk
+    vadd
 )
 
 # Include benchmark subdirectories
