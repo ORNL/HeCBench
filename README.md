@@ -25,7 +25,7 @@ Each benchmark falls into a single category. While such classification is not ac
     daphne
 
 ### Bandwidth
-    allreduce, cmembench, babelstream, ccl, memcpy, memtest, pingpong, randomAccess, shmembench, storeKVCache, threadcpy, triad, vadd
+    allreduce, cmembench, babelstream, ccl, memcpy, memtest, pingpong, randomAccess, reshapeKVCache, shmembench, storeKVCache, threadcpy, triad, vadd
 
 ### Bioinformatics
     all-pairs-distance, bsw, ccs, cm, deredundancy, diamond, epistasis, extend2, frna, fsm, ga, local-ht, logan, minibude, minimap2, nbnxm, nw, pcc, prna, sa, snake
@@ -1332,6 +1332,9 @@ Early results are shown [here](results/README.md)
 
 ### relu (cuda)
   Rectified linear unit (https://github.com/tensorflow)
+
+### reshapeKVCache (cuda)
+  Reshape KV tensors into KV cache layout (https://github.com/vllm-project/vllm)
 
 ### resize (cuda)
   Resize images (https://github.com/opencv/)
