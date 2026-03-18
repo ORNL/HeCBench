@@ -69,7 +69,7 @@ void convert(bool isE4M3, int nelems, int niters)
   double time = std::chrono::duration_cast<std::chrono::nanoseconds>
                 (end - start).count() * 1.0 / niters;
   double size = (sizeof(Td) + sizeof(Ts)) * nelems;
-  printf("size(GB):%.2f, average time(sec):%f, BW:%f\n", size, time * 1e-9, size / time);
+  printf("size(GB):%.2f, average time of reference (sec):%f, BW:%f\n", size, time * 1e-9, size / time);
 
   HIP_CHECK(hipMemcpy(r_dst, dst, nelems * sizeof(Td), hipMemcpyDeviceToHost));
 
@@ -92,7 +92,7 @@ void convert(bool isE4M3, int nelems, int niters)
   time = std::chrono::duration_cast<std::chrono::nanoseconds>
                 (end - start).count() * 1.0 / niters;
   size = (sizeof(Td) + sizeof(Ts)) * nelems;
-  printf("size(GB):%.2f, average time(sec):%f, BW:%f\n", size, time * 1e-9, size / time);
+  printf("size(GB):%.2f, average time of intrinsic (sec):%f, BW:%f\n", size, time * 1e-9, size / time);
 
   HIP_CHECK(hipMemcpy(h_dst, dst, nelems * sizeof(Td), hipMemcpyDeviceToHost));
 
