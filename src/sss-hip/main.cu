@@ -352,7 +352,6 @@ int main(int argc, char *argv[]) {
       modesList->UpdateList(globalBestState);
       nmodes++;
       gsl_rng_set(rnd, seedset[nmodes - 1]);
-      start = std::chrono::steady_clock::now();
       k = 0;
       localBestScore = NEG_INF;
       globalBestScore = NEG_INF;
@@ -462,14 +461,13 @@ int main(int argc, char *argv[]) {
     for (l = 0; l < L; l++) {
       score += state->pll[l];
     }
-    auto now = std::chrono::steady_clock::now();
-    auto wall_time =  std::chrono::duration_cast<std::chrono::nanoseconds>(now - start).count();
-    wall_time = wall_time * 1e-9;
     num_allModels += num_cases;
+    /*
     printf("k=%ld L=%d score=%.4f localBestScore=%.4f globalBestScore=%.4f "
-           "nmodes=%d wall_time=%.4f num_cases=%d num_allModels=%ld\n",
+           "nmodes=%d num_cases=%d num_allModels=%ld\n",
            k, state->L, score, localBestScore, globalBestScore, nmodes,
-           wall_time, num_cases, num_allModels);
+           num_cases, num_allModels);
+    */
 
     if (score > localBestScore) {
       localBestScore = score;
@@ -489,8 +487,11 @@ int main(int argc, char *argv[]) {
       wastedIterations++;
     }
     // SCORE RECORDING
-    // ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-  }
+  } // while
+  auto now = std::chrono::steady_clock::now();
+  auto wall_time =  std::chrono::duration_cast<std::chrono::nanoseconds>(now - start).count();
+  printf("final: wall_time=%.4f (s) num_cases=%d num_allModels=%ld\n",
+         wall_time * 1e-9, num_cases, num_allModels);
 
   // writing the lists
   modesList->WriteList(outmodes);
