@@ -519,6 +519,7 @@ set(HECBENCH_POC_BENCHMARKS
     daphne
     dp4a
     gerbil
+    groupnorm
     hadamard
     halo-finder
     leukocyte
