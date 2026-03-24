@@ -1,7 +1,7 @@
 #if !defined(COMPLEX_H_)
 #define COMPLEX_H_
 
-#include <math.h>       /* import fabs, sqrt */
+#include <cmath>       /* import fabs, sqrt */
 
 #if defined(__cplusplus)
 extern "C" {
