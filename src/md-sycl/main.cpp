@@ -116,20 +116,21 @@ int main(int argc, char** argv)
   sycl::range<1> lws (256);
   sycl::range<1> gws ((nAtom + 255) / 256 * 256);
 
+  auto kFn = [=] (sycl::nd_item<1> item) {
+    md(item,
+       d_position,
+       d_force,
+       d_neighborList,
+       nAtom,
+       maxNeighbors,
+       lj1,
+       lj2,
+       cutsq);
+  };
+
   // warmup and result verification
   q.submit([&](sycl::handler& cgh) {
-    cgh.parallel_for<class warmup>(
-      sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-      md(item,
-         d_position,
-         d_force,
-         d_neighborList,
-         nAtom,
-         maxNeighbors,
-         lj1,
-         lj2,
-         cutsq);
-    });
+    cgh.parallel_for(sycl::nd_range<1>(gws, lws), kFn);
   });
 
   q.memcpy(force, d_force, nAtom * sizeof(FORCEVECTYPE)).wait();
@@ -143,18 +144,7 @@ int main(int argc, char** argv)
   for (int i = 0; i < iteration; i++)
   {
     q.submit([&](sycl::handler& cgh) {
-      cgh.parallel_for<class run>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        md(item,
-           d_position,
-           d_force,
-           d_neighborList,
-           nAtom,
-           maxNeighbors,
-           lj1,
-           lj2,
-           cutsq);
-      });
+      cgh.parallel_for(sycl::nd_range<1>(gws, lws), kFn);
     });
   }
 
