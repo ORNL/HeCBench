@@ -120,7 +120,7 @@ void reference (
         Real *__restrict__ r,
   const int  heat_flag)
 {
-  for (int i = 0; i < num; i++) 
+  for (int i = 0; i < num; i++)
     r[i] = primordial_cool(n, T[i], heat_flag);
 }
 
@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
   }
   const int num = atoi(argv[1]);
   const int repeat = atoi(argv[2]);
-    
+
   const size_t size_bytes = sizeof(Real) * num;
 
   const Real n = 0.0899; // density
@@ -155,14 +155,14 @@ int main(int argc, char* argv[])
 
   // warmup
   for (int i = 0; i < repeat; i++) {
-    hipLaunchKernelGGL(cool_kernel, grids, blocks , 0, 0, num, n, d_T, d_r, 0);
+    cool_kernel<<<grids, blocks>>>(num, n, d_T, d_r, 1);
   }
   hipDeviceSynchronize();
 
   auto start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < repeat; i++) {
-    hipLaunchKernelGGL(cool_kernel, grids, blocks , 0, 0, num, n, d_T, d_r, 1);
+    cool_kernel<<<grids, blocks>>>(num, n, d_T, d_r, 1);
   }
   hipDeviceSynchronize();
 
@@ -174,7 +174,7 @@ int main(int argc, char* argv[])
   hipMemcpy(r, d_r, size_bytes, hipMemcpyDeviceToHost);
 
   reference(num, n, T, h_r, 1);
-  
+
   bool error = false;
   for (int i = 0; i < num; i++) {
     if (fabs(r[i] - h_r[i]) > 1e-3) {
