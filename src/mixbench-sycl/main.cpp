@@ -1,5 +1,5 @@
 /**
- * main-omp.cpp: This file is the modified read-only mixbench GPU micro-benchmark suite.
+ * This file is the modified read-only mixbench GPU micro-benchmark suite.
  *
  **/
 
@@ -66,32 +66,29 @@ void mixbenchGPU(long size, int compute_iterations, int repeat) {
   sycl::range<1> gws (grid_dim);
   sycl::range<1> lws (block_dim);
 
-  for (int i = 0; i < repeat; i++) {
-    q.submit([&](sycl::handler &h) {
-      h.parallel_for<class mixbench_warmup>(
-        sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
+  auto kFn = [&](sycl::handler &h) {
+    h.parallel_for<class mixbench_warmup>(
+      sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
         benchmark_func(item, d_cd, compute_iterations);
-      });
     });
+  };
+
+  for (int i = 0; i < repeat; i++) {
+    q.submit(kFn);
   }
   q.wait();
 
   auto start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < repeat; i++) {
-    q.submit([&](sycl::handler &h) {
-      h.parallel_for<class mixbench_timing>(
-        sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
-        benchmark_func(item, d_cd, compute_iterations);
-      });
-    });
+    q.submit(kFn);
   }
 
   q.wait();
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Total kernel execution time: %f (s)\n", time * 1e-9f);
-  
+
   q.memcpy(cd, d_cd, sizeof(float) * size).wait();
   sycl::free(d_cd, q);
 
