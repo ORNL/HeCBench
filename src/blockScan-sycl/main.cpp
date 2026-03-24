@@ -64,7 +64,7 @@ void BlockPrefixSumKernel(const int *d_in,  // Tile of input
 {
   // Specialize BlockLoad type for our thread block (uses warp-striped loads for coalescing, then transposes in shared memory to a blocked arrangement)
   typedef BlockLoad<int, BLOCK_THREADS, ITEMS_PER_THREAD, BLOCK_LOAD_WARP_TRANSPOSE> BlockLoadT;
-  
+
   // Specialize BlockStore type using warp-striped loads for coalescing,
   // then transposes in shared memory to a blocked arrangement)
   typedef BlockStore<int, BLOCK_THREADS, ITEMS_PER_THREAD, BLOCK_STORE_WARP_TRANSPOSE> BlockStoreT;
@@ -167,13 +167,14 @@ void Test(sycl::queue &q) try {
   sycl::range<3> gws (1, 1, (size_t)grid_size * BLOCK_THREADS);
   sycl::range<3> lws (1, 1, BLOCK_THREADS);
 
+  auto kFn = [=](sycl::nd_item<3> item) {
+    BlockPrefixSumKernel<BLOCK_THREADS, ITEMS_PER_THREAD, ALGORITHM>(
+      d_in, d_out, item);
+  };
+
   // Run aggregate/prefix kernel
   for (int i = 0; i < 100; ++i) {
-    q.parallel_for(
-      sycl::nd_range<3>(gws, lws), [=](sycl::nd_item<3> item) {
-        BlockPrefixSumKernel<BLOCK_THREADS, ITEMS_PER_THREAD, ALGORITHM>(
-            d_in, d_out, item);
-    });
+    q.parallel_for(sycl::nd_range<3>(gws, lws), kFn);
 
     // Check results for the first warmup run
     if (i == 0) {
@@ -193,11 +194,7 @@ void Test(sycl::queue &q) try {
   auto start = std::chrono::steady_clock::now();
   for (int i = 0; i < repeat; ++i)
   {
-    q.parallel_for(
-      sycl::nd_range<3>(gws, lws), [=](sycl::nd_item<3> item) {
-        BlockPrefixSumKernel<BLOCK_THREADS, ITEMS_PER_THREAD, ALGORITHM>(
-            d_in, d_out, item);
-    });
+    q.parallel_for(sycl::nd_range<3>(gws, lws), kFn);
   }
   q.wait();
   auto end = std::chrono::steady_clock::now();
@@ -228,7 +225,7 @@ int main(int argc, char** argv)
   if (argc != 3) {
     printf("The benchmark evaluates the impacts of the number of threads ");
     printf("per block and the number of items per thread on the performance ");
-    printf("of block-level scans\n"); 
+    printf("of block-level scans\n");
     printf("Usage: %s <grid_size> <repeat>\n", argv[0]);
     printf("grid_size specifies the number of thread blocks");
     return 1;
