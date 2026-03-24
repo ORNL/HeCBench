@@ -70,60 +70,57 @@ int main(int argc, char* argv[])
   sycl::range<1> gws (1);
   sycl::range<1> lws (1);
 
+  auto ksFn = [=](sycl::nd_item<1> item) {
+    KernelWithSmallArgs(small_kernel_args, nullptr, item);
+  };
+
   // warmup
   for (int i = 0; i < repeat; i++) {
-    q.parallel_for(
-      sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
-        KernelWithSmallArgs(small_kernel_args, nullptr, item);
-    });
+    q.parallel_for(sycl::nd_range<1>(gws, lws), ksFn);
   }
   q.wait();
 
   auto start = std::chrono::steady_clock::now();
-  for (int i = 0; i < repeat; i++)
-    q.parallel_for(
-      sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
-        KernelWithSmallArgs(small_kernel_args, nullptr, item);
-    });
+  for (int i = 0; i < repeat; i++) {
+    q.parallel_for(sycl::nd_range<1>(gws, lws), ksFn);
+  }
   q.wait();
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average execution time of kernelWithSmallArgs: %f (us)\n", (time * 1e-3f) / repeat);
 
+  auto kmFn = [=](sycl::nd_item<1> item) {
+    KernelWithMediumArgs(medium_kernel_args, nullptr, item);
+  };
+
   // warmup
   for (int i = 0; i < repeat; i++) {
-    q.parallel_for(
-      sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
-        KernelWithMediumArgs(medium_kernel_args, nullptr, item);
-    });
+    q.parallel_for(sycl::nd_range<1>(gws, lws), kmFn);
   }
   q.wait();
 
   start = std::chrono::steady_clock::now();
-  for (int i = 0; i < repeat; i++)
-    q.parallel_for(
-      sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
-        KernelWithMediumArgs(medium_kernel_args, nullptr, item);
-    });
+  for (int i = 0; i < repeat; i++) {
+    q.parallel_for(sycl::nd_range<1>(gws, lws), kmFn);
+  }
   end = std::chrono::steady_clock::now();
   time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average execution time of kernelWithMediumArgs: %f (us)\n", (time * 1e-3f) / repeat);
 
+  auto klFn = [=](sycl::nd_item<1> item) {
+    KernelWithLargeArgs(large_kernel_args, nullptr, item);
+  };
+
   // warmup
   for (int i = 0; i < repeat; i++) {
-    q.parallel_for(
-      sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
-        KernelWithLargeArgs(large_kernel_args, nullptr, item);
-    });
+    q.parallel_for(sycl::nd_range<1>(gws, lws), klFn);
   }
   q.wait();
 
   start = std::chrono::steady_clock::now();
-  for (int i = 0; i < repeat; i++)
-    q.parallel_for(
-      sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
-        KernelWithLargeArgs(large_kernel_args, nullptr, item);
-    });
+  for (int i = 0; i < repeat; i++) {
+    q.parallel_for(sycl::nd_range<1>(gws, lws), klFn);
+  }
   q.wait();
   end = std::chrono::steady_clock::now();
   time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
