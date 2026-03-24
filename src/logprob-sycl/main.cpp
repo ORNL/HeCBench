@@ -240,8 +240,7 @@ int main(int argc, char* argv[])
   sycl::range<2> gws2 (1, batch_size * block_size);
   sycl::range<2> lws (1, block_size);
 
-  // warmup and verify
-    q.submit([&](sycl::handler &cgh) {
+  auto logprobsFn = [&](sycl::handler &cgh) {
 #ifndef USE_SYCL_GROUP_REDUCE
       sycl::local_accessor<float, 1> sm (sycl::range<1>(SG), cgh);
 #endif
@@ -257,9 +256,9 @@ int main(int argc, char* argv[])
             d_log_probs, d_logits, d_ids, d_lengths, max_length, batch_size,
             vocab_size, vocab_size_padded);
       });
-    });
+    };
 
-    q.submit([&](sycl::handler &cgh) {
+    auto acclogprobsFn = [&](sycl::handler &cgh) {
 #ifndef USE_SYCL_GROUP_REDUCE
       sycl::local_accessor<float, 1> sm (sycl::range<1>(SG), cgh);
 #endif
@@ -273,7 +272,11 @@ int main(int argc, char* argv[])
            d_cum_log_probs, d_log_probs, d_lengths,
            max_length, batch_size);
       });
-    });
+    };
+
+  // warmup and verify
+  q.submit(logprobsFn);
+  q.submit(acclogprobsFn);
 
   log_probs_cpu<float>(
     h_log_probs_ref,
@@ -311,40 +314,8 @@ int main(int argc, char* argv[])
   auto start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < repeat; i++) {
-
-    q.submit([&](sycl::handler &cgh) {
-#ifndef USE_SYCL_GROUP_REDUCE
-      sycl::local_accessor<float, 1> sm (sycl::range<1>(SG), cgh);
-#endif
-      sycl::local_accessor<float, 0> s_max_logit (cgh);
-      cgh.parallel_for(sycl::nd_range<2>(gws, lws), [=](sycl::nd_item<2> item)
-        [[sycl::reqd_sub_group_size(SG)]] {
-        log_probs_kernel<float>(
-            item,
-#ifndef USE_SYCL_GROUP_REDUCE
-            sm.get_multi_ptr<sycl::access::decorated::no>().get(),
-#endif
-            s_max_logit,
-            d_log_probs, d_logits, d_ids, d_lengths, max_length, batch_size,
-            vocab_size, vocab_size_padded);
-      });
-    });
-
-    q.submit([&](sycl::handler &cgh) {
-#ifndef USE_SYCL_GROUP_REDUCE
-      sycl::local_accessor<float, 1> sm (sycl::range<1>(SG), cgh);
-#endif
-      cgh.parallel_for(sycl::nd_range<2>(gws2, lws), [=](sycl::nd_item<2> item)
-        [[sycl::reqd_sub_group_size(SG)]] {
-        accumulate_log_probs(
-           item,
-#ifndef USE_SYCL_GROUP_REDUCE
-           sm.get_multi_ptr<sycl::access::decorated::no>().get(),
-#endif
-           d_cum_log_probs, d_log_probs, d_lengths,
-           max_length, batch_size);
-      });
-    });
+    q.submit(logprobsFn);
+    q.submit(acclogprobsFn);
   }
 
   q.wait();
