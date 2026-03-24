@@ -85,11 +85,11 @@ int main(int argc, char* argv[])
     float *outp_ref = (float*) malloc (outp_size_bytes);
 
     for (size_t i = 0; i < inp1_size; i++) {
-      inp1[i] = rand() % inp1_size; 
+      inp1[i] = rand() % inp1_size;
     }
 
     for (size_t i = 0; i < inp2_size; i++) {
-      inp2[i] = rand() % inp2_size; 
+      inp2[i] = rand() % inp2_size;
     }
 
     float *d_inp1, *d_inp2, *d_outp;
@@ -105,12 +105,12 @@ int main(int argc, char* argv[])
     sycl::range<1> gws (nblock * 256);
     sycl::range<1> lws (256);
 
+    auto kFn = [=] (sycl::nd_item<1> item) {
+        concat(item, d_inp1, d_inp2, d_outp, batch_size * beam_size * nhead, head_dim, sl1, sl2);
+    };
     // warmup and verify
     q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class warmup>(
-      sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        concat(item, d_inp1, d_inp2, d_outp, batch_size * beam_size * nhead, head_dim, sl1, sl2);
-      });
+      cgh.parallel_for(sycl::nd_range<1>(gws, lws), kFn);
     });
 
     concat_cpu(
@@ -124,10 +124,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < repeat; i++) {
       q.submit([&] (sycl::handler &cgh) {
-        cgh.parallel_for<class eval>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-          concat(item, d_inp1, d_inp2, d_outp, batch_size * beam_size * nhead, head_dim, sl1, sl2);
-        });
+        cgh.parallel_for(sycl::nd_range<1>(gws, lws), kFn);
       });
     }
 
