@@ -61,7 +61,7 @@ double run_gmem_atomics(
         int ny = item.get_global_range(0);
         int t = item.get_local_linear_id();
         int nt = item.get_local_range(1)*item.get_local_range(0);
-        int g = item.get_group_linear_id(); 
+        int g = item.get_group_linear_id();
 
         // initialize global memory
         for (int i = t; i < ACTIVE_CHANNELS * NUM_BINS; i += nt)
@@ -77,14 +77,14 @@ double run_gmem_atomics(
                 PixelType pixel = d_image[row * width + col];
 
                 unsigned int bins[ACTIVE_CHANNELS];
-		DecodePixel<NUM_BINS>(pixel, bins);
+                DecodePixel<NUM_BINS>(pixel, bins);
 
                 #pragma unroll
-                for (int CHANNEL = 0; CHANNEL < ACTIVE_CHANNELS; ++CHANNEL) {
+                for (int c = 0; c < ACTIVE_CHANNELS; ++c) {
                    auto ao = sycl::atomic_ref<unsigned int, sycl::memory_order::relaxed, \
                                               sycl::memory_scope::device,\
                                               sycl::access::address_space::global_space>(
-                     d_part_hist[g * NUM_PARTS + (NUM_BINS * CHANNEL) + bins[CHANNEL]]);
+                     d_part_hist[g * NUM_PARTS + (NUM_BINS * c) + bins[c]]);
                    ao.fetch_add(1U);
                 }
             }
