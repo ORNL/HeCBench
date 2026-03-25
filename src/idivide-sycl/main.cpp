@@ -23,7 +23,7 @@ int test(sycl::queue &q)
   int buf[4];
   int *d_buf = sycl::malloc_device<int>(4, q);
 
-  std::cout << "Running functional test on " << divisor_count << " divisors, with " 
+  std::cout << "Running functional test on " << divisor_count << " divisors, with "
             << grids * blocks << " dividents for each divisor" << std::endl;
 
   for(int d = 1; d < divisor_count; ++d)
@@ -44,8 +44,8 @@ int test(sycl::queue &q)
 
       if (buf[0] > 0)
       {
-        std::cout << buf[0] << " wrong results, one of them is for divident " 
-                  << buf[1] << ", correct quotient = " << buf[2] 
+        std::cout << buf[0] << " wrong results, one of them is for divident "
+                  << buf[1] << ", correct quotient = " << buf[2]
                   << ", fast computed quotient = " << buf[3] << std::endl;
         sycl::free(d_buf, q);
         return 1;
@@ -80,20 +80,22 @@ int main(int argc, char* argv[])
   sycl::range<1> gws (grids * blocks);
   sycl::range<1> lws (blocks);
 
+  auto baseTpFn = [&] (sycl::handler &cgh) {
+    cgh.parallel_for(sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+      throughput_test<int>(item, 3, 5, 7, 0, 0);
+    });
+  };
+
+  auto fastTpFn = [&] (sycl::handler &cgh) {
+    cgh.parallel_for(sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+      throughput_test<int_fastdiv>(item, 3, 5, 7, 0, 0);
+    });
+  };
+
   // warmup may be needed for accurate performance measurement with chrono
   for (int i = 0; i < 100; i++) {
-    q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class warm_thru>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        throughput_test<int>(item, 3, 5, 7, 0, 0);
-      });
-    });
-    q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class warm_thru_fast>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        throughput_test<int_fastdiv>(item, 3, 5, 7, 0, 0);
-      });
-    });
+    q.submit(baseTpFn);
+    q.submit(fastTpFn);
   }
   q.wait();
 
@@ -103,12 +105,7 @@ int main(int argc, char* argv[])
   auto start = NOW;
 
   for (int i = 0; i < repeat; i++) {
-    q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class bench_thru>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        throughput_test<int>(item, 3, 5, 7, 0, 0);
-      });
-    });
+    q.submit(baseTpFn);
   }
   q.wait();
 
@@ -120,12 +117,7 @@ int main(int argc, char* argv[])
   start = NOW;
 
   for (int i = 0; i < repeat; i++) {
-    q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class bench_thru_fast>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        throughput_test<int_fastdiv>(item, 3, 5, 7, 0, 0);
-      });
-    });
+    q.submit(fastTpFn);
   }
   q.wait();
 
@@ -135,20 +127,22 @@ int main(int argc, char* argv[])
 
   std::cout << "Speedup = " << elapsed_time_slow.count() / elapsed_time_fast.count() << std::endl;
 
+  auto baseLatFn = [&] (sycl::handler &cgh) {
+    cgh.parallel_for(sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+      latency_test<int>(item, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0);
+    });
+  };
+
+  auto fastLatFn = [&] (sycl::handler &cgh) {
+    cgh.parallel_for(sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+      latency_test<int_fastdiv>(item, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0);
+    });
+  };
+
   // warmup
   for (int i = 0; i < 100; i++) {
-    q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class warm_lat>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        latency_test<int>(item, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0);
-      });
-    });
-    q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class warm_lat_fast>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        latency_test<int_fastdiv>(item, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0);
-      });
-    });
+    q.submit(baseLatFn);
+    q.submit(fastLatFn);
   }
   q.wait();
 
@@ -157,12 +151,7 @@ int main(int argc, char* argv[])
   start = NOW;
 
   for (int i = 0; i < repeat; i++) {
-    q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class bench_lat>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        latency_test<int>(item, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0);
-      });
-    });
+    q.submit(baseLatFn);
   }
   q.wait();
 
@@ -174,12 +163,7 @@ int main(int argc, char* argv[])
   start = NOW;
 
   for (int i = 0; i < repeat; i++) {
-    q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class bench_lat_fast>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        latency_test<int_fastdiv>(item, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0);
-      });
-    });
+    q.submit(fastLatFn);
   }
   q.wait();
 
