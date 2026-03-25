@@ -17,7 +17,7 @@
 #include <cuda.h>
 #include "reference.h"
 
-// kernel 
+// kernel
 #define SCORE(i, j) input_itemsets_l[j + i * (BLOCK_SIZE+1)]
 #define REF(i, j)   reference_l[j + i * BLOCK_SIZE]
 
@@ -27,7 +27,7 @@ int maximum( int a, int b, int c){
   int k;
   if( a <= b )
     k = b;
-  else 
+  else
     k = a;
   if( k <=c )
     return(c);
@@ -68,14 +68,15 @@ int blosum62[24][24] = {
 
 void usage(int argc, char **argv)
 {
-  fprintf(stderr, "Usage: %s <max_rows/max_cols> <penalty> \n", argv[0]);
+  fprintf(stderr, "Usage: %s <max_rows/max_cols> <penalty> <repeat>\n", argv[0]);
   fprintf(stderr, "\t<dimension>  - x and y dimensions\n");
   fprintf(stderr, "\t<penalty> - penalty(positive integer)\n");
+  fprintf(stderr, "\t<repeat> - the number of kernel executions\n");
   fprintf(stderr, "\t<file> - filename\n");
   exit(1);
 }
 
-__global__ void 
+__global__ void
 kernel1 (int*__restrict__ d_input_itemsets,
          const int*__restrict__ d_reference,
          const int offset_r,
@@ -89,62 +90,62 @@ kernel1 (int*__restrict__ d_input_itemsets,
 
   int bx = blockIdx.x;
   int tx = threadIdx.x;
-  
+
   // Base elements
   int base = offset_r * max_cols + offset_c;
-  
+
   int b_index_x = bx;
   int b_index_y = blk - 1 - bx;
-  
+
   int index   =   base + max_cols * BLOCK_SIZE * b_index_y + BLOCK_SIZE * b_index_x + tx + ( max_cols + 1 );
   int index_n   = base + max_cols * BLOCK_SIZE * b_index_y + BLOCK_SIZE * b_index_x + tx + ( 1 );
   int index_w   = base + max_cols * BLOCK_SIZE * b_index_y + BLOCK_SIZE * b_index_x + ( max_cols );
   int index_nw =  base + max_cols * BLOCK_SIZE * b_index_y + BLOCK_SIZE * b_index_x;
-  
+
   if (tx == 0) SCORE(tx, 0) = d_input_itemsets[index_nw + tx];
-  
+
   for ( int ty = 0 ; ty < BLOCK_SIZE ; ty++)  {
     REF(ty, tx) =  d_reference[index + max_cols * ty];
   }
-  
+
   SCORE((tx + 1), 0) = d_input_itemsets[index_w + max_cols * tx];
-  
+
   SCORE(0, (tx + 1)) = d_input_itemsets[index_n];
-  
+
   __syncthreads();
 
   for( int m = 0 ; m < BLOCK_SIZE ; m++){
      if ( tx <= m ){
         int t_index_x =  tx + 1;
         int t_index_y =  m - tx + 1;
-  
+
         SCORE(t_index_y, t_index_x) = maximum( SCORE((t_index_y-1), (t_index_x-1)) + REF((t_index_y-1), (t_index_x-1)),
-              SCORE((t_index_y),   (t_index_x-1)) - (penalty), 
+              SCORE((t_index_y),   (t_index_x-1)) - (penalty),
               SCORE((t_index_y-1), (t_index_x))   - (penalty));
      }
      __syncthreads();
   }
-  
+
   for( int m = BLOCK_SIZE - 2 ; m >=0 ; m--){
-  
+
      if ( tx <= m){
         int t_index_x =  tx + BLOCK_SIZE - m ;
         int t_index_y =  BLOCK_SIZE - tx;
-  
+
         SCORE(t_index_y, t_index_x) = maximum(  SCORE((t_index_y-1), (t_index_x-1)) + REF((t_index_y-1), (t_index_x-1)),
-              SCORE((t_index_y),   (t_index_x-1)) - (penalty), 
+              SCORE((t_index_y),   (t_index_x-1)) - (penalty),
               SCORE((t_index_y-1), (t_index_x))   - (penalty));
      }
      __syncthreads();
   }
-  
+
   for ( int ty = 0 ; ty < BLOCK_SIZE ; ty++) {
      d_input_itemsets[index + max_cols * ty] = SCORE((ty+1), (tx+1));
   }
-  
+
 }
 
-__global__ void 
+__global__ void
 kernel2 (int*__restrict__ d_input_itemsets,
          const int*__restrict__ d_reference,
          const int block_width,
@@ -188,7 +189,7 @@ kernel2 (int*__restrict__ d_input_itemsets,
          int t_index_y =  m - tx + 1;
 
          SCORE(t_index_y, t_index_x) = maximum(  SCORE((t_index_y-1), (t_index_x-1)) + REF((t_index_y-1), (t_index_x-1)),
-               SCORE((t_index_y),   (t_index_x-1)) - (penalty), 
+               SCORE((t_index_y),   (t_index_x-1)) - (penalty),
                SCORE((t_index_y-1), (t_index_x))   - (penalty));
       }
       __syncthreads();
@@ -202,7 +203,7 @@ kernel2 (int*__restrict__ d_input_itemsets,
          int t_index_y =  BLOCK_SIZE - tx;
 
          SCORE(t_index_y, t_index_x) = maximum( SCORE((t_index_y-1), (t_index_x-1)) + REF((t_index_y-1), (t_index_x-1)),
-               SCORE((t_index_y),   (t_index_x-1)) - (penalty), 
+               SCORE((t_index_y),   (t_index_x-1)) - (penalty),
                SCORE((t_index_y-1), (t_index_x))   - (penalty));
 
       }
@@ -218,13 +219,15 @@ int main(int argc, char **argv){
   printf("WG size of kernel = %d \n", BLOCK_SIZE);
 
   int max_rows_t, max_cols_t, penalty_t;
+  int repeat;
   // the lengths of the two sequences should be able to divided by 16.
   // And at current stage  max_rows needs to equal max_cols
-  if (argc == 3)
+  if (argc == 4)
   {
     max_rows_t = atoi(argv[1]);
     max_cols_t = atoi(argv[1]);
     penalty_t = atoi(argv[2]);
+    repeat = atoi(argv[3]);
   }
   else{
     usage(argc, argv);
@@ -238,7 +241,7 @@ int main(int argc, char **argv){
   // make constant variable to avoid kernel argument set at every loop iteration
   const int max_rows = max_rows_t + 1;
   const int max_cols = max_cols_t + 1;
-  const int penalty = penalty_t;  
+  const int penalty = penalty_t;
 
   int *reference;
   int *input_itemsets;
@@ -250,7 +253,7 @@ int main(int argc, char **argv){
 
   srand(7);
 
-  //initialization 
+  //initialization
   for (int i = 0 ; i < max_cols; i++){
     for (int j = 0 ; j < max_rows; j++){
       input_itemsets[i*max_cols+j] = 0;
@@ -279,7 +282,7 @@ int main(int argc, char **argv){
   int workgroupsize = BLOCK_SIZE;
 #ifdef DEBUG
   if(workgroupsize < 0){
-     printf("ERROR: invalid or missing <num_work_items>[/<work_group_size>]\n"); 
+     printf("ERROR: invalid or missing <num_work_items>[/<work_group_size>]\n");
      return -1;
   }
 #endif
@@ -297,47 +300,44 @@ int main(int argc, char **argv){
   const int block_width = worksize/BLOCK_SIZE ;
   printf("block width = %d\n", block_width);
 
-  int *d_input_itemsets; 
-  int *d_reference; 
+  int *d_input_itemsets;
+  int *d_reference;
   cudaMalloc((void**)&d_input_itemsets, max_cols * max_rows * sizeof(int));
   cudaMalloc((void**)&d_reference, max_cols * max_rows * sizeof(int));
 
   cudaMemcpy(d_input_itemsets, input_itemsets, max_cols * max_rows * sizeof(int), cudaMemcpyHostToDevice);
   cudaMemcpy(d_reference, reference, max_cols * max_rows * sizeof(int), cudaMemcpyHostToDevice);
 
-  // warmup
-  for( int blk = 1 ; blk <= block_width ; blk++){
-    global_work = blk;
-    kernel1<<<global_work, local_work>>>(d_input_itemsets, d_reference, offset_r, offset_c, max_cols, blk, penalty);
-  }
-  for( int blk = block_width - 1 ; blk >= 1 ; blk--){      
-    global_work = blk;
-    kernel2<<<global_work, local_work>>>(d_input_itemsets, d_reference, block_width, offset_r, offset_c, max_cols, blk, penalty);
-  }
+  int warmup = 100;
 
+  std::chrono::steady_clock::time_point start, end;
+
+  for (int i = 0; i < warmup + repeat; i++) {
+    if (i == warmup) {
+      cudaDeviceSynchronize();
+      start = std::chrono::steady_clock::now();
+    }
+
+    #ifdef DEBUG
+    printf("Processing upper-left matrix\n");
+    #endif
+    for( int blk = 1 ; blk <= block_width ; blk++){
+      global_work = blk;
+      kernel1<<<global_work, local_work>>>(d_input_itemsets, d_reference, offset_r, offset_c, max_cols, blk, penalty);
+    }
+
+    #ifdef DEBUG
+    printf("Processing lower-right matrix\n");
+    #endif
+    for( int blk = block_width - 1 ; blk >= 1 ; blk--){
+      global_work = blk;
+      kernel2<<<global_work, local_work>>>(d_input_itemsets, d_reference, block_width, offset_r, offset_c, max_cols, blk, penalty);
+    }
+  }
   cudaDeviceSynchronize();
-  auto start = std::chrono::steady_clock::now();
-
-#ifdef DEBUG
-  printf("Processing upper-left matrix\n");
-#endif
-  for( int blk = 1 ; blk <= block_width ; blk++){
-    global_work = blk;
-    kernel1<<<global_work, local_work>>>(d_input_itemsets, d_reference, offset_r, offset_c, max_cols, blk, penalty);
-  }
-
-#ifdef DEBUG
-  printf("Processing lower-right matrix\n");
-#endif
-  for( int blk = block_width - 1 ; blk >= 1 ; blk--){      
-    global_work = blk;
-    kernel2<<<global_work, local_work>>>(d_input_itemsets, d_reference, block_width, offset_r, offset_c, max_cols, blk, penalty);
-  }
-
-  cudaDeviceSynchronize();
-  auto end = std::chrono::steady_clock::now();
+  end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-  printf("Total kernel execution time: %f (s)\n", time * 1e-9f);
+  printf("Total kernel execution time: %f (s)\n", time * 1e-9f / repeat);
 
   cudaMemcpy(output_itemsets, d_input_itemsets, max_cols * max_rows * sizeof(int), cudaMemcpyDeviceToHost);
 
