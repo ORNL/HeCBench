@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 
 // CPU implementation of matrix transpose
-void matrixTransposeCPUReference(float* output, float* input, 
+void matrixTransposeCPUReference(float* output, float* input,
     unsigned int numGroups, unsigned int subGroupSize) {
   for (unsigned i = 0; i < numGroups; ++i) {
     for (unsigned j = 0; j < subGroupSize; j++) {
@@ -41,7 +41,7 @@ void verifyBroadcast(const int *out, const int subGroupSize, int pattern = 0)
 {
   int expected = pattern;
   if (pattern == 0) {
-    for (int i = 0; i < subGroupSize; i++) 
+    for (int i = 0; i < subGroupSize; i++)
       expected += i;
   }
   int errors = 0;
@@ -60,7 +60,7 @@ void verifyBroadcast(const int *out, const int subGroupSize, int pattern = 0)
 }
 
 void verifyTransposeMatrix(const float *TransposeMatrix,
-                           const float* cpuTransposeMatrix, 
+                           const float* cpuTransposeMatrix,
                            const int total, const int subGroupSize)
 {
   int errors = 0;
@@ -81,14 +81,13 @@ void verifyTransposeMatrix(const float *TransposeMatrix,
     std::cout << "FAIL\n";
 }
 
-
 //==================================================================================
 // Broadcast
 //==================================================================================
 __global__ void bcast_shfl_sg8(const int arg, int *out) {
   int value = ((threadIdx.x & 0x7) == 0) ? arg : 0;
   // Synchronize all threads in warp, and get "value" from lane 0
-  int out_v = __shfl( value, 0); 
+  int out_v = __shfl(value, 0);
   size_t oi = blockDim.x * blockIdx.x + threadIdx.x;
   out[oi] = out_v;
 }
@@ -104,7 +103,7 @@ __global__ void bcast_shfl_xor_sg8(int *out) {
 __global__ void bcast_shfl_sg16(const int arg, int *out) {
   int value = ((threadIdx.x & 0xf) == 0) ? arg : 0;
   // Synchronize all threads in warp, and get "value" from lane 0
-  int out_v = __shfl( value, 0); 
+  int out_v = __shfl(value, 0);
   size_t oi = blockDim.x * blockIdx.x + threadIdx.x;
   out[oi] = out_v;
 }
@@ -119,7 +118,7 @@ __global__ void bcast_shfl_xor_sg16(int *out) {
 __global__ void bcast_shfl_sg32(const int arg, int *out) {
   int value = ((threadIdx.x & 0x1f) == 0) ? arg : 0;
   // Synchronize all threads in warp, and get "value" from lane 0
-  int out_v = __shfl( value, 0); 
+  int out_v = __shfl(value, 0);
   size_t oi = blockDim.x * blockIdx.x + threadIdx.x;
   out[oi] = out_v;
 }
@@ -153,25 +152,24 @@ int main(int argc, char* argv[]) {
   const int repeat = atoi(argv[1]);
   const int repeat2 = atoi(argv[2]);
 
-  std::cout << "Broadcast using shuffle functions\n";
-
+  std::cout << "Broadcast using the shuffle xor function (subgroup sizes 8, 16, and 32) \n";
   int *out = (int *)malloc(sizeof(int) * BUF_SIZE);
   int *d_out;
   hipMalloc((void **)&d_out, sizeof(int) * BUF_SIZE);
 
-  // warmup
-  for (int n = 0; n < repeat; n++)
-    hipLaunchKernelGGL(bcast_shfl_xor_sg8, dim3(1), dim3(BUF_SIZE), 0, 0, d_out);
+  int warmup = repeat;
+  std::chrono::steady_clock::time_point begin, end;
+
+  for (int n = 0; n < warmup + repeat; n++) {
+    if (n == warmup) {
+      hipDeviceSynchronize();
+      begin = std::chrono::steady_clock::now();
+    }
+    bcast_shfl_xor_sg8 <<< dim3(1), dim3(BUF_SIZE) >>> (d_out);
+  }
+
   hipDeviceSynchronize();
-
-  std::cout << "Broadcast using the shuffle xor function (subgroup sizes 8, 16, and 32) \n";
-  auto begin = std::chrono::steady_clock::now();
-
-  for (int n = 0; n < repeat; n++)
-    hipLaunchKernelGGL(bcast_shfl_xor_sg8, dim3(1), dim3(BUF_SIZE), 0, 0, d_out);
-
-  hipDeviceSynchronize();
-  auto end = std::chrono::steady_clock::now();
+  end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
   std::cout << "Average kernel time (subgroup size = 8): "
             << time * 1e-3f / repeat << " (us)\n";
@@ -179,10 +177,13 @@ int main(int argc, char* argv[]) {
   hipMemcpy(out, d_out, sizeof(int) * BUF_SIZE, hipMemcpyDeviceToHost);
   verifyBroadcast(out, 8);
 
-  begin = std::chrono::steady_clock::now();
-
-  for (int n = 0; n < repeat; n++)
-    hipLaunchKernelGGL(bcast_shfl_xor_sg16, dim3(1), dim3(BUF_SIZE), 0, 0, d_out);
+  for (int n = 0; n < warmup + repeat; n++) {
+    if (n == warmup) {
+      hipDeviceSynchronize();
+      begin = std::chrono::steady_clock::now();
+    }
+    bcast_shfl_xor_sg16 <<< dim3(1), dim3(BUF_SIZE) >>> (d_out);
+  }
 
   hipDeviceSynchronize();
   end = std::chrono::steady_clock::now();
@@ -193,10 +194,13 @@ int main(int argc, char* argv[]) {
   hipMemcpy(out, d_out, sizeof(int) * BUF_SIZE, hipMemcpyDeviceToHost);
   verifyBroadcast(out, 16);
 
-  begin = std::chrono::steady_clock::now();
-
-  for (int n = 0; n < repeat; n++)
-    hipLaunchKernelGGL(bcast_shfl_xor_sg32, dim3(1), dim3(BUF_SIZE), 0, 0, d_out);
+  for (int n = 0; n < warmup + repeat; n++) {
+    if (n == warmup) {
+      hipDeviceSynchronize();
+      begin = std::chrono::steady_clock::now();
+    }
+    bcast_shfl_xor_sg32 <<< dim3(1), dim3(BUF_SIZE) >>> (d_out);
+  }
 
   hipDeviceSynchronize();
   end = std::chrono::steady_clock::now();
@@ -208,10 +212,14 @@ int main(int argc, char* argv[]) {
   verifyBroadcast(out, 32);
 
   std::cout << "Broadcast using the shuffle function (subgroup sizes 8, 16, and 32) \n";
-  begin = std::chrono::steady_clock::now();
 
-  for (int n = 0; n < repeat; n++)
-    hipLaunchKernelGGL(bcast_shfl_sg8, dim3(1), dim3(BUF_SIZE), 0, 0, PATTERN, d_out);
+  for (int n = 0; n < warmup + repeat; n++) {
+    if (n == warmup) {
+      hipDeviceSynchronize();
+      begin = std::chrono::steady_clock::now();
+    }
+    bcast_shfl_sg8 <<< dim3(1), dim3(BUF_SIZE) >>> (PATTERN, d_out);
+  }
 
   hipDeviceSynchronize();
   end = std::chrono::steady_clock::now();
@@ -222,10 +230,13 @@ int main(int argc, char* argv[]) {
   hipMemcpy(out, d_out, sizeof(int) * BUF_SIZE, hipMemcpyDeviceToHost);
   verifyBroadcast(out, 8, PATTERN);
 
-  begin = std::chrono::steady_clock::now();
-
-  for (int n = 0; n < repeat; n++)
-    hipLaunchKernelGGL(bcast_shfl_sg16, dim3(1), dim3(BUF_SIZE), 0, 0, PATTERN, d_out);
+  for (int n = 0; n < warmup + repeat; n++) {
+    if (n == warmup) {
+      hipDeviceSynchronize();
+      begin = std::chrono::steady_clock::now();
+    }
+    bcast_shfl_sg16 <<< dim3(1), dim3(BUF_SIZE) >>> (PATTERN, d_out);
+  }
 
   hipDeviceSynchronize();
   end = std::chrono::steady_clock::now();
@@ -237,10 +248,13 @@ int main(int argc, char* argv[]) {
 
   verifyBroadcast(out, 16, PATTERN);
 
-  begin = std::chrono::steady_clock::now();
-
-  for (int n = 0; n < repeat; n++)
-    hipLaunchKernelGGL(bcast_shfl_sg32, dim3(1), dim3(BUF_SIZE), 0, 0, PATTERN, d_out);
+  for (int n = 0; n < warmup + repeat; n++) {
+    if (n == warmup) {
+      hipDeviceSynchronize();
+      begin = std::chrono::steady_clock::now();
+    }
+    bcast_shfl_sg32 <<< dim3(1), dim3(BUF_SIZE) >>> (PATTERN, d_out);
+  }
 
   hipDeviceSynchronize();
   end = std::chrono::steady_clock::now();
@@ -275,10 +289,15 @@ int main(int argc, char* argv[]) {
 
   hipMemcpy(gpuMatrix, Matrix, total * sizeof(float), hipMemcpyHostToDevice);
 
-  begin = std::chrono::steady_clock::now();
+  warmup = repeat2;
 
-  for (int n = 0; n < repeat2; n++)
-    hipLaunchKernelGGL(transpose_shfl, dim3(total/8), dim3(8), 0, 0, gpuTransposeMatrix, gpuMatrix);
+  for (int n = 0; n < warmup + repeat2; n++) {
+    if (n == warmup) {
+      hipDeviceSynchronize();
+      begin = std::chrono::steady_clock::now();
+    }
+    transpose_shfl <<< dim3(total/8), dim3(8) >>> (gpuTransposeMatrix, gpuMatrix);
+  }
 
   hipDeviceSynchronize();
   end = std::chrono::steady_clock::now();
@@ -291,10 +310,13 @@ int main(int argc, char* argv[]) {
   matrixTransposeCPUReference(cpuTransposeMatrix, Matrix, total/8, 8);
   verifyTransposeMatrix(TransposeMatrix, cpuTransposeMatrix, total, 8);
 
-  begin = std::chrono::steady_clock::now();
-
-  for (int n = 0; n < repeat2; n++)
-    hipLaunchKernelGGL(transpose_shfl, dim3(total/16), dim3(16), 0, 0, gpuTransposeMatrix, gpuMatrix);
+  for (int n = 0; n < warmup + repeat2; n++) {
+    if (n == warmup) {
+      hipDeviceSynchronize();
+      begin = std::chrono::steady_clock::now();
+    }
+    transpose_shfl <<< dim3(total/16), dim3(16) >>> (gpuTransposeMatrix, gpuMatrix);
+  }
 
   hipDeviceSynchronize();
   end = std::chrono::steady_clock::now();
@@ -307,10 +329,13 @@ int main(int argc, char* argv[]) {
   matrixTransposeCPUReference(cpuTransposeMatrix, Matrix, total/16, 16);
   verifyTransposeMatrix(TransposeMatrix, cpuTransposeMatrix, total, 16);
 
-  begin = std::chrono::steady_clock::now();
-
-  for (int n = 0; n < repeat2; n++)
-    hipLaunchKernelGGL(transpose_shfl, dim3(total/32), dim3(32), 0, 0, gpuTransposeMatrix, gpuMatrix);
+  for (int n = 0; n < warmup + repeat2; n++) {
+    if (n == warmup) {
+      hipDeviceSynchronize();
+      begin = std::chrono::steady_clock::now();
+    }
+    transpose_shfl <<< dim3(total/32), dim3(32) >>> (gpuTransposeMatrix, gpuMatrix);
+  }
 
   hipDeviceSynchronize();
   end = std::chrono::steady_clock::now();
