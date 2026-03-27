@@ -272,7 +272,7 @@ int main(int argc, char **argv)
       {
         printf("> Peer access from %s (GPU%d) -> %s (GPU%d) : \n", prop[i].name, i,
                prop[j].name, j);
-	pair_access(i, j, repeat);
+        pair_access(i, j, repeat);
       }
     }
   }
