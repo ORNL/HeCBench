@@ -170,6 +170,7 @@ Not all CUDA programs have SYCL, HIP or OpenMP equivalents
 Raw performance of any program may be suboptimal  
 Some programs may take long to complete on an integrated GPU  
 Some host programs contain platform-specific intrinsics, so they may cause compile error on a PowerPC platform
+Some programs may fail to complete due to limited GPU device memory (4, 8, 12, 16, 24, 32, 40 GB)
 Program hang: bh-hip, mpc-sycl 
 
 # Emulation
