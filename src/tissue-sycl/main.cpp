@@ -5,7 +5,7 @@
   This spreads it over more threads.
   TWS September 2014
  */
- 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
   float* h_qt = (float*) malloc (nntDev*sizeof(float));
   float* h_ct_gold = (float*) malloc (nntDev*sizeof(float));
 
-  // bound the distance between any two 3D points 
+  // bound the distance between any two 3D points
   for (int i = 0; i < 3 * nntDev; i++) {
     h_tisspoints[i] = rand() % (nntDev / 3);
   }
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
     h_qt[i] = rand() / (float)RAND_MAX;
   }
 
-  int step = 4; //a power of two 
+  int step = 4; //a power of two
 
 #ifdef USE_GPU
   sycl::queue q(sycl::gpu_selector_v, sycl::property::queue::in_order());
@@ -148,26 +148,19 @@ int main(int argc, char** argv) {
   sycl::range<1> lws (256);
   sycl::range<1> gws ((step*nnt + 255) / 256 * 256);
 
+  auto kFn = [&] (sycl::handler &cgh) {
+    cgh.parallel_for(sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+      tissue(item, d_tisspoints, d_gtt, d_gbartt, d_ct, d_ctprev, d_qt,
+             nnt, nntDev, step, 2);
+    });
+  };
+
   // quick verification and warmup
   for (int i = 0; i < 2; i++) {
-    q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class warmup>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        tissue(item, d_tisspoints, d_gtt, d_gbartt, d_ct, d_ctprev, d_qt,
-               nnt, nntDev, step, 1);
-      });
-    });
-
-    q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class warmup2>(sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        tissue(item, d_tisspoints, d_gtt, d_gbartt, d_ct, d_ctprev, d_qt,
-               nnt, nntDev, step, 2);
-      });
-    });
+    q.submit(kFn);
   }
 
   for (int i = 0; i < 2; i++) {
-    reference(h_tisspoints,h_gtt,h_gbartt,h_ct_gold,h_ctprev,h_qt,nnt,nntDev,step,1);
     reference(h_tisspoints,h_gtt,h_gbartt,h_ct_gold,h_ctprev,h_qt,nnt,nntDev,step,2);
   }
 
@@ -188,21 +181,7 @@ int main(int argc, char** argv) {
   auto start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < repeat; i++) {
-    q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class timing>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        tissue(item, d_tisspoints, d_gtt, d_gbartt, d_ct, d_ctprev, d_qt,
-               nnt, nntDev, step, 1);
-      });
-    });
-
-    q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class timing2>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        tissue(item, d_tisspoints, d_gtt, d_gbartt, d_ct, d_ctprev, d_qt,
-               nnt, nntDev, step, 2);
-      });
-    });
+    q.submit(kFn);
   }
 
   q.wait();

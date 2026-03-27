@@ -38,6 +38,53 @@ void MRCGradient2(
   }
 }
 
+__global__
+void MRCGradient3(
+    const int N, const int* Y, const float* X1, const float* X2, const float* dOutput,
+    const float margin, float*__restrict__ dX1, float*__restrict__ dX2)
+{
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int vec_count = N / 4;
+
+  if (i < vec_count) {
+    int4   y4  = reinterpret_cast<const int4*>  (Y)      [i];
+    float4 x1  = reinterpret_cast<const float4*>(X1)     [i];
+    float4 x2  = reinterpret_cast<const float4*>(X2)     [i];
+    float4 do4 = reinterpret_cast<const float4*>(dOutput)[i];
+
+    float4 yf, dist;
+    float4 out_x1, out_x2;
+    yf.x   = y4.x;
+    yf.y   = y4.y;
+    yf.z   = y4.z;
+    yf.w   = y4.w;
+    dist.x = fma(-yf.x , x1.x - x2.x , margin);
+    dist.y = fma(-yf.y , x1.y - x2.y , margin);
+    dist.z = fma(-yf.z , x1.z - x2.z , margin);
+    dist.w = fma(-yf.w , x1.w - x2.w , margin);
+
+    out_x1.x = dist.x < 0.f ? 0.f : -yf.x * do4.x;
+    out_x2.x = dist.x < 0.f ? 0.f :  yf.x * do4.x;
+    out_x1.y = dist.y < 0.f ? 0.f : -yf.y * do4.y;
+    out_x2.y = dist.y < 0.f ? 0.f :  yf.y * do4.y;
+    out_x1.z = dist.z < 0.f ? 0.f : -yf.z * do4.z;
+    out_x2.z = dist.z < 0.f ? 0.f :  yf.z * do4.z;
+    out_x1.w = dist.w < 0.f ? 0.f : -yf.w * do4.w;
+    out_x2.w = dist.w < 0.f ? 0.f :  yf.w * do4.w;
+
+    reinterpret_cast<float4*>(dX1)[i] = out_x1;
+    reinterpret_cast<float4*>(dX2)[i] = out_x2;
+  }
+
+  for (int j = 4 * vec_count + i; j < N; j += blockDim.x) {
+    float yf   = (float)Y[j];
+    float o    = dOutput[j];
+    float dist = -yf * (X1[j] - X2[j]) + margin;
+    dX1[j] = dist < 0.f ? 0.f : -yf * o;
+    dX2[j] = dist < 0.f ? 0.f :  yf * o;
+  }
+}
+
 int main(int argc, char* argv[])
 {
   if (argc != 3) {
@@ -86,19 +133,22 @@ int main(int argc, char* argv[])
   hipMalloc((void**)&d_dX1, size_bytes);
   hipMalloc((void**)&d_dX2, size_bytes);
 
-  dim3 grid ((length + 255) / 256);
-  dim3 block (256);
+  int block_size = 256;
+  dim3 grid ((length + block_size - 1) / block_size);
+  dim3 grid2 ((length/4 + block_size - 1) / block_size);
+  dim3 block (block_size);
 
   // warmup
   for (int i = 0; i < repeat; i++) {
-    MRCGradient <<<grid, block>>> (length, d_Y, d_X1, d_X2, d_O, m, d_dX1, d_dX2);
+    MRCGradient  <<<grid, block>>> (length, d_Y, d_X1, d_X2, d_O, m, d_dX1, d_dX2);
     MRCGradient2 <<<grid, block>>> (length, d_Y, d_X1, d_X2, d_O, m, d_dX1, d_dX2);
+    MRCGradient3 <<<grid2, block>>> (length, d_Y, d_X1, d_X2, d_O, m, d_dX1, d_dX2);
   }
 
   hipDeviceSynchronize();
   auto start = std::chrono::steady_clock::now();
 
-  for (int i = 0; i < repeat; i++) 
+  for (int i = 0; i < repeat; i++)
     MRCGradient <<<grid, block>>> (length, d_Y, d_X1, d_X2, d_O, m, d_dX1, d_dX2);
 
   hipDeviceSynchronize();
@@ -108,7 +158,7 @@ int main(int argc, char* argv[])
 
   start = std::chrono::steady_clock::now();
 
-  for (int i = 0; i < repeat; i++) 
+  for (int i = 0; i < repeat; i++)
     MRCGradient2 <<<grid, block>>> (length, d_Y, d_X1, d_X2, d_O, m, d_dX1, d_dX2);
 
   hipDeviceSynchronize();
@@ -116,9 +166,19 @@ int main(int argc, char* argv[])
   time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average execution time of MRC2 kernel: %f (us)\n", (time * 1e-3f) / repeat);
 
+  start = std::chrono::steady_clock::now();
+
+  for (int i = 0; i < repeat; i++)
+    MRCGradient3 <<<grid2, block>>> (length, d_Y, d_X1, d_X2, d_O, m, d_dX1, d_dX2);
+
+  hipDeviceSynchronize();
+  end = std::chrono::steady_clock::now();
+  time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  printf("Average execution time of MRC3 kernel: %f (us)\n", (time * 1e-3f) / repeat);
+
   // verify
-  hipMemcpy(h_dX1, d_dX1, size_bytes, hipMemcpyDeviceToHost); 
-  hipMemcpy(h_dX2, d_dX2, size_bytes, hipMemcpyDeviceToHost); 
+  hipMemcpy(h_dX1, d_dX1, size_bytes, hipMemcpyDeviceToHost);
+  hipMemcpy(h_dX2, d_dX2, size_bytes, hipMemcpyDeviceToHost);
 
   reference (length, h_Y, h_X1, h_X2, h_O, m, r_dX1, r_dX2);
 

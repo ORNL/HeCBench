@@ -109,19 +109,20 @@ int main(int argc, char* argv[])
   sycl::range<1> gws ((nrow + 255) / 256 * 256);
   sycl::range<1> lws (256);
 
+  auto taFn = [=] (sycl::nd_item<1> item) {
+    tensor_packed_accessor_kernel(item, r_acc, m_acc, v_acc);
+  };
+  auto raFn = [=] (sycl::nd_item<1> item) {
+    raw_accessor_kernel(item, nrow, ncol, d_r, d_m, d_v);
+  };
+
   printf("Warmup..\n");
   for (int i = 0; i < repeat; i++) {
     q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class packed_warmup>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        tensor_packed_accessor_kernel(item, r_acc, m_acc, v_acc);
-      });
+      cgh.parallel_for(sycl::nd_range<1>(gws, lws), taFn);
     });
     q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class raw_warmup>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        raw_accessor_kernel(item, nrow, ncol, d_r, d_m, d_v);
-      });
+      cgh.parallel_for(sycl::nd_range<1>(gws, lws), raFn);
     });
   }
 
@@ -130,10 +131,7 @@ int main(int argc, char* argv[])
 
   for (int i = 0; i < repeat; i++) {
     q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class raw>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        raw_accessor_kernel(item, nrow, ncol, d_r, d_m, d_v);
-      });
+      cgh.parallel_for(sycl::nd_range<1>(gws, lws), raFn);
     });
   }
 
@@ -147,10 +145,7 @@ int main(int argc, char* argv[])
 
   for (int i = 0; i < repeat; i++) {
     q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class packed>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        tensor_packed_accessor_kernel(item, r_acc, m_acc, v_acc);
-      });
+      cgh.parallel_for(sycl::nd_range<1>(gws, lws), taFn);
     });
   }
 

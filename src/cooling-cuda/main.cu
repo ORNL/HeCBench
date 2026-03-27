@@ -120,7 +120,7 @@ void reference (
         Real *__restrict__ r,
   const int  heat_flag)
 {
-  for (int i = 0; i < num; i++) 
+  for (int i = 0; i < num; i++)
     r[i] = primordial_cool(n, T[i], heat_flag);
 }
 
@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
   }
   const int num = atoi(argv[1]);
   const int repeat = atoi(argv[2]);
-    
+
   const size_t size_bytes = sizeof(Real) * num;
 
   const Real n = 0.0899; // density
@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
 
   // warmup
   for (int i = 0; i < repeat; i++) {
-    cool_kernel <<< grids, blocks >>> (num, n, d_T, d_r, 0);
+    cool_kernel <<< grids, blocks >>> (num, n, d_T, d_r, 1);
   }
   cudaDeviceSynchronize();
 
@@ -174,7 +174,7 @@ int main(int argc, char* argv[])
   cudaMemcpy(r, d_r, size_bytes, cudaMemcpyDeviceToHost);
 
   reference(num, n, T, h_r, 1);
-  
+
   bool error = false;
   for (int i = 0; i < num; i++) {
     if (fabs(r[i] - h_r[i]) > 1e-3) {

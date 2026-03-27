@@ -108,13 +108,15 @@ void atomicCost (int nelems, int repeat)
   sycl::range<1> lws (BLOCK_SIZE);
   sycl::range<1> gws ((nelems / 2 + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE);
 
-  //  warmup
-  q.submit([&](sycl::handler &cgh) {
+  auto kFn = [&](sycl::handler &cgh) {
     auto nelems_ct1 = nelems / 2;
     cgh.parallel_for(sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
       f16AtomicOnGlobalMem(d_result, nelems_ct1, item);
     });
-  });
+  };
+
+  //  warmup
+  q.submit(kFn);
 
   q.memcpy(result, d_result, result_size).wait();
   printf("Print the first two elements: 0x%04x 0x%04x\n\n", result[0], result[1]);
@@ -123,12 +125,7 @@ void atomicCost (int nelems, int repeat)
   auto start = std::chrono::steady_clock::now();
   for(int i=0; i<repeat; i++)
   {
-    q.submit([&](sycl::handler &cgh) {
-      auto nelems_ct1 = nelems / 2;
-      cgh.parallel_for(sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
-        f16AtomicOnGlobalMem(d_result, nelems_ct1, item);
-      });
-    });
+    q.submit(kFn);
   }
   q.wait();
   auto end = std::chrono::steady_clock::now();

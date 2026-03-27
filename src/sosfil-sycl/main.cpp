@@ -187,16 +187,17 @@ void filtering (sycl::queue &q, const int repeat,
   const int out_size = n_sections;
   const int shared_mem_size = out_size + z_size + sos_size;
 
+  auto kFn = [&](sycl::handler &cgh) {
+    sycl::local_accessor<T, 1> smem(sycl::range<1>(shared_mem_size), cgh);
+    cgh.parallel_for(sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
+      sosfilt<T>(n_signals, n_samples, n_sections, zi_width, d_sos, d_zi, d_x,
+                 item, smem.template get_multi_ptr<sycl::access::decorated::no>().get());
+    });
+  };
+
   // warmup and validate
   for (int n = 0; n < 30; n++) {
-    q.submit([&](sycl::handler &cgh) {
-      sycl::local_accessor<T, 1> smem(sycl::range<1>(shared_mem_size), cgh);
-      cgh.parallel_for(
-          sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
-        sosfilt<T>(n_signals, n_samples, n_sections, zi_width, d_sos, d_zi, d_x,
-                   item, smem.template get_multi_ptr<sycl::access::decorated::no>().get());
-      });
-    });
+    q.submit(kFn);
 
     reference<T>(
         n_signals,
@@ -217,14 +218,7 @@ void filtering (sycl::queue &q, const int repeat,
   auto start = std::chrono::steady_clock::now();
 
   for (int n = 0; n < repeat; n++) {
-    q.submit([&](sycl::handler &cgh) {
-      sycl::local_accessor<T, 1> smem(sycl::range<1>(shared_mem_size), cgh);
-      cgh.parallel_for(
-          sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
-        sosfilt<T>(n_signals, n_samples, n_sections, zi_width, d_sos, d_zi, d_x,
-                   item, smem.template get_multi_ptr<sycl::access::decorated::no>().get());
-      });
-    });
+    q.submit(kFn);
   }
 
   q.wait();

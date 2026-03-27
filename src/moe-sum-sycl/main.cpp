@@ -19,24 +19,22 @@ int64_t moe_sum(sycl::queue &q,
   sycl::range<1> gws(block_size * num_tokens);
   sycl::range<1> lws(block_size);
 
+  auto kFn = [=](sycl::nd_item<1> item) {
+    moe_sum_kernel<scalar_t, 2>(output, input, hidden_size, item);
+  };
+
   // warmup
   for (int i = 0; i < 30; i++) {
-    q.parallel_for(
-      sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
-        moe_sum_kernel<scalar_t, 2>(output, input, hidden_size, item);
-    });
+    q.parallel_for(sycl::nd_range<1>(gws, lws), kFn);
   }
   q.wait();
 
   auto start = std::chrono::steady_clock::now();
-  
+
   switch (topk) {
     case 2:
       for (int i = 0; i < repeat; i++)
-        q.parallel_for(
-          sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
-            moe_sum_kernel<scalar_t, 2>(output, input, hidden_size, item);
-        });
+        q.parallel_for(sycl::nd_range<1>(gws, lws), kFn);
       break;
 
     case 3:
@@ -80,24 +78,22 @@ int64_t moe_sum_vec4(sycl::queue &q,
   sycl::range<1> gws(block_size * num_tokens);
   sycl::range<1> lws(block_size);
 
+  auto kFn = [=](sycl::nd_item<1> item) {
+    moe_sum_kernel_vec4<2>(output, input, hidden_size, item);
+  };
+
   // warmup
   for (int i = 0; i < 30; i++) {
-    q.parallel_for(
-      sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
-        moe_sum_kernel_vec4<2>(output, input, hidden_size, item);
-    });
+    q.parallel_for(sycl::nd_range<1>(gws, lws), kFn);
   }
   q.wait();
 
   auto start = std::chrono::steady_clock::now();
-  
+
   switch (topk) {
     case 2:
       for (int i = 0; i < repeat; i++)
-        q.parallel_for(
-          sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
-            moe_sum_kernel_vec4<2>(output, input, hidden_size, item);
-        });
+        q.parallel_for(sycl::nd_range<1>(gws, lws), kFn);
       break;
 
     case 3:

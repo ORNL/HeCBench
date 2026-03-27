@@ -258,11 +258,9 @@ std::vector<float> runKernel(Params params) {
   sycl::range<1> gws (global);
   sycl::range<1> lws (wgSize);
 
-  // warmup
-  q.submit([&](sycl::handler &h) {
+  auto kFn = [&](sycl::handler &h) {
     sycl::local_accessor<FFParams, 1> s_forcefield(sycl::range<1>(ntypes), h);
-    h.parallel_for<class warmup>(
-      sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
+    h.parallel_for(sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
       fasten_main(item,
                   s_forcefield.get_multi_ptr<sycl::access::decorated::no>().get(),
                   wgSize,
@@ -281,33 +279,14 @@ std::vector<float> runKernel(Params params) {
                   forcefield,
                   results);
     });
-  }).wait();
+  };
+
+  // warmup
+  q.submit(kFn).wait();
 
   auto kernelStart = std::chrono::high_resolution_clock::now();
   for (size_t i = 0; i < params.iterations; ++i) {
-    q.submit([&](sycl::handler &h) {
-      sycl::local_accessor<FFParams, 1> s_forcefield(sycl::range<1>(ntypes), h);
-      h.parallel_for<class run>(
-        sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
-        fasten_main(item,
-                    s_forcefield.get_multi_ptr<sycl::access::decorated::no>().get(),
-                    wgSize,
-                    ntypes,
-                    nposes,
-                    natlig,
-                    natpro,
-                    protein,
-                    ligand,
-                    transforms_0,
-                    transforms_1,
-                    transforms_2,
-                    transforms_3,
-                    transforms_4,
-                    transforms_5,
-                    forcefield,
-                    results);
-      });
-    });
+    q.submit(kFn);
   }
   q.wait();
   auto kernelEnd = std::chrono::high_resolution_clock::now();

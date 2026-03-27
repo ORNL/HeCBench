@@ -11,7 +11,7 @@ bool check (const char *cs, int n)
   bool ok = true;
   for (int i = 0; i < n; i++) {
     if (cs[i] != 5) {
-      ok = false; 
+      ok = false;
       break;
     }
   }
@@ -39,19 +39,20 @@ int main(int argc, char* argv[]) {
   sycl::range<1> gws ((n + 255)/256*256);
   sycl::range<1> lws (256);
 
+  auto cmplx32Fn = [=] (sycl::nd_item<1> item) {
+    complex_float(item, d_cs, n);
+  };
+  auto cmplx64Fn = [=] (sycl::nd_item<1> item) {
+    complex_double(item, d_cs, n);
+  };
+
   // warmup
   q.submit([&] (sycl::handler &cgh) {
-    cgh.parallel_for(
-      sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-      complex_float(item, d_cs, n);
-    });
+    cgh.parallel_for(sycl::nd_range<1>(gws, lws), cmplx32Fn);
   });
 
   q.submit([&] (sycl::handler &cgh) {
-    cgh.parallel_for(
-      sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-      complex_double(item, d_cs, n);
-    });
+    cgh.parallel_for(sycl::nd_range<1>(gws, lws), cmplx64Fn);
   });
 
   q.wait();
@@ -62,10 +63,7 @@ int main(int argc, char* argv[]) {
   // complex numbers in single precision
   for (int i = 0; i < repeat; i++) {
     q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        complex_float(item, d_cs, n);
-      });
+      cgh.parallel_for(sycl::nd_range<1>(gws, lws), cmplx32Fn);
     });
   }
 
@@ -102,10 +100,7 @@ int main(int argc, char* argv[]) {
   // complex numbers in double precision
   for (int i = 0; i < repeat; i++) {
     q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        complex_double(item, d_cs, n);
-      });
+      cgh.parallel_for(sycl::nd_range<1>(gws, lws), cmplx64Fn);
     });
   }
 

@@ -45,13 +45,14 @@ void test_threads_copy(sycl::queue &q, size_t n, int repeat) try {
     sycl::range<3> lws (1, 1, block_size);
     sycl::range<3> gws (1, 1, (n + block_work_size - 1) / block_work_size * block_size);
 
+    auto thrcpyFn = [=](sycl::nd_item<3> item) {
+         threads_copy_kernel<scalar_t, vec_size>(item, in_d, out_d, n);
+    };
+
     // warmup and verify
     for (int i = 0; i < 100; i++)
     {
-        q.parallel_for(
-            sycl::nd_range<3>(gws, lws), [=](sycl::nd_item<3> item) {
-                threads_copy_kernel<scalar_t, vec_size>(item, in_d, out_d, n);
-        });
+        q.parallel_for(sycl::nd_range<3>(gws, lws), thrcpyFn);
     }
     q.memcpy(out_h, out_d, n * sizeof(scalar_t)).wait();
 
@@ -62,10 +63,7 @@ void test_threads_copy(sycl::queue &q, size_t n, int repeat) try {
 
     for (int i = 0; i < repeat; i++)
     {
-        q.parallel_for(
-            sycl::nd_range<3>(gws, lws), [=](sycl::nd_item<3> item) {
-                threads_copy_kernel<scalar_t, vec_size>(item, in_d, out_d, n);
-        });
+        q.parallel_for(sycl::nd_range<3>(gws, lws), thrcpyFn);
     }
     q.wait();
 

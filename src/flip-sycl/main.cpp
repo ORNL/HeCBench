@@ -134,9 +134,7 @@ void flip (const int64_t num_dims, const int64_t num_flip_dims,
   sycl::range<1> gws ((n + threadsPerBlock - 1) / threadsPerBlock * threadsPerBlock);
   sycl::range<1> lws (threadsPerBlock);
 
-  // warmup and verify
-  q.submit([&] (sycl::handler &cgh) {
-    cgh.parallel_for(sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+  auto kFn = [=] (sycl::nd_item<1> item) {
       flip_kernel<scalar_t>(
         item,
         d_input,
@@ -148,7 +146,11 @@ void flip (const int64_t num_dims, const int64_t num_flip_dims,
         d_strides_contiguous,
         d_shape,
         num_dims);
-    });
+   };
+
+  // warmup and verify
+  q.submit([&] (sycl::handler &cgh) {
+    cgh.parallel_for(sycl::nd_range<1>(gws, lws), kFn);
   });
 
   flip_kernel_cpu<scalar_t>(
@@ -171,19 +173,7 @@ void flip (const int64_t num_dims, const int64_t num_flip_dims,
 
   for (int i = 0; i < repeat; i++) {
     q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for(sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        flip_kernel<scalar_t>(
-          item,
-          d_input,
-          d_output,
-          n,
-          d_flip_dims,
-          num_flip_dims,
-          d_strides,
-          d_strides_contiguous,
-          d_shape,
-          num_dims);
-      });
+      cgh.parallel_for(sycl::nd_range<1>(gws, lws), kFn);
     });
   }
 

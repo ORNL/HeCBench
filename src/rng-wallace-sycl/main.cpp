@@ -50,16 +50,18 @@ int main(int argc, char* argv[]) {
   sycl::range<1> lws (WALLACE_NUM_THREADS);
   const unsigned seed = 1;
 
+  auto kFn = [&](sycl::handler &cgh) {
+    sycl::local_accessor<float, 1> pool (
+      sycl::range<1>(WALLACE_POOL_SIZE + WALLACE_CHI2_SHARED_SIZE), cgh);
+    cgh.parallel_for(sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+      rng_wallace(seed, d_Pool, d_randomNumbers, d_rngChi2Corrections,
+                  item, pool.get_multi_ptr<sycl::access::decorated::no>().get());
+    });
+  };
+
   // warmup and quick validation
   for (int i = 0; i < 30; i++) {
-    q.submit([&](sycl::handler &cgh) {
-      sycl::local_accessor<float, 1> pool (
-        sycl::range<1>(WALLACE_POOL_SIZE + WALLACE_CHI2_SHARED_SIZE), cgh);
-      cgh.parallel_for(sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        rng_wallace(seed, d_Pool, d_randomNumbers, d_rngChi2Corrections,
-                    item, pool.get_multi_ptr<sycl::access::decorated::no>().get());
-      });
-    });
+    q.submit(kFn);
   }
 
   for (int i = 0; i < 30; i++) {
@@ -90,14 +92,7 @@ int main(int argc, char* argv[]) {
   auto start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < repeat; i++) {
-    q.submit([&] (sycl::handler &cgh) {
-      sycl::local_accessor<float, 1> pool (
-        sycl::range<1>(WALLACE_POOL_SIZE + WALLACE_CHI2_SHARED_SIZE), cgh);
-      cgh.parallel_for(sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        rng_wallace(seed, d_Pool, d_randomNumbers, d_rngChi2Corrections,
-                    item, pool.get_multi_ptr<sycl::access::decorated::no>().get());
-      });
-    });
+    q.submit(kFn);
   }
 
   q.wait();

@@ -25,13 +25,13 @@ Each benchmark falls into a single category. While such classification is not ac
     daphne
 
 ### Bandwidth
-    allreduce, cmembench, babelstream, ccl, memcpy, memtest, pingpong, randomAccess, reshapeKVCache, shmembench, storeKVCache, threadcpy, triad, vadd
+    allreduce, cmembench, babelstream, ccl, memcpy, memtest, p2p, pingpong, randomAccess, reshapeKVCache, shmembench, storeKVCache, threadcpy, triad, vadd
 
 ### Bioinformatics
     all-pairs-distance, bsw, ccs, cm, deredundancy, diamond, epistasis, extend2, frna, fsm, ga, local-ht, logan, minibude, minimap2, nbnxm, nw, pcc, prna, sa, snake
 
 ### Computer vision and image processing
-    affine, aobench, asmooth, background-subtract, bezier-surface, bilateral, bm3d, boxfilter, cbsfil, car, ced, colorwheel, convolution1D, convolution3D, convolutionDeformable, convolutionSeperable, dct8x8, debayer, depixel, degrid, doh, dpid, egs, face, flame, gabor, gamma-correction, hogbom, mandelbrot, marchCubes, match, medianfilter, morphology, mriQ, ne, opticalFlow, perlin, sobel, tonemapping, recursiveGaussian, resize, sad, seam-carving, spm, srad, ssim, stencil1d, stencil3d, surfel, tgvnn, voxelization, zoom
+    affine, aobench, asmooth, background-subtract, bezier-surface, bilateral, bm3d, boxfilter, cbsfil, car, ced, colorwheel, convolution1D, convolution3D, convolutionDeformable, convolutionSeperable, dct8x8, debayer, depixel, degrid, doh, dpid, egs, face, flame, gabor, gamma-correction, groupnorm, hogbom, mandelbrot, marchCubes, match, medianfilter, morphology, mriQ, ne, opticalFlow, perlin, sobel, tonemapping, recursiveGaussian, resize, sad, seam-carving, spm, srad, ssim, stencil1d, stencil3d, surfel, tgvnn, upsample, voxelization, zoom
     
 ### Cryptography
     aes, bitcracker, bitpermute, chacha20, columnarSolver, ecdh, keccaktreehash, merkle, present  
@@ -52,7 +52,7 @@ Each benchmark falls into a single category. While such classification is not ac
     cc, floydwarshall, floydwarshall2, gc, hbc, hungarian, mis, sssp, rsmt
 
 ### Language and kernel features
-    adjacent, aligned-types, asta, blockAccess, blockexchange, blockScan, collision, concurrentKernels, conversion, dispatch, dp4a, graphExecution, ert, interleave, intrinsics-cast, kernelLaunch, layout, mallocFree, maxFlops, mixbench, nosync, openmp, overlap, p2p, pad, pitch, popcount, prefetch, reverse, ring, saxpy-ompt, shuffle, simpleMultiDevice, streamCreateCopyDestroy, streamOrderedAllocation, streamPriority, streamUM, tensorAccessor, threadfence, warpexchange, vote, wmma, wordcount, zerocopy 
+    adjacent, aligned-types, asta, blockAccess, blockexchange, blockScan, collision, concurrentKernels, conversion, dispatch, dp4a, graphExecution, ert, interleave, intrinsics-cast, kernelLaunch, layout, mallocFree, maxFlops, mixbench, nosync, openmp, overlap, pad, pitch, popcount, prefetch, reverse, ring, saxpy-ompt, shuffle, simpleMultiDevice, streamCreateCopyDestroy, streamOrderedAllocation, streamPriority, streamUM, tensorAccessor, threadfence, warpexchange, vote, wmma, wordcount, zerocopy 
 
 ### Machine learning  
     accuracy, adam, adamw, addBiasQKV, addBiasResidualLayerNorm, attention, attention-paged, attentionMultiHead, backprop, bincount, bn, channelShuffle, channelSum, clink, concat, crossEntropy, dense-embedding, dropout, dwconv, dwconv1d, expdist, flip, gd, gelu, ge-spmm, geglu, glu, gmm, gru, kalman, kmc, kmeans, knn, layernorm, lda, lif, logprob, lr, lrn, mask, matern, maxpool3d, mcpr, meanshift, mf-sgd, mmcsf, mnist, moe, moe-align, moe-sum, mrc, multinomial, nlll, nonzero, overlay, p4, page-rank, permute, perplexity, pointwise, pool, qkv, qtclustering, remap, relu, resnet-kernels, rmsnorm, rowwiseMoments, rotary, sampling, scel, snicit, softmax, softmax-fused, softmax-online, ssm, stddev, streamcluster, swish, tsne, unfold, vol2col, wedford, winograd, word2vec
@@ -170,6 +170,7 @@ Not all CUDA programs have SYCL, HIP or OpenMP equivalents
 Raw performance of any program may be suboptimal  
 Some programs may take long to complete on an integrated GPU  
 Some host programs contain platform-specific intrinsics, so they may cause compile error on a PowerPC platform
+Some programs may fail to complete due to limited GPU device memory (4, 8, 12, 16, 24, 32, 40 GB)
 Program hang: bh-hip, mpc-sycl 
 
 # Emulation
@@ -768,6 +769,9 @@ Early results are shown [here](results/README.md)
 
 ### grep (cuda)
   Regular expression matching (https://github.com/bkase/CUDA-grep)
+
+### groupnorm (cuda)
+  Divide channels into groups and computes mean/variance for normalization within each group (https://github.com/clu0/unet.cu)
 
 ### grrt (cuda)
   General-relativistic radiative transfer calculations coupled with the calculation of geodesics in the Kerr spacetime (https://github.com/hungyipu/Odyssey)
@@ -1663,6 +1667,9 @@ Early results are shown [here](results/README.md)
 
 ### unfold (cuda)
   Unfold the view of original tensor as slices (https://pytorch.org/)
+  
+### upsample (cuda)
+  Nearest interpolation of samples (https://github.com/clu0/unet.cu)
   
 ### urng (opencl)
   Uniform random noise generator (https://github.com/OpenCL/AMD_APP_samples)

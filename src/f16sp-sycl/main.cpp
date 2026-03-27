@@ -75,19 +75,28 @@ int main(int argc, char *argv[])
 
     printf("\nGPU grid size is %d\n", grid);
 
-    // warmup
-    for (int i = 0; i < 1000; i++) {
-      q.submit([&](sycl::handler &cgh) {
+    auto fp16Fn = [&](sycl::handler &cgh) {
         sycl::local_accessor<sycl::half2> sm(sycl::range<1>(NUM_OF_THREADS), cgh);
-        cgh.parallel_for(
-          sycl::nd_range<1>(sycl::range<1>(grid*NUM_OF_THREADS),
-                            sycl::range<1>(NUM_OF_THREADS)),
-          [=](sycl::nd_item<1> item) {
+        cgh.parallel_for(sycl::nd_range<1>(sycl::range<1>(grid*NUM_OF_THREADS),
+                            sycl::range<1>(NUM_OF_THREADS)), [=](sycl::nd_item<1> item) {
           scalarProductKernel_native(d_a, d_b, d_r,
                                      sm.get_multi_ptr<sycl::access::decorated::no>().get(),
                                      size, item);
         });
-      });
+    };
+    auto fp32Fn = [&](sycl::handler &cgh) {
+        sycl::local_accessor<sycl::float2> sm(sycl::range<1>(NUM_OF_THREADS), cgh);
+        cgh.parallel_for(sycl::nd_range<1>(sycl::range<1>(grid*NUM_OF_THREADS),
+                            sycl::range<1>(NUM_OF_THREADS)), [=](sycl::nd_item<1> item) {
+          scalarProductKernel_native_fp32(d_a, d_b, d_r,
+                                          sm.get_multi_ptr<sycl::access::decorated::no>().get(),
+                                          size, item);
+        });
+    };
+
+    // warmup
+    for (int i = 0; i < 1000; i++) {
+      q.submit(fp16Fn);
     }
     q.wait();
 
@@ -95,17 +104,7 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < repeat; i++) {
       q.memset(d_r, 0, result_bytes);
-      q.submit([&](sycl::handler &cgh) {
-        sycl::local_accessor<sycl::half2> sm(sycl::range<1>(NUM_OF_THREADS), cgh);
-        cgh.parallel_for(
-          sycl::nd_range<1>(sycl::range<1>(grid*NUM_OF_THREADS),
-                            sycl::range<1>(NUM_OF_THREADS)),
-          [=](sycl::nd_item<1> item) {
-          scalarProductKernel_native(d_a, d_b, d_r,
-                                     sm.get_multi_ptr<sycl::access::decorated::no>().get(),
-                                     size, item);
-        });
-      });
+      q.submit(fp16Fn);
     }
 
     q.wait();
@@ -118,17 +117,7 @@ int main(int argc, char *argv[])
 
     // warmup
     for (int i = 0; i < 1000; i++) {
-      q.submit([&](sycl::handler &cgh) {
-        sycl::local_accessor<sycl::float2> sm(sycl::range<1>(NUM_OF_THREADS), cgh);
-        cgh.parallel_for(
-          sycl::nd_range<1>(sycl::range<1>(grid*NUM_OF_THREADS),
-                            sycl::range<1>(NUM_OF_THREADS)),
-          [=](sycl::nd_item<1> item) {
-          scalarProductKernel_native_fp32(d_a, d_b, d_r,
-                                          sm.get_multi_ptr<sycl::access::decorated::no>().get(),
-                                          size, item);
-        });
-      });
+      q.submit(fp32Fn);
     }
     q.wait();
 
@@ -136,17 +125,7 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < repeat; i++) {
       q.memset(d_r, 0, result_bytes);
-      q.submit([&](sycl::handler &cgh) {
-        sycl::local_accessor<sycl::float2> sm(sycl::range<1>(NUM_OF_THREADS), cgh);
-        cgh.parallel_for(
-          sycl::nd_range<1>(sycl::range<1>(grid*NUM_OF_THREADS),
-                            sycl::range<1>(NUM_OF_THREADS)),
-          [=](sycl::nd_item<1> item) {
-          scalarProductKernel_native_fp32(d_a, d_b, d_r,
-                                          sm.get_multi_ptr<sycl::access::decorated::no>().get(),
-                                          size, item);
-        });
-      });
+      q.submit(fp32Fn);
     }
 
     q.wait();

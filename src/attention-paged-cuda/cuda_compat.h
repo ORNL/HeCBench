@@ -8,6 +8,7 @@
     if (err != hipSuccess) { \
         printf("HIP error %s:%d: %s\n", \
                __FILE__, __LINE__, hipGetErrorString(err)); \
+        exit(err); \
     } \
 } while (0)
 
@@ -19,6 +20,7 @@
     if (err != cudaSuccess) { \
         printf("CUDA error %s:%d: %s\n", \
                __FILE__, __LINE__, cudaGetErrorString(err)); \
+        exit(err); \
     } \
 } while (0)
 

@@ -84,18 +84,30 @@ void index_accumulate(int batch_size, int output_size, int vector_dim, int repea
   sycl::range<3> gws (1, thread_y, thread_x * block_x);
   int shared_mem = (output_size * vector_dim + MAX_THREADS_PER_BLOCK);
 
+  auto k1Fn = [&](sycl::handler &cgh) {
+    sycl::local_accessor<float, 1> sm(sycl::range<1>(shared_mem), cgh);
+    cgh.parallel_for(sycl::nd_range<3>(gws, lws), [=](sycl::nd_item<3> item) {
+      scatterAdd_kernel(
+              d_index, d_source, d_output, batch_size, output_size,
+              vector_dim, item,
+              sm.get_multi_ptr<sycl::access::decorated::no>().get());
+    });
+  };
+
+  auto k2Fn = [&](sycl::handler &cgh) {
+    sycl::local_accessor<float, 1> sm(sycl::range<1>(shared_mem), cgh);
+    cgh.parallel_for(sycl::nd_range<3>(gws, lws), [=](sycl::nd_item<3> item) {
+      scatterAdd2_kernel(
+              d_index, d_source, d_output, batch_size, output_size,
+              vector_dim, item,
+              sm.get_multi_ptr<sycl::access::decorated::no>().get());
+    });
+  };
+
   // verify and warmup
   for (int i = 0; i < 10; i++) {
     q.memset(d_output, 0, output_size_bytes);
-    q.submit([&](sycl::handler &cgh) {
-      sycl::local_accessor<float, 1> sm(sycl::range<1>(shared_mem), cgh);
-      cgh.parallel_for(sycl::nd_range<3>(gws, lws), [=](sycl::nd_item<3> item) {
-        scatterAdd2_kernel(
-                d_index, d_source, d_output, batch_size, output_size,
-                vector_dim, item,
-                sm.get_multi_ptr<sycl::access::decorated::no>().get());
-      });
-    });
+    q.submit(k2Fn);
   }
   q.memcpy(output, d_output, output_size_bytes).wait();
 
@@ -114,15 +126,7 @@ void index_accumulate(int batch_size, int output_size, int vector_dim, int repea
 
   for (int i = 0; i < repeat; i++) {
     //q.memset(d_output, 0, output_size_bytes);
-    q.submit([&](sycl::handler &cgh) {
-      sycl::local_accessor<float, 1> sm(sycl::range<1>(shared_mem), cgh);
-      cgh.parallel_for(sycl::nd_range<3>(gws, lws), [=](sycl::nd_item<3> item) {
-        scatterAdd_kernel(
-                d_index, d_source, d_output, batch_size, output_size,
-                vector_dim, item,
-                sm.get_multi_ptr<sycl::access::decorated::no>().get());
-      });
-    });
+    q.submit(k1Fn);
   }
   q.wait();
 
@@ -135,15 +139,7 @@ void index_accumulate(int batch_size, int output_size, int vector_dim, int repea
 
   for (int i = 0; i < repeat; i++) {
     //q.memset(d_output, 0, output_size_bytes);
-    q.submit([&](sycl::handler &cgh) {
-      sycl::local_accessor<float, 1> sm(sycl::range<1>(shared_mem), cgh);
-      cgh.parallel_for(sycl::nd_range<3>(gws, lws), [=](sycl::nd_item<3> item) {
-        scatterAdd2_kernel(
-                d_index, d_source, d_output, batch_size, output_size,
-                vector_dim, item,
-                sm.get_multi_ptr<sycl::access::decorated::no>().get());
-      });
-    });
+    q.submit(k2Fn);
   }
   q.wait();
 

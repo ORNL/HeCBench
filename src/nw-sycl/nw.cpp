@@ -19,7 +19,7 @@
 #include <sycl/sycl.hpp>
 #include "reference.h"
 
-// kernel 
+// kernel
 #define SCORE(i, j) input_itemsets_l[j + i * (BLOCK_SIZE+1)]
 #define REF(i, j)   reference_l[j + i * BLOCK_SIZE]
 int max3( int a, int b, int c){
@@ -27,7 +27,7 @@ int max3( int a, int b, int c){
   int k;
   if( a <= b )
     k = b;
-  else 
+  else
     k = a;
   if( k <=c )
     return(c);
@@ -69,9 +69,10 @@ int blosum62[24][24] = {
 
 void usage(int argc, char **argv)
 {
-  fprintf(stderr, "Usage: %s <max_rows/max_cols> <penalty> \n", argv[0]);
+  fprintf(stderr, "Usage: %s <max_rows/max_cols> <penalty> <repeat>\n", argv[0]);
   fprintf(stderr, "\t<dimension>  - x and y dimensions\n");
   fprintf(stderr, "\t<penalty> - penalty(positive integer)\n");
+  fprintf(stderr, "\t<repeat> - the number of kernel executions\n");
   exit(1);
 }
 
@@ -80,13 +81,15 @@ int main(int argc, char **argv){
   printf("WG size of kernel = %d \n", BLOCK_SIZE);
 
   int max_rows_t, max_cols_t, penalty_t;
+  int repeat;
   // the lengths of the two sequences should be able to divided by 16.
   // And at current stage  max_rows needs to equal max_cols
-  if (argc == 3)
+  if (argc == 4)
   {
     max_rows_t = atoi(argv[1]);
     max_cols_t = atoi(argv[1]);
     penalty_t = atoi(argv[2]);
+    repeat = atoi(argv[3]);
   }
   else{
     usage(argc, argv);
@@ -100,7 +103,7 @@ int main(int argc, char **argv){
   // make constant variable to avoid kernel argument set at every loop iteration
   const int max_rows = max_rows_t + 1;
   const int max_cols = max_cols_t + 1;
-  const int penalty = penalty_t;  
+  const int penalty = penalty_t;
 
   int *reference;
   int *input_itemsets;
@@ -115,7 +118,7 @@ int main(int argc, char **argv){
 
   srand(7);
 
-  //initialization 
+  //initialization
   for (int i = 0 ; i < max_cols; i++){
     for (int j = 0 ; j < max_rows; j++){
       input_itemsets[i*max_cols+j] = 0;
@@ -151,7 +154,7 @@ int main(int argc, char **argv){
   int workgroupsize = BLOCK_SIZE;
 #ifdef DEBUG
   if (workgroupsize < 0) {
-    printf("ERROR: invalid or missing <num_work_items>[/<work_group_size>]\n"); 
+    printf("ERROR: invalid or missing <num_work_items>[/<work_group_size>]\n");
     return -1;
   }
 #endif
@@ -174,61 +177,56 @@ int main(int argc, char **argv){
   int *d_reference_acc = sycl::malloc_device<int>(matrix_size, q);
   q.memcpy(d_reference_acc, reference,  matrix_size_bytes);
 
-  // warmup is required to exclude data copy from host to device 
-  for(int blk = 1 ; blk <= block_width ; blk++){
-    global_work = BLOCK_SIZE * blk; // kernel arg set every iteration
-    q.submit([&](sycl::handler& cgh) {
-      sycl::local_accessor <int, 1> input_itemsets_l (sycl::range<1>((BLOCK_SIZE + 1) *(BLOCK_SIZE+1)), cgh);
-      sycl::local_accessor <int, 1> reference_l (sycl::range<1>(BLOCK_SIZE * BLOCK_SIZE), cgh);
-      cgh.parallel_for<class kernel1_warmup>(
-        sycl::nd_range<1>(sycl::range<1>(global_work), sycl::range<1>(local_work)), [=] (sycl::nd_item<1> item) {
-          #include "kernel1.sycl"
+  int warmup = 100;
+
+  std::chrono::steady_clock::time_point start, end;
+
+  for (int i = 0; i < warmup + repeat; i++) {
+    if (i == warmup) {
+      q.wait();
+      start = std::chrono::steady_clock::now();
+    }
+
+    #ifdef DEBUG
+      printf("Processing upper-left matrix\n");
+    #endif
+
+    for(int blk = 1 ; blk <= block_width ; blk++){
+      global_work = BLOCK_SIZE * blk; // kernel arg set every iteration
+      #ifdef DEBUG
+      printf("global size: %d local size: %d\n", global_work, local_work);
+      #endif
+      q.submit([&](sycl::handler& cgh) {
+        sycl::local_accessor <int, 1> input_itemsets_l (sycl::range<1>((BLOCK_SIZE + 1) *(BLOCK_SIZE+1)), cgh);
+        sycl::local_accessor <int, 1> reference_l (sycl::range<1>(BLOCK_SIZE * BLOCK_SIZE), cgh);
+        cgh.parallel_for(
+          sycl::nd_range<1>(sycl::range<1>(global_work), sycl::range<1>(local_work)), [=] (sycl::nd_item<1> item) {
+            #include "kernel1.sycl"
+        });
       });
-    });
+    }
+
+    #ifdef DEBUG
+    printf("Processing lower-right matrix\n");
+    #endif
+
+    for(int blk = block_width - 1 ; blk >= 1 ; blk--){
+      global_work = BLOCK_SIZE * blk;
+      q.submit([&](sycl::handler& cgh) {
+        sycl::local_accessor <int, 1> input_itemsets_l (sycl::range<1>((BLOCK_SIZE + 1) *(BLOCK_SIZE+1)), cgh);
+        sycl::local_accessor <int, 1> reference_l (sycl::range<1>(BLOCK_SIZE * BLOCK_SIZE), cgh);
+        cgh.parallel_for<class kernel2>(
+          sycl::nd_range<1>(sycl::range<1>(global_work), sycl::range<1>(local_work)), [=] (sycl::nd_item<1> item) {
+            #include "kernel2.sycl"
+        });
+      });
+    }
   }
 
   q.wait();
-  auto start = std::chrono::steady_clock::now();
-
-#ifdef DEBUG
-  printf("Processing upper-left matrix\n");
-#endif
-
-  for(int blk = 1 ; blk <= block_width ; blk++){
-    global_work = BLOCK_SIZE * blk; // kernel arg set every iteration
-#ifdef DEBUG
-    printf("global size: %d local size: %d\n", global_work, local_work);
-#endif
-    q.submit([&](sycl::handler& cgh) {
-      sycl::local_accessor <int, 1> input_itemsets_l (sycl::range<1>((BLOCK_SIZE + 1) *(BLOCK_SIZE+1)), cgh);
-      sycl::local_accessor <int, 1> reference_l (sycl::range<1>(BLOCK_SIZE * BLOCK_SIZE), cgh);
-      cgh.parallel_for<class kernel1>(
-        sycl::nd_range<1>(sycl::range<1>(global_work), sycl::range<1>(local_work)), [=] (sycl::nd_item<1> item) {
-          #include "kernel1.sycl"
-      });
-    });
-  }
-
-#ifdef DEBUG
-  printf("Processing lower-right matrix\n");
-#endif
-
-  for(int blk = block_width - 1 ; blk >= 1 ; blk--){	   
-    global_work = BLOCK_SIZE * blk;
-    q.submit([&](sycl::handler& cgh) {
-      sycl::local_accessor <int, 1> input_itemsets_l (sycl::range<1>((BLOCK_SIZE + 1) *(BLOCK_SIZE+1)), cgh);
-      sycl::local_accessor <int, 1> reference_l (sycl::range<1>(BLOCK_SIZE * BLOCK_SIZE), cgh);
-      cgh.parallel_for<class kernel2>(
-        sycl::nd_range<1>(sycl::range<1>(global_work), sycl::range<1>(local_work)), [=] (sycl::nd_item<1> item) {
-          #include "kernel2.sycl"
-      });
-    });
-  }
-
-  q.wait();
-  auto end = std::chrono::steady_clock::now();
+  end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-  printf("Total kernel execution time: %f (s)\n", time * 1e-9f);
+  printf("Total kernel execution time: %f (s)\n", time * 1e-9f / repeat);
 
   q.memcpy(output_itemsets, d_input_itemsets_acc, matrix_size_bytes).wait();
 

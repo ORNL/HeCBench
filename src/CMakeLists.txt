@@ -519,6 +519,7 @@ set(HECBENCH_POC_BENCHMARKS
     daphne
     dp4a
     gerbil
+    groupnorm
     hadamard
     halo-finder
     leukocyte
@@ -532,6 +533,7 @@ set(HECBENCH_POC_BENCHMARKS
     threadcpy
     tridiagonal
     topk
+    upsample
     vadd
 )
 

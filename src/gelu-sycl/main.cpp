@@ -118,16 +118,25 @@ int main(int argc, char* argv[])
   sycl::range<2> lws (1, block_size);
   sycl::range<2> gws (batch_size, seq_len * block_size);
 
-  // warmup and verify
-  gelu_bias_loop_cpu (output_ref, bias, batch_size, hidden_dim, seq_len);
-
-  q.memcpy(d_output, input, src_size_bytes).wait();
-  q.submit([&] (sycl::handler &cgh) {
+  auto k1Fn = [&] (sycl::handler &cgh) {
     cgh.parallel_for(
       sycl::nd_range<2>(gws, lws), [=] (sycl::nd_item<2> item) {
       gelu_bias_loop_base(d_output, d_bias, hidden_dim, seq_len, item);
     });
-  });
+  };
+
+  auto k2Fn = [&] (sycl::handler &cgh) {
+    cgh.parallel_for(
+      sycl::nd_range<2>(gws, lws), [=] (sycl::nd_item<2> item) {
+      gelu_bias_loop(d_output, d_bias, hidden_dim, seq_len, item);
+    });
+  };
+
+  // warmup and verify
+  gelu_bias_loop_cpu (output_ref, bias, batch_size, hidden_dim, seq_len);
+
+  q.memcpy(d_output, input, src_size_bytes).wait();
+  q.submit(k1Fn);
   q.memcpy(output, d_output, src_size_bytes).wait();
 
   bool ok = true;
@@ -144,12 +153,7 @@ int main(int argc, char* argv[])
 
   ok = true;
   q.memcpy(d_output, input, src_size_bytes).wait();
-  q.submit([&] (sycl::handler &cgh) {
-    cgh.parallel_for(
-      sycl::nd_range<2>(gws, lws), [=] (sycl::nd_item<2> item) {
-      gelu_bias_loop(d_output, d_bias, hidden_dim, seq_len, item);
-    });
-  });
+  q.submit(k2Fn);
   q.memcpy(output, d_output, src_size_bytes).wait();
 
   for (size_t i = 0; i < src_size; i++) {
@@ -163,16 +167,11 @@ int main(int argc, char* argv[])
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
 
-  q.wait(); 
+  q.wait();
   auto start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < repeat; i++) {
-    q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for(
-        sycl::nd_range<2>(gws, lws), [=] (sycl::nd_item<2> item) {
-        gelu_bias_loop(d_output, d_bias, hidden_dim, seq_len, item);
-      });
-    });
+    q.submit(k2Fn);
   }
 
   q.wait();
@@ -183,12 +182,7 @@ int main(int argc, char* argv[])
   start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < repeat; i++) {
-    q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for(
-        sycl::nd_range<2>(gws, lws), [=] (sycl::nd_item<2> item) {
-        gelu_bias_loop_base(d_output, d_bias, hidden_dim, seq_len, item);
-      });
-    });
+    q.submit(k1Fn);
   }
 
   q.wait();

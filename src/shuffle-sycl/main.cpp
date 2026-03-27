@@ -103,24 +103,14 @@ int main(int argc, char* argv[]) {
   sycl::range<1> gws (BUF_SIZE);
   sycl::range<1> lws (BUF_SIZE);
 
-  // warmup
-  for (int n = 0; n < repeat; n++) {
-    q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class bc_shflxor_sg8_warmup>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        int value = item.get_local_id(0) & 0x7;
-        auto sg = item.get_sub_group();
-        for (int mask = 1; mask < 0x7; mask *= 2)
-          value += sycl::permute_group_by_xor(sg, value, mask);
-        d_out[item.get_global_id(0)] = value;
-      });
-    });
-  }
-  q.wait();
+  int warmup = repeat;
+  std::chrono::steady_clock::time_point begin, end;
 
-  auto begin = std::chrono::steady_clock::now();
-
-  for (int n = 0; n < repeat; n++) {
+  for (int n = 0; n < warmup + repeat; n++) {
+    if (n == warmup) {
+      q.wait();
+      begin = std::chrono::steady_clock::now();
+    }
     q.submit([&] (sycl::handler &cgh) {
       cgh.parallel_for<class bc_shflxor_sg8>(
         sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
@@ -134,7 +124,7 @@ int main(int argc, char* argv[]) {
   }
 
   q.wait();
-  auto end = std::chrono::steady_clock::now();
+  end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
   std::cout << "Average kernel time (subgroup size = 8): "
             << time * 1e-3f / repeat << "(us)\n";
@@ -144,9 +134,11 @@ int main(int argc, char* argv[]) {
   verifyBroadcast(out, 8);
 
   //=====================================================================================================
-  begin = std::chrono::steady_clock::now();
-
-  for (int n = 0; n < repeat; n++) {
+  for (int n = 0; n < warmup + repeat; n++) {
+    if (n == warmup) {
+      q.wait();
+      begin = std::chrono::steady_clock::now();
+    }
     q.submit([&] (sycl::handler &cgh) {
       cgh.parallel_for<class bc_shflxor_sg16>(
         sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
@@ -169,9 +161,11 @@ int main(int argc, char* argv[]) {
 
   verifyBroadcast(out, 16);
 
-  begin = std::chrono::steady_clock::now();
-
-  for (int n = 0; n < repeat; n++) {
+  for (int n = 0; n < warmup + repeat; n++) {
+    if (n == warmup) {
+      q.wait();
+      begin = std::chrono::steady_clock::now();
+    }
     q.submit([&] (sycl::handler &cgh) {
       cgh.parallel_for<class bc_shflxor_sg32>(
         sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
@@ -196,9 +190,11 @@ int main(int argc, char* argv[]) {
   //=====================================================================================================
   std::cout << "Broadcast using the shuffle function (subgroup sizes 8, 16, and 32) \n";
 
-  begin = std::chrono::steady_clock::now();
-
-  for (int n = 0; n < repeat; n++) {
+  for (int n = 0; n < warmup + repeat; n++) {
+    if (n == warmup) {
+      q.wait();
+      begin = std::chrono::steady_clock::now();
+    }
     q.submit([&] (sycl::handler &cgh) {
       cgh.parallel_for<class bc_shfl_sg8>(
         sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
@@ -220,9 +216,11 @@ int main(int argc, char* argv[]) {
   verifyBroadcast(out, 8, PATTERN);
 
   //=====================================================================================================
-  begin = std::chrono::steady_clock::now();
-
-  for (int n = 0; n < repeat; n++) {
+  for (int n = 0; n < warmup + repeat; n++) {
+    if (n == warmup) {
+      q.wait();
+      begin = std::chrono::steady_clock::now();
+    }
     q.submit([&] (sycl::handler &cgh) {
       cgh.parallel_for<class bc_shfl_sg16>(
         sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
@@ -244,9 +242,11 @@ int main(int argc, char* argv[]) {
   verifyBroadcast(out, 16, PATTERN);
 
   //=====================================================================================================
-  begin = std::chrono::steady_clock::now();
-
-  for (int n = 0; n < repeat; n++) {
+  for (int n = 0; n < warmup + repeat; n++) {
+    if (n == warmup) {
+      q.wait();
+      begin = std::chrono::steady_clock::now();
+    }
     q.submit([&] (sycl::handler &cgh) {
       cgh.parallel_for<class bc_shfl_sg32>(
         sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
@@ -288,9 +288,13 @@ int main(int argc, char* argv[]) {
   float *d_TransposeMatrix = sycl::malloc_device<float>(total, q);
   q.memcpy(d_Matrix, Matrix, total * sizeof(float)).wait();
 
-  begin = std::chrono::steady_clock::now();
+  warmup = repeat2;
 
-  for (int n = 0; n < repeat2; n++) {
+  for (int n = 0; n < warmup + repeat2; n++) {
+    if (n == warmup) {
+      q.wait();
+      begin = std::chrono::steady_clock::now();
+    }
     q.submit([&] (sycl::handler &cgh) {
       cgh.parallel_for<class transpose_shfl_sg8>(
         sycl::nd_range<1>(sycl::range<1>(total), sycl::range<1>(8)), [=] (sycl::nd_item<1> item) {
@@ -313,9 +317,12 @@ int main(int argc, char* argv[]) {
 
   matrixTransposeCPUReference(cpuTransposeMatrix, Matrix, total/8, 8);
   verifyTransposeMatrix(TransposeMatrix, cpuTransposeMatrix, total, 8);
-  begin = std::chrono::steady_clock::now();
 
-  for (int n = 0; n < repeat2; n++) {
+  for (int n = 0; n < warmup + repeat2; n++) {
+    if (n == warmup) {
+      q.wait();
+      begin = std::chrono::steady_clock::now();
+    }
     q.submit([&] (sycl::handler &cgh) {
       cgh.parallel_for<class transpose_shfl_sg16>(
         sycl::nd_range<1>(sycl::range<1>(total), sycl::range<1>(16)), [=] (sycl::nd_item<1> item) {
@@ -339,9 +346,11 @@ int main(int argc, char* argv[]) {
   matrixTransposeCPUReference(cpuTransposeMatrix, Matrix, total/16, 16);
   verifyTransposeMatrix(TransposeMatrix, cpuTransposeMatrix, total, 16);
 
-  begin = std::chrono::steady_clock::now();
-
-  for (int n = 0; n < repeat2; n++) {
+  for (int n = 0; n < warmup + repeat2; n++) {
+    if (n == warmup) {
+      q.wait();
+      begin = std::chrono::steady_clock::now();
+    }
     q.submit([&] (sycl::handler &cgh) {
       cgh.parallel_for<class transpose_shfl_sg32>(
         sycl::nd_range<1>(sycl::range<1>(total), sycl::range<1>(32)), [=] (sycl::nd_item<1> item) {

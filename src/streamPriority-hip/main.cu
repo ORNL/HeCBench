@@ -1,194 +1,158 @@
-/* Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *  * Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *  * Neither the name of NVIDIA CORPORATION nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
- * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
- * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 #include <chrono>
-#include <cstdio>
-#include <cstring>
-#include <iostream>
+#include <vector>
 #include <hip/hip_runtime.h>
+#include "kernels.h"
+#include "reference.h"
 
-#define EACH_SIZE 256 * 1024
+#define GPU_CHECK(expr)                                                \
+    do { hipError_t e = (expr);                                        \
+         if (e != hipSuccess) {                                        \
+             fprintf(stderr, "HIP %s:%d  %s\n",                        \
+                     __FILE__, __LINE__, hipGetErrorString(e));        \
+             exit(EXIT_FAILURE); } } while (0)
 
-// # threadblocks
-#define TBLOCKS 256
-#define THREADS 256
+//----------------------------------------------------------------
+//   high priority  - forward + backward (blocks training loop)
+//   low  priority  - data prefetch for next batch (background)
+//----------------------------------------------------------------
+void use_case_ml_training(int batches, int lo_pri, int hi_pri) {
+  const int N       = 1 << 24;
+  const int threads = 256;
+  const int blocks  = (N + threads - 1) / threads;
 
-#ifndef checkCudaErrors
-#define checkCudaErrors(err)  __checkCudaErrors (err, __FILE__, __LINE__)
+  // high and low priority streams
+  hipStream_t s_train, s_prefetch;
+  GPU_CHECK(hipStreamCreateWithPriority(&s_train,    hipStreamNonBlocking, hi_pri));
+  GPU_CHECK(hipStreamCreateWithPriority(&s_prefetch, hipStreamNonBlocking, lo_pri));
 
-// These are the inline versions for all of the SDK helper functions
-inline void __checkCudaErrors(hipError_t err, const char *file, const int line)
-{   
-  if (hipSuccess != err)
-  {   
-    std::cerr << "CUDA Error = " << err << ": " << hipGetErrorString(err) << " from file "
-              << file  << ", line " << line << std::endl;
+  // events for inter-stream synchronization
+  hipEvent_t fwd_done, fetch_done;
+  GPU_CHECK(hipEventCreate(&fwd_done));
+  GPU_CHECK(hipEventCreate(&fetch_done));
+
+  std::vector<float> prefetch_buf (N, 0);
+  std::vector<float> weights (N, 1);
+  std::vector<float> weights_ref (N, 1); // constant
+  std::vector<float> grad_in (N, 1);
+  std::vector<float> grad_in_ref (N, 1); // constant
+  std::vector<float> act (N);
+  std::vector<float> grad_out (N);
+  std::vector<float> grad_out_dev (N); // from device
+
+  float *d_act, *d_grad_in, *d_grad_out, *d_prefetch_buf, *d_weights;
+  GPU_CHECK(hipMalloc(&d_act,          N * sizeof(float)));
+  GPU_CHECK(hipMalloc(&d_grad_in,      N * sizeof(float)));
+  GPU_CHECK(hipMalloc(&d_grad_out,     N * sizeof(float)));
+  GPU_CHECK(hipMalloc(&d_prefetch_buf, N * sizeof(float)));
+  GPU_CHECK(hipMalloc(&d_weights,      N * sizeof(float)));
+
+  GPU_CHECK(hipMemset(d_prefetch_buf, 0, N * sizeof(float)));
+  GPU_CHECK(hipMemcpy(d_grad_in, grad_in_ref.data(), N * sizeof(float), hipMemcpyHostToDevice));
+  GPU_CHECK(hipMemcpy(d_weights, weights_ref.data(), N * sizeof(float), hipMemcpyHostToDevice));
+
+  //------------------------------------------------------------
+  // reference
+  //------------------------------------------------------------
+  for (int b = 0; b < batches; b++) {
+    forward_pass(prefetch_buf.data(), act.data(), N, 1.0f);
+    backward_pass(act.data(), grad_in.data(), grad_out.data(), N);
+    sgd_update(weights.data(), grad_out.data(), N, 0.01f);
+    data_prefetch(prefetch_buf.data(), N, b + 1);
   }
-}
-#endif
 
-// throw error on equality
-#define ERR_EQ(X, Y)                                                           \
-  do {                                                                         \
-    if ((X) == (Y)) {                                                          \
-      fprintf(stderr, "Error in %s at %s:%d\n", __func__, __FILE__, __LINE__); \
-    }                                                                          \
-  } while (0)
-
-// throw error on difference
-#define ERR_NE(X, Y)                                                           \
-  do {                                                                         \
-    if ((X) != (Y)) {                                                          \
-      fprintf(stderr, "Error in %s at %s:%d\n", __func__, __FILE__, __LINE__); \
-    }                                                                          \
-  } while (0)
-
-// copy from source -> destination arrays
-__global__ void memcpy_kernel(int *dst, int *src, size_t n, bool wait) {
-  int num = gridDim.x * blockDim.x;
-  int id = blockDim.x * blockIdx.x + threadIdx.x;
-
-  for (size_t i = id; i < n / sizeof(int); i += num) {
-    int v = src[i];
-    if (wait) {
-      while (v--) 
-        dst[i] = v;
-    }
-    dst[i] = src[i];
-  }
-}
-
-// initialise memory
-void mem_init(int *buf, size_t n) {
-  for (size_t i = 0; i < n / sizeof(int); i++) {
-    buf[i] = i;
-  }
-}
-
-long eval (hipStream_t &s1, hipStream_t &s2) {
-  size_t size = 1UL << 29;
-
-  // initialise host data
-  int *h_src_low;
-  int *h_src_hi;
-  ERR_EQ(h_src_low = (int *)malloc(size), NULL);
-  ERR_EQ(h_src_hi = (int *)malloc(size), NULL);
-  mem_init(h_src_low, size);
-  mem_init(h_src_hi, size);
-
-  // initialise device data
-  int *h_dst_low;
-  int *h_dst_hi;
-  ERR_EQ(h_dst_low = (int *)malloc(size), NULL);
-  ERR_EQ(h_dst_hi = (int *)malloc(size), NULL);
-  memset(h_dst_low, 0, size);
-  memset(h_dst_hi, 0, size);
-
-  // copy source data -> device
-  int *d_src_low;
-  int *d_src_hi;
-  checkCudaErrors(hipMalloc(&d_src_low, size));
-  checkCudaErrors(hipMalloc(&d_src_hi, size));
-  checkCudaErrors(hipMemcpy(d_src_low, h_src_low, size, hipMemcpyHostToDevice));
-  checkCudaErrors(hipMemcpy(d_src_hi, h_src_hi, size, hipMemcpyHostToDevice));
-
-  // allocate memory for memcopy destination
-  int *d_dst_low;
-  int *d_dst_hi;
-  checkCudaErrors(hipMalloc(&d_dst_low, size));
-  checkCudaErrors(hipMalloc(&d_dst_hi, size));
-
-  // warmup
-  for (size_t i = 0; i < size; i += EACH_SIZE) {
-    size_t j = i / sizeof(int);
-    memcpy_kernel<<<TBLOCKS, THREADS, 0, s1>>>(d_dst_low + j, d_src_low + j, EACH_SIZE, true);
-    memcpy_kernel<<<TBLOCKS, THREADS, 0, s2>>>(d_dst_hi + j, d_src_hi + j, EACH_SIZE, false);
-  }
-  hipDeviceSynchronize();
-
+  //------------------------------------------------------------
+  printf("Default stream (no priority)\n");
+  //------------------------------------------------------------
+  GPU_CHECK(hipDeviceSynchronize());
   auto start = std::chrono::steady_clock::now();
-  for (size_t i = 0; i < size; i += EACH_SIZE) {
-    size_t j = i / sizeof(int);
-    memcpy_kernel<<<TBLOCKS, THREADS, 0, s1>>>(d_dst_low + j, d_src_low + j, EACH_SIZE, true);
-    memcpy_kernel<<<TBLOCKS, THREADS, 0, s2>>>(d_dst_hi + j, d_src_hi + j, EACH_SIZE, false);
+  for (int b = 0; b < batches; b++) {
+    forward_pass_kernel <<<blocks, threads>>>(d_prefetch_buf, d_act,      N, 1.0f);
+    backward_pass_kernel<<<blocks, threads>>>(d_act,      d_grad_in,  d_grad_out, N);
+    sgd_update_kernel   <<<blocks, threads>>>(d_weights,  d_grad_out, N, 0.01f);
+    data_prefetch_kernel<<<blocks, threads>>>(d_prefetch_buf, N, b + 1);
   }
-  hipStreamSynchronize(s2);
+  GPU_CHECK(hipDeviceSynchronize());
   auto end = std::chrono::steady_clock::now();
-  auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  auto time_default = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 
-  checkCudaErrors(hipMemcpy(h_dst_low, d_dst_low, size, hipMemcpyDeviceToHost));
-  checkCudaErrors(hipMemcpy(h_dst_hi, d_dst_hi, size, hipMemcpyDeviceToHost));
+  GPU_CHECK(hipMemcpy(grad_out_dev.data(), d_grad_out, N * sizeof(float), hipMemcpyDeviceToHost));
+  bool ok = true;
+  for (int i = 0; i < N; i++) {
+    if (fabsf(grad_out_dev[i] - grad_out[i]) > 1e-3f) {
+      printf("@%d: %f %f\n", i, grad_out_dev[i] , grad_out[i]);
+      ok = false;
+      break;
+    }
+  }
+  printf("%s\n", ok ? "PASS" : "FAIL");
 
-  // check results of kernels
-  ERR_NE(memcmp(h_dst_low, h_src_low, size), 0);
-  ERR_NE(memcmp(h_dst_hi, h_src_hi, size), 0);
+  //------------------------------------------------------------
+  printf("Priority stream\n");
+  //------------------------------------------------------------
+  GPU_CHECK(hipMemset(d_prefetch_buf, 0, N * sizeof(float)));
+  GPU_CHECK(hipMemcpy(d_grad_in, grad_in_ref.data(), N * sizeof(float), hipMemcpyHostToDevice));
+  GPU_CHECK(hipMemcpy(d_weights, weights_ref.data(), N * sizeof(float), hipMemcpyHostToDevice));
 
-  checkCudaErrors(hipFree(d_src_low));
-  checkCudaErrors(hipFree(d_src_hi));
-  checkCudaErrors(hipFree(d_dst_low));
-  checkCudaErrors(hipFree(d_dst_hi));
-  free(h_src_low);
-  free(h_src_hi);
-  free(h_dst_low);
-  free(h_dst_hi);
+  GPU_CHECK(hipDeviceSynchronize());
+  start = std::chrono::steady_clock::now();
+  for (int b = 0; b < batches; b++) {
+    GPU_CHECK(hipStreamWaitEvent(s_train, fetch_done, 0));
+    forward_pass_kernel <<<blocks, threads, 0, s_train>>>(d_prefetch_buf, d_act, N, 1.0f);
+    GPU_CHECK(hipEventRecord(fwd_done, s_train));
+    backward_pass_kernel<<<blocks, threads, 0, s_train>>>(d_act, d_grad_in, d_grad_out, N);
+    sgd_update_kernel<<<blocks, threads, 0, s_train>>>(d_weights, d_grad_out, N, 0.01f);
+    GPU_CHECK(hipStreamWaitEvent(s_prefetch, fwd_done, 0));
+    data_prefetch_kernel<<<blocks, threads, 0, s_prefetch>>>(d_prefetch_buf, N, b + 1);
+    GPU_CHECK(hipEventRecord(fetch_done, s_prefetch));
+  }
+  GPU_CHECK(hipStreamSynchronize(s_train)); // wait for s_train stream
+  end = std::chrono::steady_clock::now();
+  auto time_pri = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 
-  return time;
+  GPU_CHECK(hipMemcpyAsync(grad_out_dev.data(), d_grad_out, N * sizeof(float), hipMemcpyDeviceToHost, s_train));
+  GPU_CHECK(hipStreamSynchronize(s_train)); // wait for s_train stream
+
+  ok = true;
+  for (int i = 0; i < N; i++) {
+    if (fabsf(grad_out_dev[i] - grad_out[i]) > 1e-3f) {
+      printf("@%d: %f %f\n", i, grad_out_dev[i] , grad_out[i]);
+      ok = false;
+      break;
+    }
+  }
+  printf("%s\n", ok ? "PASS" : "FAIL");
+
+  printf("  Default  streams: %.2f ms\n", time_default * 1e-6);
+  printf("  Priority streams: %.2f ms\n", time_pri * 1e-6);
+
+  GPU_CHECK(hipStreamDestroy(s_train));
+  GPU_CHECK(hipStreamDestroy(s_prefetch));
+  GPU_CHECK(hipEventDestroy(fwd_done));
+  GPU_CHECK(hipEventDestroy(fetch_done));
+  GPU_CHECK(hipFree(d_act));
+  GPU_CHECK(hipFree(d_grad_in));
+  GPU_CHECK(hipFree(d_grad_out));
+  GPU_CHECK(hipFree(d_prefetch_buf));
+  GPU_CHECK(hipFree(d_weights));
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char* argv[])
+{
+  if (argc != 2) {
+    printf("Usage: %s <repeat>\n", argv[0]);
+    return 1;
+  }
+  const int repeat = atoi(argv[1]);
 
-  printf("Starting [%s]...\n", argv[0]);
+  int lo_pri, hi_pri;
+  GPU_CHECK(hipDeviceGetStreamPriorityRange(&lo_pri, &hi_pri));
+  printf("Stream priority range:  least=%d  greatest=%d\n", lo_pri, hi_pri);
+  printf("(greatest priority = numerically lowest value = %d)\n\n", hi_pri);
 
-  // get the range of priorities available
-  // [ greatest_priority, lowest_priority ]
-  int priority_low;
-  int priority_hi;
-  checkCudaErrors(hipDeviceGetStreamPriorityRange(&priority_low, &priority_hi));
-  printf("Stream priority range: low: %d to high: %d\n", priority_low, priority_hi);
-
-  // create streams with highest and lowest available priorities
-  hipStream_t s1, s2;
-  checkCudaErrors(hipStreamCreateWithPriority(&s1, hipStreamNonBlocking, priority_low));
-  checkCudaErrors(hipStreamCreateWithPriority(&s2, hipStreamNonBlocking, priority_hi));
-
-  auto time = eval(s1, s2);
-  printf("Elapsed time of kernel launched to high priority stream: %.3lf ms\n", time * 1e-6);
-
-  hipStream_t s3, s4;
-  checkCudaErrors(hipStreamCreate(&s3));
-  checkCudaErrors(hipStreamCreate(&s4));
-
-  time = eval(s3, s4);
-  printf("Elapsed time of kernel launched to no-priority stream: %.3lf ms\n", time * 1e-6);
-
-  checkCudaErrors(hipStreamDestroy(s1));
-  checkCudaErrors(hipStreamDestroy(s2));
-  checkCudaErrors(hipStreamDestroy(s3));
-  checkCudaErrors(hipStreamDestroy(s4));
+  use_case_ml_training(repeat, lo_pri, hi_pri);
 
   return 0;
 }

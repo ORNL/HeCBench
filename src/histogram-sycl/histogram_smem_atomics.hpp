@@ -64,7 +64,7 @@ double run_smem_atomics(
         int ny = item.get_global_range(0);
         int t = item.get_local_linear_id();
         int nt = item.get_local_range(1)*item.get_local_range(0);
-        int g = item.get_group_linear_id(); 
+        int g = item.get_group_linear_id();
 
         // initialize smem
         for (int i = t; i < ACTIVE_CHANNELS * NUM_BINS + 3; i += nt)
@@ -80,14 +80,14 @@ double run_smem_atomics(
                 PixelType pixel = d_image[row * width + col];
 
                 unsigned int bins[ACTIVE_CHANNELS];
-	        DecodePixel<NUM_BINS>(pixel, bins);
+                DecodePixel<NUM_BINS>(pixel, bins);
 
                 #pragma unroll
-                for (int CHANNEL = 0; CHANNEL < ACTIVE_CHANNELS; ++CHANNEL) {
+                for (int c = 0; c < ACTIVE_CHANNELS; ++c) {
                    auto ao = sycl::atomic_ref<unsigned int, sycl::memory_order::relaxed, \
                                     sycl::memory_scope::work_group,\
                                     sycl::access::address_space::local_space>(
-                     smem[(NUM_BINS * CHANNEL) + bins[CHANNEL] + CHANNEL]);
+                     smem[(NUM_BINS * c) + bins[c] + c]);
                    ao.fetch_add(1U);
                 }
             }
@@ -99,8 +99,8 @@ double run_smem_atomics(
         for (int i = t; i < NUM_BINS; i += nt)
         {
             #pragma unroll
-            for (int CHANNEL = 0; CHANNEL < ACTIVE_CHANNELS; ++CHANNEL)
-                d_part_hist[g*NUM_PARTS + i + NUM_BINS * CHANNEL] = smem[i + NUM_BINS * CHANNEL + CHANNEL];
+            for (int c = 0; c < ACTIVE_CHANNELS; ++c)
+                d_part_hist[g*NUM_PARTS + i + NUM_BINS * c] = smem[i + NUM_BINS * c + c];
         }
       });
     });

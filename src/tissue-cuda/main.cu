@@ -5,7 +5,7 @@
   This spreads it over more threads.
   TWS September 2014
  */
- 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
   float* h_qt = (float*) malloc (nntDev*sizeof(float));
   float* h_ct_gold = (float*) malloc (nntDev*sizeof(float));
 
-  // bound the distance between any two 3D points 
+  // bound the distance between any two 3D points
   for (int i = 0; i < 3 * nntDev; i++) {
     h_tisspoints[i] = rand() % (nntDev / 3);
   }
@@ -143,21 +143,17 @@ int main(int argc, char** argv) {
   cudaMemcpy(d_qt, h_qt, nntDev*sizeof(float), cudaMemcpyHostToDevice);
 
   int threadsPerBlock = 256;
-  int step = 4; //a power of two 
+  int step = 4; //a power of two
   int blocksPerGrid = (step*nnt + threadsPerBlock - 1) / threadsPerBlock;
 
   // quick verification and warmup
   for (int i = 0; i < 2; i++) {
-    tissue<<<blocksPerGrid, threadsPerBlock>>>(
-        d_tisspoints,d_gtt,d_gbartt,d_ct,d_ctprev,d_qt,nnt,nntDev,step,1);
-
     tissue<<<blocksPerGrid, threadsPerBlock>>>(
         d_tisspoints,d_gtt,d_gbartt,d_ct,d_ctprev,d_qt,nnt,nntDev,step,2);
   }
 
   // may take long for a large grid on host
   for (int i = 0; i < 2; i++) {
-    reference(h_tisspoints,h_gtt,h_gbartt,h_ct_gold,h_ctprev,h_qt,nnt,nntDev,step,1);
     reference(h_tisspoints,h_gtt,h_gbartt,h_ct_gold,h_ctprev,h_qt,nnt,nntDev,step,2);
   }
 
@@ -176,9 +172,6 @@ int main(int argc, char** argv) {
   auto start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < repeat; i++) {
-    tissue<<<blocksPerGrid, threadsPerBlock>>>(
-        d_tisspoints,d_gtt,d_gbartt,d_ct,d_ctprev,d_qt,nnt,nntDev,step,1);
-
     tissue<<<blocksPerGrid, threadsPerBlock>>>(
         d_tisspoints,d_gtt,d_gbartt,d_ct,d_ctprev,d_qt,nnt,nntDev,step,2);
   }

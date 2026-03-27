@@ -87,8 +87,8 @@ void gemm_impl0(const uint32_t m, const uint32_t n, const uint32_t k,
   }
 
   joint_matrix_load(sg, sub_c, p_c + cRow * ldc + cCol, ldc, layout::row_major);
-  
-  joint_matrix_apply(sg, sub_acc, sub_c, [=] (const fp32 &acc, fp32 &c) 
+
+  joint_matrix_apply(sg, sub_acc, sub_c, [=] (const fp32 &acc, fp32 &c)
                                              {c = alpha * acc + beta * c;});
 
   joint_matrix_store(sg, sub_c, p_d + cRow * ldd + cCol, ldd, layout::row_major);
@@ -103,7 +103,7 @@ void gemm_impl0(const uint32_t m, const uint32_t n, const uint32_t k,
 // : Multiplication is NOT in-place, output is written to D matrix
 // : No LDS required
 //
-template <unsigned int WAVE_SIZE> 
+template <unsigned int WAVE_SIZE>
 void gemm_impl1(const uint32_t m, const uint32_t n, const uint32_t k,
                 fp16 const *__restrict__ a,
                 fp16 const *__restrict__ b,
@@ -111,7 +111,7 @@ void gemm_impl1(const uint32_t m, const uint32_t n, const uint32_t k,
                 fp32 *d, const uint32_t lda, const uint32_t ldb,
                 const uint32_t ldc, const uint32_t ldd,
                 const fp32 alpha, const fp32 beta,
-                sycl::nd_item<3> &item) 
+                sycl::nd_item<3> &item)
 {
   sycl::sub_group sg = item.get_sub_group();
 
@@ -148,8 +148,8 @@ void gemm_impl1(const uint32_t m, const uint32_t n, const uint32_t k,
   }
 
   joint_matrix_load(sg, sub_c, p_c + cRow * ldc + cCol, ldc, layout::row_major);
-  
-  joint_matrix_apply(sg, sub_acc, sub_c, [=] (const fp32 &acc, fp32 &c) 
+
+  joint_matrix_apply(sg, sub_acc, sub_c, [=] (const fp32 &acc, fp32 &c)
                                              {c = alpha * acc + beta * c;});
 
   joint_matrix_store(sg, sub_c, p_d + cRow * ldd + cCol, ldd, layout::row_major);
@@ -230,33 +230,37 @@ void gemm_wmma(int impl, uint32_t m, uint32_t n, uint32_t k, fp32 alpha,
     lws[2] = WAVE_SIZE;
     gws[2] = m / WMMA_M * lws[2];
     gws[1] = n / WMMA_N;
-  } 
+  }
   else {
     lws[2] = TILE_M / WMMA_M * WAVE_SIZE;
     lws[1] = TILE_N / WMMA_N;
     gws[2] = m / TILE_M * lws[2];
     gws[1] = n / TILE_N * lws[1];
-  } 
+  }
+
+  auto gemm0Fn = [=](sycl::nd_item<3> item) {
+    gemm_impl0(m, n, k, d_a, d_b, d_c, d_d, lda, ldb, ldc, ldd, alpha, beta, item);
+  };
+  auto gemm1w32Fn = [=](sycl::nd_item<3> item) {
+    gemm_impl1<32>(m, n, k, d_a, d_b, d_c, d_d, lda, ldb, ldc, ldd, alpha, beta, item);
+  };
+  auto gemm1w64Fn = [=](sycl::nd_item<3> item) {
+    gemm_impl1<64>(m, n, k, d_a, d_b, d_c, d_d, lda, ldb, ldc, ldd, alpha, beta, item);
+  };
 
   for (uint32_t w = 0; w < 30; w++) {
     if (impl == 0)
       q.submit([&](sycl::handler &cgh) {
-        cgh.parallel_for(sycl::nd_range<3>(gws, lws), [=](sycl::nd_item<3> item) {
-          gemm_impl0(m, n, k, d_a, d_b, d_c, d_d, lda, ldb, ldc, ldd, alpha, beta, item);
-        });
+        cgh.parallel_for(sycl::nd_range<3>(gws, lws), gemm0Fn);
       });
     else if (impl == 1) {
       if (WAVE_SIZE == 32)
         q.submit([&](sycl::handler &cgh) {
-          cgh.parallel_for(sycl::nd_range<3>(gws, lws), [=](sycl::nd_item<3> item) {
-            gemm_impl1<32>(m, n, k, d_a, d_b, d_c, d_d, lda, ldb, ldc, ldd, alpha, beta, item);
-          });
+          cgh.parallel_for(sycl::nd_range<3>(gws, lws), gemm1w32Fn);
         });
       else
         q.submit([&](sycl::handler &cgh) {
-          cgh.parallel_for(sycl::nd_range<3>(gws, lws), [=](sycl::nd_item<3> item) {
-            gemm_impl1<64>(m, n, k, d_a, d_b, d_c, d_d, lda, ldb, ldc, ldd, alpha, beta, item);
-          });
+          cgh.parallel_for(sycl::nd_range<3>(gws, lws), gemm1w64Fn);
         });
     }
   }
@@ -291,22 +295,16 @@ void gemm_wmma(int impl, uint32_t m, uint32_t n, uint32_t k, fp32 alpha,
   for (uint32_t w = 0; w < repeat; w++) {
     if (impl == 0)
       q.submit([&](sycl::handler &cgh) {
-        cgh.parallel_for(sycl::nd_range<3>(gws, lws), [=](sycl::nd_item<3> item) {
-          gemm_impl0(m, n, k, d_a, d_b, d_c, d_d, lda, ldb, ldc, ldd, alpha, beta, item);
-        });
+        cgh.parallel_for(sycl::nd_range<3>(gws, lws), gemm0Fn);
       });
     else if (impl == 1) {
       if (WAVE_SIZE == 32)
         q.submit([&](sycl::handler &cgh) {
-          cgh.parallel_for(sycl::nd_range<3>(gws, lws), [=](sycl::nd_item<3> item) {
-            gemm_impl1<32>(m, n, k, d_a, d_b, d_c, d_d, lda, ldb, ldc, ldd, alpha, beta, item);
-          });
+          cgh.parallel_for(sycl::nd_range<3>(gws, lws), gemm1w32Fn);
         });
       else
         q.submit([&](sycl::handler &cgh) {
-          cgh.parallel_for(sycl::nd_range<3>(gws, lws), [=](sycl::nd_item<3> item) {
-            gemm_impl1<64>(m, n, k, d_a, d_b, d_c, d_d, lda, ldb, ldc, ldd, alpha, beta, item);
-          });
+          cgh.parallel_for(sycl::nd_range<3>(gws, lws), gemm1w64Fn);
         });
     }
   }
