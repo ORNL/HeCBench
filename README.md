@@ -25,7 +25,7 @@ Each benchmark falls into a single category. While such classification is not ac
     daphne
 
 ### Bandwidth
-    allreduce, cmembench, babelstream, ccl, memcpy, memtest, pingpong, randomAccess, reshapeKVCache, shmembench, storeKVCache, threadcpy, triad, vadd
+    allreduce, cmembench, babelstream, ccl, memcpy, memtest, p2p, pingpong, randomAccess, reshapeKVCache, shmembench, storeKVCache, threadcpy, triad, vadd
 
 ### Bioinformatics
     all-pairs-distance, bsw, ccs, cm, deredundancy, diamond, epistasis, extend2, frna, fsm, ga, local-ht, logan, minibude, minimap2, nbnxm, nw, pcc, prna, sa, snake
@@ -52,7 +52,7 @@ Each benchmark falls into a single category. While such classification is not ac
     cc, floydwarshall, floydwarshall2, gc, hbc, hungarian, mis, sssp, rsmt
 
 ### Language and kernel features
-    adjacent, aligned-types, asta, blockAccess, blockexchange, blockScan, collision, concurrentKernels, conversion, dispatch, dp4a, graphExecution, ert, interleave, intrinsics-cast, kernelLaunch, layout, mallocFree, maxFlops, mixbench, nosync, openmp, overlap, p2p, pad, pitch, popcount, prefetch, reverse, ring, saxpy-ompt, shuffle, simpleMultiDevice, streamCreateCopyDestroy, streamOrderedAllocation, streamPriority, streamUM, tensorAccessor, threadfence, warpexchange, vote, wmma, wordcount, zerocopy 
+    adjacent, aligned-types, asta, blockAccess, blockexchange, blockScan, collision, concurrentKernels, conversion, dispatch, dp4a, graphExecution, ert, interleave, intrinsics-cast, kernelLaunch, layout, mallocFree, maxFlops, mixbench, nosync, openmp, overlap, pad, pitch, popcount, prefetch, reverse, ring, saxpy-ompt, shuffle, simpleMultiDevice, streamCreateCopyDestroy, streamOrderedAllocation, streamPriority, streamUM, tensorAccessor, threadfence, warpexchange, vote, wmma, wordcount, zerocopy 
 
 ### Machine learning  
     accuracy, adam, adamw, addBiasQKV, addBiasResidualLayerNorm, attention, attention-paged, attentionMultiHead, backprop, bincount, bn, channelShuffle, channelSum, clink, concat, crossEntropy, dense-embedding, dropout, dwconv, dwconv1d, expdist, flip, gd, gelu, ge-spmm, geglu, glu, gmm, gru, kalman, kmc, kmeans, knn, layernorm, lda, lif, logprob, lr, lrn, mask, matern, maxpool3d, mcpr, meanshift, mf-sgd, mmcsf, mnist, moe, moe-align, moe-sum, mrc, multinomial, nlll, nonzero, overlay, p4, page-rank, permute, perplexity, pointwise, pool, qkv, qtclustering, remap, relu, resnet-kernels, rmsnorm, rowwiseMoments, rotary, sampling, scel, snicit, softmax, softmax-fused, softmax-online, ssm, stddev, streamcluster, swish, tsne, unfold, vol2col, wedford, winograd, word2vec
