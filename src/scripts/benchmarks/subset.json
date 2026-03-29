@@ -2,6 +2,13 @@
     "accuracy": [
         "(?:Average execution time of accuracy kernel: )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "8192",
             "10000",
             "10",
@@ -11,11 +18,25 @@
     "ace": [
         "(?:Offload time: )([0-9.+-e]+)(?: \\(ms\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "100"
         ]
     ],
     "adam": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(ms\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "10000",
             "200",
@@ -25,6 +46,10 @@
     "adv": [
         "(?:elapsed time=)([0-9.+-e]+)(?: )",
         [
+            "no_verification",
+            []
+        ],
+        [
             "16",
             "16",
             "16"
@@ -32,6 +57,10 @@
     ],
     "axhelm": [
         "(?:elapsed time=)([0-9.+-e]+)(?: )",
+        [
+            "no_verification",
+            []
+        ],
         [
             "3",
             "8000",
@@ -41,6 +70,13 @@
     "aidw": [
         "(?:Average execution time of AIDW_Kernel_Tiled )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "10",
             "1",
             "100"
@@ -49,17 +85,32 @@
     "all-pairs-distance": [
         "(?:Average kernel execution time \\(w/o? shared memory\\): )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "1000"
         ]
     ],
     "aobench": [
         "(?:Average render time: )([0-9.+-e]+)(?: sec)",
         [
+            "no_verification",
+            []
+        ],
+        [
             "1000"
         ]
     ],
     "aop": [
         "(?:elapsed time for each run *: )([0-9.+-e]+)(?:ms)",
+        [
+            "no_verification",
+            []
+        ],
         [
             "-paths",
             "200"
@@ -68,6 +119,13 @@
     "asmooth": [
         "(?:Average filtering time )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "10000",
             "1",
             "5",
@@ -75,13 +133,31 @@
         ]
     ],
     "assert": [
-        "(?:Kernel time : )([0-9.+-e]+)"
+        "(?:Kernel time : )([0-9.+-e]+)",
+        [
+            "no_verification",
+            []
+        ]
     ],
     "asta": [
-        "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))"
+        "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ]
     ],
     "atomicAggregate": [
         "(?:Total kernel time \\(32 locations\\): )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "1000"
         ]
@@ -89,11 +165,25 @@
     "atomicCAS": [
         "(?:Average execution time: )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "10000"
         ]
     ],
     "atomicCost": [
         "(?:Average execution time of WithoutAtomicOnGlobalMem: )([0-9.+-e]+)(?: \\(us\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "16",
             "10"
@@ -102,15 +192,30 @@
     "atomicPerf": [
         "(?:Average execution time of SingleRangeAtomicOnGlobalMem: )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "10"
         ]
     ],
     "atomicReduction": [
         "(?:The average performance of reduction is )([0-9.+-e]+)(?: GBytes/sec)",
+        [
+            "validation_token",
+            [
+                "VERIFICATION: PASS",
+                "VERIFICATION: FAIL!!"
+            ]
+        ],
         []
     ],
     "attention": [
         "(?:Average execution time of kernels )([0-9.+-e]+)(?: \\(ms\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "8192",
             "8192",
@@ -121,17 +226,32 @@
     "backprop": [
         "(?:Device offloading time = )([0-9.+-e]+)(?:\\(s\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "65536"
         ]
     ],
     "background-subtract": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "4096", "2048", "1", "102"
         ]
     ],
     "bezier-surface": [
         "(?:kernel execution time: )([0-9.+-e]+)(?: ms)",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "-n",
             "8192"
@@ -140,12 +260,23 @@
     "bh": [
         "(?:Total kernel execution time: )([0-9.+-e]+)(?: s)",
         [
+            "no_verification",
+            []
+        ],
+        [
             "300",
             "30"
         ]
     ],
     "bilateral": [
         "(?:Average kernel execution time \\([1-9]x[1-9]\\) )([0-9.+-e]+)(?: \\(ms\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "2960",
             "1440",
@@ -155,26 +286,55 @@
         ]
     ],
     "binomial": [
-        "(?:Total binomialOptionsGPU\\(\\) time: )([0-9.+-e]+)(?: msec)"
+        "(?:Total binomialOptionsGPU\\(\\) time: )([0-9.+-e]+)(?: msec)",
+        [
+            "validation_token",
+            [
+                "Test passed",
+                "Test failed!"
+            ]
+        ]
     ],
     "bitonic-sort": [
         "(?:Total kernel execution time: )([0-9.+-e]+)(?: \\(ms\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "25",
             "2"
         ]
     ],
     "bitpacking": [
-        "(?:Device offload time = )([0-9.+-e]+)(?: \\((?:s|ms|us)\\))"
+        "(?:Device offload time = )([0-9.+-e]+)(?: \\((?:s|ms|us)\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ]
     ],
     "black-scholes": [
         "(?:Processing time on GPU: )([0-9.+-e]+)(?: \\(ms\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "100"
         ]
     ],
     "bn": [
         "(?:Average execution time of genScoreKernel: )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "result",
             "10"
@@ -183,11 +343,22 @@
     "bonds": [
         "(?:Average processing time on GPU: )([0-9.+-e]+)(?: \\(ms\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "100"
         ]
     ],
     "boxfilter": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(us\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "../boxfilter-sycl/data/lenaRGB.ppm",
             "10000"
@@ -196,15 +367,33 @@
     "bsearch": [
         "(?:Average kernel execution time \\(bs[1-9]\\) )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "validation_token",
+            [
+                "",
+                "incorrect result"
+            ]
+        ],
+        [
             "16384",
             "1"
         ]
     ],
     "bspline-vgh": [
-        "(?:Total kernel execution time )([0-9.+-e]+)(?: \\(s\\))"
+        "(?:Total kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "no_verification",
+            []
+        ]
     ],
     "burger": [
         "(?:Total kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "8193",
             "8193",
@@ -214,11 +403,22 @@
     "bwt": [
         "(?:Device time: )([0-9.+-e]+)(?: (?:s|ms|us))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "10000000"
         ]
     ],
     "cbsfil": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "10000",
             "10000",
@@ -228,12 +428,23 @@
     "ccsd-trpdrv": [
         "(?:avg=)([0-9.+-e]+)",
         [
+            "no_verification",
+            []
+        ],
+        [
             "200",
             "200"
         ]
     ],
     "channelShuffle": [
         "(?:Average time of channel shuffle \\(\\w+\\): )([0-9.+-e]+)(?: \\(ms\\))",
+        [
+            "validation_token",
+            [
+                "Average time of channel shuffle",
+                "Failed to execute channel shuffle"
+            ]
+        ],
         [
             "2",
             "224",
@@ -244,6 +455,13 @@
     "channelSum": [
         "(?:Average time of channel sum \\(\\w+\\): )([0-9.+-e]+)(?: \\(ms\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "224",
             "224",
             "100"
@@ -251,6 +469,10 @@
     ],
     "chi2": [
         "(?:Average kernel execution time = )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "4000",
             "400000",
@@ -262,19 +484,38 @@
     ],
     "chemv": [
         "(?:Average execution time of chemv kernels: )([0-9.+-e]+)(?: \\(us\\))",
+        [
+            "validation_token",
+            [
+                "PASSED",
+                "FAILED"
+            ]
+        ],
         []
     ],
     "clenergy": [
-        "(?:Kernel time: )([0-9.+-e]+)(?: seconds)"
+        "(?:Kernel time: )([0-9.+-e]+)(?: seconds)",
+        [
+            "no_verification",
+            []
+        ]
     ],
     "clink": [
         "(?:Average kernel time: )([0-9.+-e]+)(?: ms)",
+        [
+            "no_verification",
+            []
+        ],
         [
             "10"
         ]
     ],
     "cmp": [
         "(?: Giga semblances traces per second: )([0-9.+-e]+)",
+        [
+            "no_verification",
+            []
+        ],
         [
           "-c0", "1.98e-7","-c1","1.77e-6","-nc","5","-aph","600","-tau","0.002","-v","2",
           "-i", "../cmp-cuda/data/simple-synthetic.su"
@@ -283,12 +524,23 @@
     "cobahh": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "1000000",
             "10"
         ]
     ],
     "complex": [
         "(?:Average kernel execution time \\([a-z]+\\) )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "10000000",
             "1000"
@@ -297,11 +549,22 @@
     "compute-score": [
         "(?:Kernel Time = )([0-9.+-e]+)(?: ms)",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "-p=1000"
         ]
     ],
     "concat": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(us\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "1000"
         ]
@@ -309,17 +572,35 @@
     "concurrentKernels": [
         "(?:Measured time for sample = )([0-9.+-e]+)(?:s)",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "4"
         ]
     ],
     "convolution3D": [
         "(?:Average kernel execution time of conv3d_s3 kernel: )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "32","6","16","14","14","5","100"
         ]
     ],
     "convolutionSeparable": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "8192",
             "8192",
@@ -329,12 +610,26 @@
     "cooling": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\((?:s|ms|us)\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "1000000",
             "1000"
         ]
     ],
     "cross": [
         "(?:Average execution time of cross[0-9]+ kernel: )([0-9.+-e]+)(?: \\((?:s|ms|us)\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "10000000",
             "100"
@@ -343,11 +638,22 @@
     "crossEntropy": [
         "(?:Average GPU kernel time \\(ms\\) : )([0-9.+-e]+)",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "100"
         ]
     ],
     "crs": [
         "(?:Total encoding time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "1",
             "1"
@@ -355,10 +661,21 @@
     ],
     "damage": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "no_verification",
+            []
+        ],
         ["50000000", "1000"]
     ],
     "dct8x8": [
         "(?:Average DCT8x8 kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "8192",
             "8192",
@@ -367,10 +684,24 @@
     ],
     "degrid": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         []
     ],
     "dense-embedding": [
         "(?:Average execution time of dense embedding kernel \\(k1\\): )([0-9.+-e]+)(?: \\(us\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "100000",
             "256",
@@ -380,12 +711,23 @@
     "dp": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "10000000",
             "10"
         ]
     ],
     "dwconv": [
         "(?:Average execution time of dwconv2d_forward kernel: )([0-9.+-e]+)(?: \\(ms\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "128",
             "16",
@@ -397,6 +739,13 @@
     "dxtc2": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "../dxtc2-sycl/data/lena_std.ppm",
             "../dxtc2-sycl/data/lena_ref.dds",
             "100"
@@ -405,6 +754,13 @@
     "ecdh": [
         "(?:: )([0-9.+-e]+)(?: s)",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "50000000",
             "100"
         ]
@@ -412,12 +768,26 @@
     "eigenvalue": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "2048",
             "10000"
         ]
     ],
     "entropy": [
         "(?:execution time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "8192",
             "8192",
@@ -427,6 +797,13 @@
     "epistasis": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "146",
             "31339",
             "100"
@@ -435,12 +812,20 @@
     "ert": [
         "(?:runtime \\([a-z1-9]*\\): )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "128",
             "1024"
         ]
     ],
     "expdist": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "10000",
             "10"
@@ -449,17 +834,38 @@
     "extend2": [
         "(?:Average offload time )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "validation_token",
+            [
+                "",
+                "Error:"
+            ]
+        ],
+        [
             "300"
         ]
     ],
     "f16sp": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "100000"
         ]
     ],
     "fdtd3d": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\((?:s|ms|us)\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "--dimx=192",
             "--dimy=184",
@@ -469,12 +875,26 @@
     "fft": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "3",
             "100"
         ]
     ],
     "filter": [
         "(?:Average execution time of filter \\(shared memory\\) )([0-9.+-e]+)(?: \\(ms\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "100000000",
             "256",
@@ -484,6 +904,10 @@
     "flip": [
         "(?:Average execution time of the flip kernel: )([0-9.+-e]+)(?: \\(ms\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "3",
             "1024",
             "100"
@@ -491,6 +915,13 @@
     ],
     "floydwarshall": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "1024",
             "100",
@@ -500,6 +931,13 @@
     "fpc": [
         "(?:fpc2: average device offload time )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "256",
             "100"
         ]
@@ -507,17 +945,38 @@
     "fsm": [
         "([0-9.+-e]+)(?:\\s*#runtime \\[s\\])",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "65536"
         ]
     ],
     "fwt": [
         "(?:Average device execution time )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "100"
         ]
     ],
     "gabor": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(us\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "8640",
             "15360",
@@ -526,6 +985,13 @@
     ],
     "gamma-correction": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "7680",
             "4320",
@@ -536,6 +1002,13 @@
     "gaussian": [
         "(?:Device offloading time )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "-q",
             "-t",
             "-s",
@@ -544,7 +1017,11 @@
     ],
     "gd": [
         "(?:Training time takes )([0-9.+-e]+)(?: \\(s\\))",
-	[
+        [
+            "no_verification",
+            []
+        ],
+        [
             "../gd-cuda/gisette_scale",
             "0.0001",
             "10",
@@ -553,6 +1030,10 @@
     ],
     "gelu": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(ms\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "512",
             "8192",
@@ -563,11 +1044,22 @@
     "geodesic": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "1000"
         ]
     ],
     "glu": [
         "(?:Average execution time of GLU kernel \\(split dimension = 2\\): )([0-9.+-e]+)(?: \\(us\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "3",
             "1024",
@@ -577,21 +1069,49 @@
     "goulash": [
         "(?:total kernel time )([0-9.+-e]+)(?:\\(s\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "101",
             "5"
         ]
     ],
     "gpp": [
-        "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))"
+        "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "SUCCESS",
+                "FAILURE\n"
+            ]
+        ]
     ],
     "haccmk": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "1000"
         ]
     ],
     "hausdorff": [
         "(?:Average execution time of kernels: )([0-9.+-e]+)(?: \\(ms\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "100000",
             "100000",
@@ -601,12 +1121,20 @@
     "heat": [
         "(?:Solve time \\(s\\): )([0-9.+-e]+)",
         [
+            "no_verification",
+            []
+        ],
+        [
             "4096",
             "1000"
         ]
     ],
     "heat2d": [
         "([0-9.+-e]+)(?: usec/iter)",
+        [
+            "no_verification",
+            []
+        ],
         [
             "1024",
             "1024",
@@ -616,11 +1144,22 @@
     "knn": [
         "(?:100 iterations \\()([0-9.+-e]+)(?: s by iteration\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "100"
         ]
     ],
     "histogram": [
         "(?:Avg time )([0-9.+-e]+)(?: us )",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "--width=3840",
             "--height=2160"
@@ -628,14 +1167,32 @@
     ],
     "hmm": [
         "(?:Device execution time of Viterbi iterations )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "Success",
+                "Fail"
+            ]
+        ],
         []
     ],
     "hotspot3D": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(us\\))",
+        [
+            "no_verification",
+            []
+        ],
         ["512", "8", "5000", "../data/hotspot3D/power_512x8", "../data/hotspot3D/temp_512x8", "output.out"]
     ],
     "hwt1d": [
         "(?:Average device offload time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "8388608",
             "100"
@@ -644,6 +1201,13 @@
     "hybridsort": [
         "(?:GPU execution time: )([0-9.+-e]+)(?: ms)",
         [
+            "validation_token",
+            [
+                "PASSED",
+                "FAILED"
+            ]
+        ],
+        [
             "r"
         ],
         "hybridsort"
@@ -651,15 +1215,33 @@
     "inversek2j": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "../inversek2j-sycl/coord_in.txt",
             "100000"
         ]
     ],
     "ising": [
-        "(?:elapsed time: )([0-9.+-e]+)(?: sec)"
+        "(?:elapsed time: )([0-9.+-e]+)(?: sec)",
+        [
+            "no_verification",
+            []
+        ]
     ],
     "iso2dfd": [
         "(?:Total kernel execution time )([0-9.+-e]+)(?: \\(ms\\))",
+        [
+            "validation_token",
+            [
+                "",
+                "ERROR:"
+            ]
+        ],
         [
             "2048",
             "2048",
@@ -668,13 +1250,31 @@
     ],
     "lid-driven-cavity": [
         "(?:Total execution time of the iteration loop: )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "no_verification",
+            []
+        ],
         []
     ],
     "jacobi": [
-        "(?:Total elapsed time: )([0-9.+-e]+)(?: seconds)"
+        "(?:Total elapsed time: )([0-9.+-e]+)(?: seconds)",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ]
     ],
     "jenkins-hash": [
         "(?:Average kernel execution time : )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "256",
             "16777216",
@@ -682,7 +1282,11 @@
         ]
     ],
     "laplace": [
-        "(?:iterations: )([0-9.+-e]+)(?: s)"
+        "(?:iterations: )([0-9.+-e]+)(?: s)",
+        [
+            "no_verification",
+            []
+        ]
     ],
     "laplace3d": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
@@ -697,6 +1301,10 @@
     "lavaMD": [
         "(?:Device offloading time:\\s)([0-9.+-e]+)(?: s)",
         [
+            "no_verification",
+            []
+        ],
+        [
             "-boxes1d",
             "16"
         ]
@@ -704,17 +1312,38 @@
     "layout": [
         "(?:Average kernel execution time \\(SoA\\): )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "1000"
         ]
     ],
     "libor": [
         "(?:Average kernel execution time : )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "100"
         ]
     ],
     "lif": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(us\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "1000",
             "1000",
@@ -724,12 +1353,20 @@
     "linearprobing": [
         "(?:Kernel execution time \\(iterate\\): )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "16",
             "8"
         ]
     ],
     "logprob": [
         "(?:Average execution time of kernels: )([0-9.+-e]+)(?: \\(us\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "100",
             "128",
@@ -740,11 +1377,22 @@
     "lombscargle": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "100"
         ]
     ],
     "lr": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: us)",
+        [
+            "no_verification",
+            []
+        ],
         [
             "100000",
             "0"
@@ -753,11 +1401,22 @@
     "mandelbrot": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: ms)",
         [
+            "validation_token",
+            [
+                "",
+                "Verification failure"
+            ]
+        ],
+        [
             "1000"
         ]
     ],
     "mask": [
         "(?:Average execution time of \\w+ kernel: )([0-9.+-e]+)(?: \\(us\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "512",
             "512",
@@ -768,12 +1427,26 @@
     "matrix-rotate": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "5000",
             "100"
         ]
     ],
     "maxpool3d": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "2048",
             "2048",
@@ -784,12 +1457,20 @@
     "mcpr": [
         "(?:Average execution time of compute_probs_unitStrides kernel: )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "../mcpr-cuda/alphas.csv",
             "10"
         ]
     ],
     "md": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "3",
             "1000"
@@ -798,12 +1479,26 @@
     "meanshift": [
         "(?:Average execution time of mean-shift \\(opt\\) )([0-9.+-e]+)(?: ms)",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "../meanshift-cuda/dataset/data.csv",
             "../meanshift-cuda/dataset/centroids.csv"
         ]
     ],
     "medianfilter": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "../medianfilter-sycl/data/SierrasRGB.ppm",
             "1000"
@@ -812,18 +1507,40 @@
     "merge": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "100000",
             "100"
         ]
     ],
     "merkle": [
-        "(?: )([0-9.+-e]+)(?: ms)"
+        "(?: )([0-9.+-e]+)(?: ms)",
+        [
+            "no_verification",
+            []
+        ]
     ],
     "minimod": [
-        "(?:Average kernel time per iteration: )([0-9.+-e]+)(?: s)"
+        "(?:Average kernel time per iteration: )([0-9.+-e]+)(?: s)",
+        [
+            "no_verification",
+            []
+        ]
     ],
     "minisweep": [
         "(?:kernel time: )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "--niterations",
             "5"
@@ -832,20 +1549,42 @@
     "minkowski": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
+        [
             "100"
         ]
     ],
     "mnist": [
         "(?:Total time \\(learn \\+ test\\) )([0-9.+-e]+)(?: secs)",
         [
+            "no_verification",
+            []
+        ],
+        [
             "2"
         ]
     ],
     "mr": [
-        "(?:Total kernel execution time \\(\\w+\\s*\\): )([0-9.+-e]+)(?: \\(ms\\))"
+        "(?:Total kernel execution time \\(\\w+\\s*\\): )([0-9.+-e]+)(?: \\(ms\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ]
     ],
     "multinomial": [
         "(?:Average execution time of sampleMultinomialOnce kernel: )([0-9.+-e]+)(?: \\(us\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "65536",
             "2048",
@@ -855,12 +1594,23 @@
     "mrc": [
         "(?:Average execution time of MRC2 kernel: )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "10000000",
             "1000"
         ]
     ],
     "murmurhash3": [
         "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "SUCCESS",
+                "FAIL"
+            ]
+        ],
         [
             "100000",
             "100"
@@ -869,11 +1619,19 @@
     "nbnxm": [
         "(?:Average kernel execution time \\(w/o shift\\): )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "100"
         ]
     ],
     "nbody": [
         "(?:Total Time \\(s\\)[ ]*: )([0-9.+-e]+)",
+        [
+            "no_verification",
+            []
+        ],
         [
             "20000",
             "100"
@@ -882,16 +1640,31 @@
     "nlll": [
         "(?:Average execution time of nll loss forward kernel: )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "2048",
             "1000",
             "1000"
         ]
     ],
     "overlap": [
-        "(?:Avg. time when overlapped using [0-9]+ streams.*: )([0-9.+-e]+)(?: ms)"
+        "(?:Avg. time when overlapped using [0-9]+ streams.*: )([0-9.+-e]+)(?: ms)",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ]
     ],
     "overlay": [
         "(?:Total kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "640",
             "480"
@@ -900,11 +1673,22 @@
     "p4": [
         "(?:Average execution time of postprocess kernel: )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "10000"
         ]
     ],
     "pad": [
         "(?:Total padding execution time for [0-9.+-e]+ iterations: )([0-9.+-e]+)(?: \\((?:s|ms|us)\\))",
+        [
+            "validation_token",
+            [
+                "Test Passed",
+                "Test failed"
+            ]
+        ],
         [
             "-a",
             "0.1"
@@ -913,6 +1697,10 @@
     "page-rank": [
         "(?:Total kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "1000",
             "1000"
         ]
@@ -920,12 +1708,20 @@
     "particle-diffusion": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "10",
             "5"
         ]
     ],
     "particlefilter": [
         "(?:Device offloading time: )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "-x",
             "200",
@@ -940,6 +1736,10 @@
     "pathfinder": [
         "(?:Total kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "1000",
             "1000",
             "100"
@@ -948,12 +1748,20 @@
     "permute": [
         "(?:block_size  256 | time )([0-9.+-e]+)(?: ms)",
         [
+            "no_verification",
+            []
+        ],
+        [
             "8",
             "100"
         ]
     ],
     "perplexity": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "10000",
             "50",
@@ -962,6 +1770,10 @@
     "pns": [
         "(?:Total device execution time: )([0-9.+-e]+)(?: s)",
         [
+            "no_verification",
+            []
+        ],
+        [
             "5000",
             "100",
             "100"
@@ -969,6 +1781,10 @@
     ],
     "pointwise": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "100",
             "8",
@@ -980,11 +1796,22 @@
     "projectile": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "1000"
         ]
     ],
     "rsc": [
         "(?:Total task execution time for [0-9.+-e]+ iterations: )([0-9.+-e]+)(?: \\((?:s|ms|us)\\))",
+        [
+            "validation_token",
+            [
+                "Test Passed",
+                "Test failed"
+            ]
+        ],
         [
             "-f",
             "../rsc-cuda/input/vectors.csv",
@@ -995,6 +1822,10 @@
     "s3d": [
         "(?:Total time )([0-9.+-e]+)(?: secs)",
         [
+            "no_verification",
+            []
+        ],
+        [
             "-s",
             "3",
             "-n",
@@ -1004,12 +1835,23 @@
     "sc": [
         "(?:Total stream compaction time for [0-9.+-e]+ iterations: )([0-9.+-e]+)(?: \\((?:s|ms|us)\\))",
         [
+            "validation_token",
+            [
+                "Test failed",
+                "Test Passed"
+            ]
+        ],
+        [
             "-a",
             "0.1"
         ]
     ],
     "softmax": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(ms\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "100000",
             "784",
@@ -1018,10 +1860,21 @@
         ]
     ],
     "sheath": [
-        "(?:Time per time step: )([0-9.+-e]+)(?: \\(ms\\))"
+        "(?:Time per time step: )([0-9.+-e]+)(?: \\(ms\\))",
+        [
+            "no_verification",
+            []
+        ]
     ],
     "simplemoc": [
         "(?:Total kernel time:       )([0-9.+-e]+)(?: seconds)",
+        [
+            "validation_token",
+            [
+                "Success",
+                "Fail"
+            ]
+        ],
         [
             "-s",
             "5000000",
@@ -1034,16 +1887,28 @@
     "stddev": [
         "(?:Average execution time of stddev kernels: )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "65536",
             "16384",
             "100"
         ]
     ],
     "su3": [
-        "(?:Total kernel execution time = )([0-9.+-e]+)(?: \\(s\\))"
+        "(?:Total kernel execution time = )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "no_verification",
+            []
+        ]
     ],
     "swish": [
         "(?:Average execution time of SwishGradient kernel: )([0-9.+-e]+)(?: \\(us\\))",
+        [
+            "no_verification",
+            []
+        ],
         [
             "10000000",
             "1000"
@@ -1052,12 +1917,23 @@
     "tissue": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "32",
             "100"
         ]
     ],
     "tqs": [
         "(?:Total task execution time for [0-9.+-e]+ iterations: )([0-9.+-e]+)(?: \\((?:s|ms|us)\\))",
+        [
+            "validation_token",
+            [
+                "",
+                "Test failed"
+            ]
+        ],
         [
             "-f",
             "../tqs-cuda/input/patternsNP100NB512FB25.txt"
@@ -1066,11 +1942,22 @@
     "tridiagonal": [
         "(?:Time = )([0-9.+-e]+)(?: s)",
         [
+            "no_verification",
+            []
+        ],
+        [
             "-num_systems=30000"
         ]
     ],
     "vanGenuchten": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "256",
             "256",
@@ -1081,20 +1968,42 @@
     "vol2col": [
         "(?:Average execution time of vol2col kernel: )([0-9.+-e]+)(?: \\(us\\))",
         [
+            "no_verification",
+            []
+        ],
+        [
             "1000"
         ]
     ],
     "winograd": [
-        "(?:Co-execution time: )([0-9.+-e]+)(?: s)"
+        "(?:Co-execution time: )([0-9.+-e]+)(?: s)",
+        [
+            "no_verification",
+            []
+        ],
     ],
     "zerocopy": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: ms)",
+        [
+            "validation_token",
+            [
+                "SUCCESS",
+                "FAILURE"
+            ]
+        ],
         [
             "100"
         ]
     ],
     "zeropoint": [
         "(?:Average execution time of zero-point kernel: )([0-9.+-e]+)(?: \\(us\\))",
+        [
+            "validation_token",
+            [
+                "PASS",
+                "FAIL"
+            ]
+        ],
         [
             "10000000",
             "100"
