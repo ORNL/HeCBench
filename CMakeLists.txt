@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
-
-# Build options - which programming models to enable
+# Build options - which programming models to enable (before project() for HIP-only / toggles)
 option(HECBENCH_ENABLE_CUDA "Enable CUDA benchmarks" ON)
 option(HECBENCH_ENABLE_HIP "Enable HIP benchmarks" ON)
 option(HECBENCH_ENABLE_SYCL "Enable SYCL benchmarks" ON)
@@ -12,7 +10,6 @@ set(HECBENCH_CUDA_ARCH "sm_80" CACHE STRING "CUDA architecture (e.g., sm_60, sm_
 set(HECBENCH_HIP_ARCH "gfx90a" CACHE STRING "HIP architecture (e.g., gfx908, gfx90a, gfx942)")
 option(HECBENCH_ENABLE_SPIRV "Enable SPIR-V mode for HIP benchmarks" OFF)
 set(HECBENCH_SPIRV_TARGET "amdgcnspirv" CACHE STRING "SPIR-V offload target")
-# Integration knobs (upstream-friendly, optional)
 set(HECBENCH_HIP_EXTRA_CFLAGS "" CACHE STRING "Extra HIP/C++ compile flags")
 set(HECBENCH_HIP_LDFLAGS "" CACHE STRING "Extra linker flags for HIP benchmarks")
 option(HECBENCH_FIX_MAKEFILE_LINK_RULES
@@ -22,9 +19,9 @@ option(HECBENCH_FIX_MAKEFILE_LINK_RULES
 option(HECBENCH_ENABLE_TESTING "Enable testing" ON)
 option(HECBENCH_BUILD_ALL_BENCHMARKS "Build all benchmarks (vs selective)" ON)
 set(HECBENCH_SKIP_BENCHMARKS "" CACHE STRING
-  "Semicolon/comma/space separated benchmark dirs to skip (e.g. layernorm-hip;slu-hip). Synonyms: nicslu_cuda/slu-cuda, nicslu_util_omp/slu-omp")
+  "Semicolon/comma/space separated benchmark dirs to skip (e.g. layernorm-hip;slu-hip)")
 set(HECBENCH_SKIP_BENCHMARKS_FILE "" CACHE FILEPATH
-  "Optional extra skip list: one benchmark id per line (# comments allowed). Merged after HECBENCH_SKIP_BENCHMARKS (for integrators like TheRock).")
+  "Optional file: one benchmark id per line (# comments allowed), merged after HECBENCH_SKIP_BENCHMARKS")
 option(HECBENCH_ENABLE_HIP_ONLY
   "Build ONLY HIP benchmarks (disables CUDA, SYCL, OpenMP)"
   OFF)
@@ -43,17 +40,18 @@ project(HeCBench
     VERSION 1.0.0
     DESCRIPTION "Heterogeneous Computing Benchmark Suite"
 )
-# Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-# 3rd party
+
 find_package(Boost)
 find_package(MPI)
 find_package(GDAL CONFIG)
 find_package(GSL)
 find_package(BZip2)
-# Find programming model compilers/libraries
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+
 if(HECBENCH_ENABLE_CUDA)
     enable_language(CUDA)
     find_package(CUDAToolkit REQUIRED)
@@ -94,7 +92,7 @@ if(HECBENCH_ENABLE_OPENMP)
         set(HECBENCH_ENABLE_OPENMP OFF)
     endif()
 endif()
-# Apply optional integration flags for HIP flow.
+
 if(HECBENCH_ENABLE_HIP)
     if(HECBENCH_ENABLE_SPIRV)
         if(NOT HECBENCH_HIP_EXTRA_CFLAGS)
@@ -117,12 +115,11 @@ if(HECBENCH_ENABLE_HIP)
         endforeach()
     endif()
 endif()
-# Include benchmark macros
+
 include(BenchmarkMacros)
 
 # ---------------------------------------------------------------------------
-# Utility: Patch Makefiles to remove CFLAGS from link rules
-# Needed when building with HIP flags like -x hip that should not reach linker
+# Patch Makefiles to remove CFLAGS from link rules (compile-only flags must not reach the linker)
 # ---------------------------------------------------------------------------
 function(hecbench_patch_makefile_link_rules _target_dir)
   file(GLOB _makefile "${_target_dir}/Makefile")
@@ -130,8 +127,6 @@ function(hecbench_patch_makefile_link_rules _target_dir)
     return()
   endif()
   file(READ "${_makefile}" _makefile_content)
-  # Recipe lines are tab-indented; strip $(CFLAGS) only from the link rule so
-  # flags like -x hip are not passed to the linker (compile-only).
   string(REGEX REPLACE
     "([\t ]*)(\\$\\(CC\\))[ \t]+\\$\\(CFLAGS\\)([^\r\n]*-o[ \t]+\\$@[^\r\n]*\\$\\(LDFLAGS\\))"
     "\\1\\2\\3"
@@ -152,7 +147,6 @@ if(HECBENCH_FIX_MAKEFILE_LINK_RULES)
   endforeach()
 endif()
 
-# Enable testing if requested
 if(HECBENCH_ENABLE_TESTING)
     enable_testing()
     include(CTest)
@@ -161,17 +155,16 @@ if(HECBENCH_ENABLE_TESTING)
     message(STATUS "Python3 for tests: ${Python3_EXECUTABLE}")
 endif()
 
-# Add src directory with all benchmarks
 add_subdirectory(src)
-# Summary
+
 message(STATUS "")
 message(STATUS "=== HeCBench Build Configuration ===")
 message(STATUS "HIP-only mode: ${HECBENCH_ENABLE_HIP_ONLY}")
-message(STATUS "CUDA:    ${HECBENCH_ENABLE_CUDA}")
+message(STATUS "CUDA: ${HECBENCH_ENABLE_CUDA}")
 if(HECBENCH_ENABLE_CUDA)
     message(STATUS "  Architecture: ${HECBENCH_CUDA_ARCH} (CMake: ${CMAKE_CUDA_ARCHITECTURES})")
 endif()
-message(STATUS "HIP:     ${HECBENCH_ENABLE_HIP}")
+message(STATUS "HIP: ${HECBENCH_ENABLE_HIP}")
 if(HECBENCH_ENABLE_HIP)
     message(STATUS "  Architecture: ${HECBENCH_HIP_ARCH} (CMake: ${CMAKE_HIP_ARCHITECTURES})")
     message(STATUS "  SPIR-V: ${HECBENCH_ENABLE_SPIRV}")
@@ -181,8 +174,8 @@ if(HECBENCH_ENABLE_HIP)
     message(STATUS "  Extra CFLAGS: ${HECBENCH_HIP_EXTRA_CFLAGS}")
     message(STATUS "  Extra LDFLAGS: ${HECBENCH_HIP_LDFLAGS}")
 endif()
-message(STATUS "SYCL:    ${HECBENCH_ENABLE_SYCL}")
-message(STATUS "OpenMP:  ${HECBENCH_ENABLE_OPENMP}")
+message(STATUS "SYCL: ${HECBENCH_ENABLE_SYCL}")
+message(STATUS "OpenMP: ${HECBENCH_ENABLE_OPENMP}")
 message(STATUS "Testing: ${HECBENCH_ENABLE_TESTING}")
 message(STATUS "====================================")
 message(STATUS "")
