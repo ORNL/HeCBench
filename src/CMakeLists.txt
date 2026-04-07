@@ -418,7 +418,6 @@ set(HECBENCH_POC_BENCHMARKS
     surfel
     svd3x3
     sw4ck
-    swish
     # Batch 14: T-Z benchmarks (33 benchmarks)
     tensorAccessor
     tensorT
@@ -524,8 +523,10 @@ set(HECBENCH_POC_BENCHMARKS
     halo-finder
     leukocyte
     miniFE
+    pointerchase
     rmsnorm
     saxpy-ompt
+    silu
     softmax-fused
     softmax-online
     ssm
