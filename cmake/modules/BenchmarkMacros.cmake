@@ -202,11 +202,12 @@ function(add_hecbench_benchmark)
         # HIP configuration
         set_target_properties(${TARGET_NAME} PROPERTIES
             HIP_STANDARD 17
-            HIP_ARCHITECTURES ${HECBENCH_HIP_ARCH}
         )
-        # SPIR-V builds set --offload-arch via HECBENCH_HIP_EXTRA_CFLAGS globally;
-        # do not also force gfx* here or clang gets conflicting offload targets.
+        # SPIR-V: offload arch comes from HECBENCH_HIP_EXTRA_CFLAGS; avoid gfx* HIP_ARCHITECTURES / flags conflict.
         if(NOT HECBENCH_ENABLE_SPIRV)
+            set_target_properties(${TARGET_NAME} PROPERTIES
+                HIP_ARCHITECTURES ${HECBENCH_HIP_ARCH}
+            )
             target_compile_options(${TARGET_NAME} PRIVATE
                 $<$<COMPILE_LANGUAGE:HIP>:--offload-arch=${HECBENCH_HIP_ARCH}>
             )
