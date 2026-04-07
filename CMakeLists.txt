@@ -1,46 +1,41 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(HeCBench
-    LANGUAGES C CXX
-    VERSION 1.0.0
-    DESCRIPTION "Heterogeneous Computing Benchmark Suite"
-)
+# Enable HIP language if requested
+if(DEFINED HECBENCH_ENABLE_HIP AND HECBENCH_ENABLE_HIP)
+    project(HeCBench
+        LANGUAGES C CXX HIP
+        VERSION 1.0.0
+        DESCRIPTION "Heterogeneous Computing Benchmark Suite"
+    )
+else()
+    project(HeCBench
+        LANGUAGES C CXX
+        VERSION 1.0.0
+        DESCRIPTION "Heterogeneous Computing Benchmark Suite"
+    )
+endif()
+
+# Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# 3rd party
 find_package(Boost)
 find_package(MPI)
 find_package(GDAL CONFIG)
 find_package(GSL)
 find_package(BZip2)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
-
-# Options (after project(); HIP-only is applied before enable_language below)
+# Build options - which programming models to enable
 option(HECBENCH_ENABLE_CUDA "Enable CUDA benchmarks" ON)
 option(HECBENCH_ENABLE_HIP "Enable HIP benchmarks" ON)
 option(HECBENCH_ENABLE_SYCL "Enable SYCL benchmarks" ON)
 option(HECBENCH_ENABLE_OPENMP "Enable OpenMP benchmarks" ON)
-set(HECBENCH_CUDA_ARCH "sm_80" CACHE STRING "CUDA architecture (e.g., sm_60, sm_70, sm_80, sm_90)")
-set(HECBENCH_HIP_ARCH "gfx90a" CACHE STRING "HIP architecture (e.g., gfx908, gfx90a, gfx942)")
-option(HECBENCH_ENABLE_SPIRV "Enable SPIR-V mode for HIP benchmarks" OFF)
-set(HECBENCH_SPIRV_TARGET "amdgcnspirv" CACHE STRING "SPIR-V offload target")
-set(HECBENCH_HIP_EXTRA_CFLAGS "" CACHE STRING "Extra HIP/C++ compile flags")
-set(HECBENCH_HIP_LDFLAGS "" CACHE STRING "Extra linker flags for HIP benchmarks")
-option(HECBENCH_FIX_MAKEFILE_LINK_RULES
-  "Patch Makefile link rules to exclude CFLAGS from link invocations"
-  ON)
-option(HECBENCH_ENABLE_TESTING "Enable testing" ON)
-option(HECBENCH_BUILD_ALL_BENCHMARKS "Build all benchmarks (vs selective)" ON)
-set(HECBENCH_SKIP_BENCHMARKS "" CACHE STRING
-  "Semicolon/comma/space separated benchmark dirs to skip (e.g. layernorm-hip;slu-hip)")
-set(HECBENCH_SKIP_BENCHMARKS_FILE "" CACHE FILEPATH
-  "Optional file: one benchmark id per line (# comments allowed), merged after HECBENCH_SKIP_BENCHMARKS")
+
 option(HECBENCH_ENABLE_HIP_ONLY
   "Build ONLY HIP benchmarks (disables CUDA, SYCL, OpenMP)"
   OFF)
-
 if(HECBENCH_ENABLE_HIP_ONLY)
   set(HECBENCH_ENABLE_CUDA OFF)
   set(HECBENCH_ENABLE_SYCL OFF)
@@ -48,6 +43,30 @@ if(HECBENCH_ENABLE_HIP_ONLY)
   set(HECBENCH_ENABLE_HIP ON)
 endif()
 
+# Architecture options
+set(HECBENCH_CUDA_ARCH "sm_80" CACHE STRING "CUDA architecture (e.g., sm_60, sm_70, sm_80, sm_90)")
+set(HECBENCH_HIP_ARCH "gfx90a" CACHE STRING "HIP architecture (e.g., gfx908, gfx90a, gfx942)")
+
+option(HECBENCH_ENABLE_SPIRV "Enable SPIR-V mode for HIP benchmarks" OFF)
+set(HECBENCH_SPIRV_TARGET "amdgcnspirv" CACHE STRING "SPIR-V offload target")
+set(HECBENCH_HIP_EXTRA_CFLAGS "" CACHE STRING "Extra HIP/C++ compile flags")
+set(HECBENCH_HIP_LDFLAGS "" CACHE STRING "Extra linker flags for HIP benchmarks")
+option(HECBENCH_FIX_MAKEFILE_LINK_RULES
+  "Patch Makefile link rules to exclude CFLAGS from link invocations"
+  ON)
+
+# Build configuration
+option(HECBENCH_ENABLE_TESTING "Enable testing" ON)
+option(HECBENCH_BUILD_ALL_BENCHMARKS "Build all benchmarks (vs selective)" ON)
+set(HECBENCH_SKIP_BENCHMARKS "" CACHE STRING
+  "Semicolon/comma/space separated benchmark dirs to skip (e.g. layernorm-hip;slu-hip)")
+set(HECBENCH_SKIP_BENCHMARKS_FILE "" CACHE FILEPATH
+  "Optional file: one benchmark id per line (# comments allowed), merged after HECBENCH_SKIP_BENCHMARKS")
+
+# Add cmake module path
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+
+# Find programming model compilers/libraries
 if(HECBENCH_ENABLE_CUDA)
     enable_language(CUDA)
     find_package(CUDAToolkit REQUIRED)
@@ -57,11 +76,17 @@ if(HECBENCH_ENABLE_CUDA)
     set(CMAKE_CUDA_ARCHITECTURES "${_hecbench_cuda_arch}")
     message(STATUS "CUDA enabled - Architecture: ${HECBENCH_CUDA_ARCH} (CMake: ${CMAKE_CUDA_ARCHITECTURES})")
 endif()
+
 if(HECBENCH_ENABLE_HIP)
-    include(CheckLanguage)
-    check_language(HIP)
+    # First configure often used project(LANGUAGES C CXX) only; enable HIP when needed.
+    if(NOT CMAKE_HIP_COMPILER)
+        include(CheckLanguage)
+        check_language(HIP)
+        if(CMAKE_HIP_COMPILER)
+            enable_language(HIP)
+        endif()
+    endif()
     if(CMAKE_HIP_COMPILER)
-        enable_language(HIP)
         set(CMAKE_HIP_ARCHITECTURES "${HECBENCH_HIP_ARCH}")
         find_package(HIP MODULE QUIET)
         message(STATUS "HIP enabled - Architecture: ${HECBENCH_HIP_ARCH} (CMake: ${CMAKE_HIP_ARCHITECTURES})")
@@ -70,6 +95,7 @@ if(HECBENCH_ENABLE_HIP)
         set(HECBENCH_ENABLE_HIP OFF)
     endif()
 endif()
+
 if(HECBENCH_ENABLE_SYCL)
     find_package(SYCL MODULE)
     if(SYCL_FOUND)
