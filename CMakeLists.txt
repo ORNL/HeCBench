@@ -1,40 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
 
-# Build options - which programming models to enable (before project() for HIP-only / toggles)
-option(HECBENCH_ENABLE_CUDA "Enable CUDA benchmarks" ON)
-option(HECBENCH_ENABLE_HIP "Enable HIP benchmarks" ON)
-option(HECBENCH_ENABLE_SYCL "Enable SYCL benchmarks" ON)
-option(HECBENCH_ENABLE_OPENMP "Enable OpenMP benchmarks" ON)
-# Architecture options
-set(HECBENCH_CUDA_ARCH "sm_80" CACHE STRING "CUDA architecture (e.g., sm_60, sm_70, sm_80, sm_90)")
-set(HECBENCH_HIP_ARCH "gfx90a" CACHE STRING "HIP architecture (e.g., gfx908, gfx90a, gfx942)")
-option(HECBENCH_ENABLE_SPIRV "Enable SPIR-V mode for HIP benchmarks" OFF)
-set(HECBENCH_SPIRV_TARGET "amdgcnspirv" CACHE STRING "SPIR-V offload target")
-set(HECBENCH_HIP_EXTRA_CFLAGS "" CACHE STRING "Extra HIP/C++ compile flags")
-set(HECBENCH_HIP_LDFLAGS "" CACHE STRING "Extra linker flags for HIP benchmarks")
-option(HECBENCH_FIX_MAKEFILE_LINK_RULES
-  "Patch Makefile link rules to exclude CFLAGS from link invocations"
-  ON)
-# Build configuration
-option(HECBENCH_ENABLE_TESTING "Enable testing" ON)
-option(HECBENCH_BUILD_ALL_BENCHMARKS "Build all benchmarks (vs selective)" ON)
-set(HECBENCH_SKIP_BENCHMARKS "" CACHE STRING
-  "Semicolon/comma/space separated benchmark dirs to skip (e.g. layernorm-hip;slu-hip)")
-set(HECBENCH_SKIP_BENCHMARKS_FILE "" CACHE FILEPATH
-  "Optional file: one benchmark id per line (# comments allowed), merged after HECBENCH_SKIP_BENCHMARKS")
-option(HECBENCH_ENABLE_HIP_ONLY
-  "Build ONLY HIP benchmarks (disables CUDA, SYCL, OpenMP)"
-  OFF)
-
-# Apply HIP-only mode
-if(HECBENCH_ENABLE_HIP_ONLY)
-  set(HECBENCH_ENABLE_CUDA OFF)
-  set(HECBENCH_ENABLE_SYCL OFF)
-  set(HECBENCH_ENABLE_OPENMP OFF)
-  set(HECBENCH_ENABLE_HIP ON)
-endif()
-
-# Configure core languages first; optional languages are enabled after detection.
 project(HeCBench
     LANGUAGES C CXX
     VERSION 1.0.0
@@ -51,6 +16,37 @@ find_package(GSL)
 find_package(BZip2)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+
+# Options (after project(); HIP-only is applied before enable_language below)
+option(HECBENCH_ENABLE_CUDA "Enable CUDA benchmarks" ON)
+option(HECBENCH_ENABLE_HIP "Enable HIP benchmarks" ON)
+option(HECBENCH_ENABLE_SYCL "Enable SYCL benchmarks" ON)
+option(HECBENCH_ENABLE_OPENMP "Enable OpenMP benchmarks" ON)
+set(HECBENCH_CUDA_ARCH "sm_80" CACHE STRING "CUDA architecture (e.g., sm_60, sm_70, sm_80, sm_90)")
+set(HECBENCH_HIP_ARCH "gfx90a" CACHE STRING "HIP architecture (e.g., gfx908, gfx90a, gfx942)")
+option(HECBENCH_ENABLE_SPIRV "Enable SPIR-V mode for HIP benchmarks" OFF)
+set(HECBENCH_SPIRV_TARGET "amdgcnspirv" CACHE STRING "SPIR-V offload target")
+set(HECBENCH_HIP_EXTRA_CFLAGS "" CACHE STRING "Extra HIP/C++ compile flags")
+set(HECBENCH_HIP_LDFLAGS "" CACHE STRING "Extra linker flags for HIP benchmarks")
+option(HECBENCH_FIX_MAKEFILE_LINK_RULES
+  "Patch Makefile link rules to exclude CFLAGS from link invocations"
+  ON)
+option(HECBENCH_ENABLE_TESTING "Enable testing" ON)
+option(HECBENCH_BUILD_ALL_BENCHMARKS "Build all benchmarks (vs selective)" ON)
+set(HECBENCH_SKIP_BENCHMARKS "" CACHE STRING
+  "Semicolon/comma/space separated benchmark dirs to skip (e.g. layernorm-hip;slu-hip)")
+set(HECBENCH_SKIP_BENCHMARKS_FILE "" CACHE FILEPATH
+  "Optional file: one benchmark id per line (# comments allowed), merged after HECBENCH_SKIP_BENCHMARKS")
+option(HECBENCH_ENABLE_HIP_ONLY
+  "Build ONLY HIP benchmarks (disables CUDA, SYCL, OpenMP)"
+  OFF)
+
+if(HECBENCH_ENABLE_HIP_ONLY)
+  set(HECBENCH_ENABLE_CUDA OFF)
+  set(HECBENCH_ENABLE_SYCL OFF)
+  set(HECBENCH_ENABLE_OPENMP OFF)
+  set(HECBENCH_ENABLE_HIP ON)
+endif()
 
 if(HECBENCH_ENABLE_CUDA)
     enable_language(CUDA)
@@ -118,12 +114,10 @@ endif()
 
 include(BenchmarkMacros)
 
-# ---------------------------------------------------------------------------
-# Patch Makefiles to remove CFLAGS from link rules (compile-only flags must not reach the linker)
-# ---------------------------------------------------------------------------
+# Patches src/<benchmark>-<model>/Makefile link lines; invoked from src/CMakeLists.txt (no file(GLOB)).
 function(hecbench_patch_makefile_link_rules _target_dir)
-  file(GLOB _makefile "${_target_dir}/Makefile")
-  if(NOT _makefile)
+  set(_makefile "${_target_dir}/Makefile")
+  if(NOT EXISTS "${_makefile}")
     return()
   endif()
   file(READ "${_makefile}" _makefile_content)
@@ -138,14 +132,6 @@ function(hecbench_patch_makefile_link_rules _target_dir)
     message(STATUS "Patched Makefile link rules in: ${_target_dir}")
   endif()
 endfunction()
-
-if(HECBENCH_FIX_MAKEFILE_LINK_RULES)
-  file(GLOB_RECURSE _hecbench_benchmark_makefiles "${CMAKE_CURRENT_SOURCE_DIR}/src/*/Makefile")
-  foreach(_makefile IN LISTS _hecbench_benchmark_makefiles)
-    get_filename_component(_makefile_dir "${_makefile}" DIRECTORY)
-    hecbench_patch_makefile_link_rules("${_makefile_dir}")
-  endforeach()
-endif()
 
 if(HECBENCH_ENABLE_TESTING)
     enable_testing()
