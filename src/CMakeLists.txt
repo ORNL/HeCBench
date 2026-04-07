@@ -418,6 +418,7 @@ set(HECBENCH_POC_BENCHMARKS
     surfel
     svd3x3
     sw4ck
+    swish
     # Batch 14: T-Z benchmarks (33 benchmarks)
     tensorAccessor
     tensorT
@@ -523,10 +524,8 @@ set(HECBENCH_POC_BENCHMARKS
     halo-finder
     leukocyte
     miniFE
-    pointerchase
     rmsnorm
     saxpy-ompt
-    silu
     softmax-fused
     softmax-online
     ssm
@@ -538,10 +537,56 @@ set(HECBENCH_POC_BENCHMARKS
     vadd
 )
 
+# Parse user-provided skip list once and reuse during benchmark discovery.
+set(_hecbench_skip_benchmarks "${HECBENCH_SKIP_BENCHMARKS}")
+string(REPLACE "," ";" _hecbench_skip_benchmarks "${_hecbench_skip_benchmarks}")
+string(REPLACE " " ";" _hecbench_skip_benchmarks "${_hecbench_skip_benchmarks}")
+list(FILTER _hecbench_skip_benchmarks EXCLUDE REGEX "^$")
+if(HECBENCH_SKIP_BENCHMARKS_FILE AND EXISTS "${HECBENCH_SKIP_BENCHMARKS_FILE}")
+  file(STRINGS "${HECBENCH_SKIP_BENCHMARKS_FILE}" _hecbench_skip_file_lines)
+  foreach(_fline IN LISTS _hecbench_skip_file_lines)
+    string(REGEX REPLACE "#.*$" "" _fentry "${_fline}")
+    string(STRIP "${_fentry}" _fentry)
+    if(_fentry)
+      list(APPEND _hecbench_skip_benchmarks "${_fentry}")
+    endif()
+  endforeach()
+endif()
+# Map common alternate names (e.g. CMake static-lib targets under slu-*) to benchmark dirs.
+foreach(_syn IN ITEMS nicslu_cuda nicslu_util_omp nicslu_util_cuda nicslu_util_hip nicslu_hip nicslu_omp)
+    if(_syn IN_LIST _hecbench_skip_benchmarks)
+        if(_syn STREQUAL "nicslu_cuda" OR _syn STREQUAL "nicslu_util_cuda")
+            list(APPEND _hecbench_skip_benchmarks "slu-cuda")
+        elseif(_syn STREQUAL "nicslu_util_omp" OR _syn STREQUAL "nicslu_omp")
+            list(APPEND _hecbench_skip_benchmarks "slu-omp")
+        elseif(_syn STREQUAL "nicslu_util_hip" OR _syn STREQUAL "nicslu_hip")
+            list(APPEND _hecbench_skip_benchmarks "slu-hip")
+        endif()
+    endif()
+endforeach()
+if(_hecbench_skip_benchmarks)
+    list(LENGTH _hecbench_skip_benchmarks _hecbench_skip_count)
+    message(STATUS "HeCBench skip list enabled (${_hecbench_skip_count} entries): ${_hecbench_skip_benchmarks}")
+endif()
+
 # Include benchmark subdirectories
 foreach(BENCHMARK ${HECBENCH_POC_BENCHMARKS})
     # Check which models exist for this benchmark
     foreach(MODEL cuda hip sycl omp)
+        if(MODEL STREQUAL "cuda" AND NOT HECBENCH_ENABLE_CUDA)
+            continue()
+        elseif(MODEL STREQUAL "hip" AND NOT HECBENCH_ENABLE_HIP)
+            continue()
+        elseif(MODEL STREQUAL "sycl" AND NOT HECBENCH_ENABLE_SYCL)
+            continue()
+        elseif(MODEL STREQUAL "omp" AND NOT HECBENCH_ENABLE_OPENMP)
+            continue()
+        endif()
+        set(BENCHMARK_MODEL "${BENCHMARK}-${MODEL}")
+        if(BENCHMARK_MODEL IN_LIST _hecbench_skip_benchmarks)
+            message(STATUS "Skipping ${BENCHMARK_MODEL} (listed in HECBENCH_SKIP_BENCHMARKS)")
+            continue()
+        endif()
         set(BENCHMARK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/${BENCHMARK}-${MODEL}")
         if(EXISTS "${BENCHMARK_DIR}/CMakeLists.txt")
             add_subdirectory(${BENCHMARK_DIR})
