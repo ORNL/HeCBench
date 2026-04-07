@@ -538,18 +538,6 @@ set(HECBENCH_POC_BENCHMARKS
     vadd
 )
 
-# Patch Makefiles using the same benchmark×model paths as discovery (avoids file(GLOB)).
-if(HECBENCH_FIX_MAKEFILE_LINK_RULES)
-  foreach(BENCHMARK ${HECBENCH_POC_BENCHMARKS})
-    foreach(MODEL cuda hip sycl omp)
-      set(_hecbench_bm_dir "${CMAKE_CURRENT_SOURCE_DIR}/${BENCHMARK}-${MODEL}")
-      if(EXISTS "${_hecbench_bm_dir}/Makefile")
-        hecbench_patch_makefile_link_rules("${_hecbench_bm_dir}")
-      endif()
-    endforeach()
-  endforeach()
-endif()
-
 # Parse user-provided skip list once and reuse during benchmark discovery.
 set(_hecbench_skip_benchmarks "${HECBENCH_SKIP_BENCHMARKS}")
 string(REPLACE "," ";" _hecbench_skip_benchmarks "${_hecbench_skip_benchmarks}")

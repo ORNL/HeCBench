@@ -56,9 +56,6 @@ option(HECBENCH_ENABLE_SPIRV "Enable SPIR-V mode for HIP benchmarks" OFF)
 set(HECBENCH_SPIRV_TARGET "amdgcnspirv" CACHE STRING "SPIR-V offload target")
 set(HECBENCH_HIP_EXTRA_CFLAGS "" CACHE STRING "Extra HIP/C++ compile flags")
 set(HECBENCH_HIP_LDFLAGS "" CACHE STRING "Extra linker flags for HIP benchmarks")
-option(HECBENCH_FIX_MAKEFILE_LINK_RULES
-  "Optional: patch in-tree benchmark Makefiles for link lines (CMake targets do not use those Makefiles; for external Makefile workflows only)"
-  OFF)
 
 # Build configuration
 option(HECBENCH_ENABLE_TESTING "Enable testing" ON)
@@ -142,25 +139,6 @@ if(HECBENCH_ENABLE_HIP)
 endif()
 
 include(BenchmarkMacros)
-
-# Patches src/<benchmark>-<model>/Makefile link lines; invoked from src/CMakeLists.txt (no file(GLOB)).
-function(hecbench_patch_makefile_link_rules _target_dir)
-  set(_makefile "${_target_dir}/Makefile")
-  if(NOT EXISTS "${_makefile}")
-    return()
-  endif()
-  file(READ "${_makefile}" _makefile_content)
-  string(REGEX REPLACE
-    "([\t ]*)(\\$\\(CC\\))[ \t]+\\$\\(CFLAGS\\)([^\r\n]*-o[ \t]+\\$@[^\r\n]*\\$\\(LDFLAGS\\))"
-    "\\1\\2\\3"
-    _patched_content
-    "${_makefile_content}"
-  )
-  if(NOT _patched_content STREQUAL _makefile_content)
-    file(WRITE "${_makefile}" "${_patched_content}")
-    message(STATUS "Patched Makefile link rules in: ${_target_dir}")
-  endif()
-endfunction()
 
 if(HECBENCH_ENABLE_TESTING)
     enable_testing()
