@@ -1,33 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-# Enable HIP language if requested
-if(DEFINED HECBENCH_ENABLE_HIP AND HECBENCH_ENABLE_HIP)
-    project(HeCBench
-        LANGUAGES C CXX HIP
-        VERSION 1.0.0
-        DESCRIPTION "Heterogeneous Computing Benchmark Suite"
-    )
-else()
-    project(HeCBench
-        LANGUAGES C CXX
-        VERSION 1.0.0
-        DESCRIPTION "Heterogeneous Computing Benchmark Suite"
-    )
-endif()
-
-# Set C++ standard
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-# 3rd party
-find_package(Boost)
-find_package(MPI)
-find_package(GDAL CONFIG)
-find_package(GSL)
-find_package(BZip2)
-
-# Build options - which programming models to enable
+# Options that affect enabled languages must appear before project().
 option(HECBENCH_ENABLE_CUDA "Enable CUDA benchmarks" ON)
 option(HECBENCH_ENABLE_HIP "Enable HIP benchmarks" ON)
 option(HECBENCH_ENABLE_SYCL "Enable SYCL benchmarks" ON)
@@ -48,6 +21,29 @@ if(HECBENCH_ENABLE_HIP_ONLY)
   set(HECBENCH_ENABLE_HIP ON)
 endif()
 
+set(_hecbench_project_langs C CXX)
+if(HECBENCH_ENABLE_HIP)
+  list(APPEND _hecbench_project_langs HIP)
+endif()
+
+project(HeCBench
+  LANGUAGES ${_hecbench_project_langs}
+  VERSION 1.0.0
+  DESCRIPTION "Heterogeneous Computing Benchmark Suite"
+)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# 3rd party
+find_package(Boost)
+find_package(MPI)
+find_package(GDAL CONFIG)
+find_package(GSL)
+find_package(BZip2)
+
 # Architecture options
 set(HECBENCH_CUDA_ARCH "sm_80" CACHE STRING "CUDA architecture (e.g., sm_60, sm_70, sm_80, sm_90)")
 set(HECBENCH_HIP_ARCH "gfx90a" CACHE STRING "HIP architecture (e.g., gfx908, gfx90a, gfx942)")
@@ -60,10 +56,6 @@ set(HECBENCH_HIP_LDFLAGS "" CACHE STRING "Extra linker flags for HIP benchmarks"
 # Build configuration
 option(HECBENCH_ENABLE_TESTING "Enable testing" ON)
 option(HECBENCH_BUILD_ALL_BENCHMARKS "Build all benchmarks (vs selective)" ON)
-set(HECBENCH_SKIP_BENCHMARKS "" CACHE STRING
-  "Semicolon/comma/space separated benchmark dirs to skip (e.g. layernorm-hip;slu-hip)")
-set(HECBENCH_SKIP_BENCHMARKS_FILE "" CACHE FILEPATH
-  "Optional file: one benchmark id per line (# comments allowed), merged after HECBENCH_SKIP_BENCHMARKS")
 
 # Add cmake module path
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
@@ -78,27 +70,19 @@ if(HECBENCH_ENABLE_CUDA)
 endif()
 
 if(HECBENCH_ENABLE_HIP)
-    # First configure often used project(LANGUAGES C CXX) only; enable HIP when needed.
-    if(NOT CMAKE_HIP_COMPILER)
-        include(CheckLanguage)
-        check_language(HIP)
-        if(CMAKE_HIP_COMPILER)
-            enable_language(HIP)
-        endif()
-    endif()
-    if(CMAKE_HIP_COMPILER)
-        # SPIR-V: avoid defaulting CMAKE_HIP_ARCHITECTURES to gfx* while SPIR-V flags use ${HECBENCH_SPIRV_TARGET}.
-        if(HECBENCH_ENABLE_SPIRV)
-            set(CMAKE_HIP_ARCHITECTURES "${HECBENCH_SPIRV_TARGET}")
-        else()
-            set(CMAKE_HIP_ARCHITECTURES "${HECBENCH_HIP_ARCH}")
-        endif()
-        find_package(HIP MODULE QUIET)
-        message(STATUS "HIP enabled - HECBENCH_HIP_ARCH=${HECBENCH_HIP_ARCH} (CMAKE_HIP_ARCHITECTURES=${CMAKE_HIP_ARCHITECTURES})")
+    # SPIR-V: avoid defaulting CMAKE_HIP_ARCHITECTURES to gfx* while SPIR-V flags use ${HECBENCH_SPIRV_TARGET}.
+    if(HECBENCH_ENABLE_SPIRV)
+        set(CMAKE_HIP_ARCHITECTURES "${HECBENCH_SPIRV_TARGET}")
     else()
-        message(WARNING "HIP requested but no HIP compiler was detected - HIP benchmarks will be skipped")
-        set(HECBENCH_ENABLE_HIP OFF)
+        set(CMAKE_HIP_ARCHITECTURES "${HECBENCH_HIP_ARCH}")
     endif()
+    find_package(HIP MODULE)
+    if(NOT HIP_FOUND)
+        message(WARNING
+            "FindHIP did not locate hipcc/ROCm in standard locations or PATH. "
+            "HIP benchmarks may still build if CMAKE_HIP_COMPILER points to a HIP-capable toolchain.")
+    endif()
+    message(STATUS "HIP enabled - HECBENCH_HIP_ARCH=${HECBENCH_HIP_ARCH} (CMAKE_HIP_ARCHITECTURES=${CMAKE_HIP_ARCHITECTURES})")
 endif()
 
 if(HECBENCH_ENABLE_SYCL)
@@ -111,8 +95,13 @@ if(HECBENCH_ENABLE_SYCL)
     endif()
 endif()
 if(HECBENCH_ENABLE_OPENMP)
-    find_package(OpenMP REQUIRED)
-    message(STATUS "OpenMP enabled")
+    find_package(OpenMP)
+    if(OpenMP_FOUND)
+        message(STATUS "OpenMP enabled")
+    else()
+        message(WARNING "OpenMP requested but not found - OpenMP benchmarks will be skipped")
+        set(HECBENCH_ENABLE_OPENMP OFF)
+    endif()
 endif()
 
 if(HECBENCH_ENABLE_HIP)

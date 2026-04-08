@@ -538,26 +538,6 @@ set(HECBENCH_POC_BENCHMARKS
     vadd
 )
 
-# Parse user-provided skip list once and reuse during benchmark discovery.
-set(_hecbench_skip_benchmarks "${HECBENCH_SKIP_BENCHMARKS}")
-string(REPLACE "," ";" _hecbench_skip_benchmarks "${_hecbench_skip_benchmarks}")
-string(REPLACE " " ";" _hecbench_skip_benchmarks "${_hecbench_skip_benchmarks}")
-list(FILTER _hecbench_skip_benchmarks EXCLUDE REGEX "^$")
-if(HECBENCH_SKIP_BENCHMARKS_FILE AND EXISTS "${HECBENCH_SKIP_BENCHMARKS_FILE}")
-  file(STRINGS "${HECBENCH_SKIP_BENCHMARKS_FILE}" _hecbench_skip_file_lines)
-  foreach(_fline IN LISTS _hecbench_skip_file_lines)
-    string(REGEX REPLACE "#.*$" "" _fentry "${_fline}")
-    string(STRIP "${_fentry}" _fentry)
-    if(_fentry)
-      list(APPEND _hecbench_skip_benchmarks "${_fentry}")
-    endif()
-  endforeach()
-endif()
-if(_hecbench_skip_benchmarks)
-    list(LENGTH _hecbench_skip_benchmarks _hecbench_skip_count)
-    message(STATUS "HeCBench skip list enabled (${_hecbench_skip_count} entries): ${_hecbench_skip_benchmarks}")
-endif()
-
 # Include benchmark subdirectories
 foreach(BENCHMARK ${HECBENCH_POC_BENCHMARKS})
     # Check which models exist for this benchmark
@@ -569,11 +549,6 @@ foreach(BENCHMARK ${HECBENCH_POC_BENCHMARKS})
         elseif("${MODEL}" STREQUAL "sycl" AND NOT HECBENCH_ENABLE_SYCL)
             continue()
         elseif("${MODEL}" STREQUAL "omp" AND NOT HECBENCH_ENABLE_OPENMP)
-            continue()
-        endif()
-        set(BENCHMARK_MODEL "${BENCHMARK}-${MODEL}")
-        if("${BENCHMARK_MODEL}" IN_LIST _hecbench_skip_benchmarks)
-            message(STATUS "Skipping ${BENCHMARK_MODEL} (listed in HECBENCH_SKIP_BENCHMARKS)")
             continue()
         endif()
         set(BENCHMARK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/${BENCHMARK}-${MODEL}")
