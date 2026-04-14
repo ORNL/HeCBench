@@ -143,9 +143,10 @@ __global__ void tv_elementwise_add_kernel(
 #else
   #define WarpSize 32
 #endif
+
   // Block-tile origin in global memory
   int blk_row = blockIdx.y * TILE_M;   // first row of this block's tile
-  int blk_col = blockIdx.x * TILE_N;   // first col of this block's tile
+  int blk_col = blockIdx.x * (WarpSize * VALS_N); // first col; one warp covers WarpSize*VALS_N cols
 
   // Thread decomposition within the tile:
   int warp_id = threadIdx.x / WarpSize;
@@ -165,19 +166,15 @@ __global__ void tv_elementwise_add_kernel(
 #pragma unroll
   for (int vm = 0; vm < VALS_M; ++vm) {
     int row = row_start + vm;
-    // 128-bit (float4 = 8×fp16) vectorised load
     size_t base = (size_t)row * N + col_start;
     *reinterpret_cast<float4*>(a_frag[vm]) = *reinterpret_cast<const float4*>(gA + base);
     *reinterpret_cast<float4*>(b_frag[vm]) = *reinterpret_cast<const float4*>(gB + base);
-
     auto a = reinterpret_cast<const __half2*>(a_frag[vm]);
     auto b = reinterpret_cast<const __half2*>(b_frag[vm]);
     auto c = reinterpret_cast<__half2*>(c_frag[vm]);
-
     #pragma unroll
     for (int i = 0; i < VALS_N / 2; i++)
       c[i] = __hadd2(a[i], b[i]);
-
     *reinterpret_cast<float4*>(gC + base) = *reinterpret_cast<const float4*>(c_frag[vm]);
   }
 }
@@ -185,11 +182,12 @@ __global__ void tv_elementwise_add_kernel(
 void run_tv_layout(const __half* dA, const __half* dB, __half* dC, int M, int N)
 {
   assert(M % TILE_M == 0 && "M must be divisible by TILE_M=16");  // 4 warps
-  assert(N % TILE_N == 0 && "N must be divisible by TILE_N=256"); // 1 warp
   int warp_size;
   GPU_CHECK(hipDeviceGetAttribute(&warp_size, hipDeviceAttributeWarpSize, 0));
+  int tile_n = warp_size * VALS_N;  // 512 on GFX9 (64-lane), 256 on NVIDIA (32-lane)
+  assert(N % tile_n == 0 && "N must be divisible by warp_size*VALS_N");
   int THREADS = WARPS * warp_size;
-  dim3 grid(N / TILE_N, M / TILE_M);
+  dim3 grid(N / tile_n, M / TILE_M);
   dim3 block(THREADS); // 128 threads
   tv_elementwise_add_kernel<<<grid, block>>>(dA, dB, dC, M, N);
 }
