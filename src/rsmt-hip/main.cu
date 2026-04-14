@@ -146,13 +146,13 @@ bool insertSteinerPoints(ID& num,
         }
       }
     }
-    const int bal = __ballot(insert);
-    const int pos = __popc(bal & ~(-1 << lane)) + num;
+    const ballot_t bal = __ballot(insert);
+    const int pos = popc_ballot(bal & ~((ballot_t)(-1) << lane)) + num;
     if (insert) {
       x[pos] = stx;
       y[pos] = sty;
     }
-    num += __popc(bal);
+    num += popc_ballot(bal);
   }
 
   return __any(updated);
@@ -322,7 +322,7 @@ static void computeRSMT(const int* const __restrict__ idxin,
   hipMemset(d_yout, -1, 2 * size * sizeof(ctype));
   hipMemset(d_edges, 0, 2 * size * sizeof(edge));
 
-  largeNetKernel<24, 64><<<blocks, 24 * WS>>>(d_idxin, d_xin, d_yin, d_idxout, d_xout, d_yout, d_edges, numnets, d_wl);
+  largeNetKernel<LargeNetWPB, 64><<<blocks, LargeNetWPB * WS>>>(d_idxin, d_xin, d_yin, d_idxout, d_xout, d_yout, d_edges, numnets, d_wl);
   smallNetKernel<3, 512><<<blocks, 3 * WS>>>(d_idxin, d_xout, d_yout, d_edges, d_wl);
 
   // end time

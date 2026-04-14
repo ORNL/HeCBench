@@ -7,7 +7,20 @@
 #include <climits>
 
 static const int MaxPins = 256;  // must be a power of 2
-static const int WS = 32;  // warp size
+
+#if defined(__HIP_PLATFORM_AMD__) || defined(__HIP_PLATFORM_HCC__)
+static const int WS = 64;  // AMD CDNA wavefront size
+using ballot_t = unsigned long long;
+__device__ inline int popc_ballot(unsigned long long x) { return __popcll(x); }
+#else
+static const int WS = 32;  // NVIDIA warp size
+using ballot_t = unsigned int;
+__device__ inline int popc_ballot(unsigned int x) { return __popc(x); }
+#endif
+
+// Number of wavefronts/warps per block for largeNetKernel; keeps total
+// thread count at 768 regardless of WS (24*32 on NVIDIA, 12*64 on AMD).
+static const int LargeNetWPB = 768 / WS;
 
 using ID = short;  // must be signed (point and edge IDs)
 using ctype = int;  // must be signed (coordinates and distances)  // change requires further change below
