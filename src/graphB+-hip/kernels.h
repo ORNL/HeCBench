@@ -1,6 +1,50 @@
 static const int Device = 0;
 static const int ThreadsPerBlock = 256;
+
+// Adaptive warp/wavefront size.
+// On AMD, __AMDGCN_WAVEFRONT_SIZE__ is set by the compiler to the actual
+// wavefront width (64 for CDNA/GCN by default, 32 when compiled with
+// -mwavefrontsize32).  On NVIDIA/other targets it defaults to 32.
+#if defined(__AMDGCN_WAVEFRONT_SIZE__)
+static const int warpsize = __AMDGCN_WAVEFRONT_SIZE__;
+#else
 static const int warpsize = 32;
+#endif
+
+// ballot_t is the type returned by __ballot(): 64-bit on wave64, 32-bit on wave32.
+#if defined(__AMDGCN_WAVEFRONT_SIZE__) && __AMDGCN_WAVEFRONT_SIZE__ == 64
+using ballot_t = unsigned long long;
+#else
+using ballot_t = unsigned int;
+#endif
+
+// Warp-width popcount: __builtin_popcountll for 64-bit masks, __popc for 32-bit.
+static __device__ __forceinline__ int warp_popc(ballot_t mask) {
+#if defined(__AMDGCN_WAVEFRONT_SIZE__) && __AMDGCN_WAVEFRONT_SIZE__ == 64
+  return __builtin_popcountll(mask);
+#else
+  return __popc(mask);
+#endif
+}
+
+// Warp-width count-trailing-zeros (0-indexed first set bit).
+static __device__ __forceinline__ int warp_ctz(ballot_t mask) {
+#if defined(__AMDGCN_WAVEFRONT_SIZE__) && __AMDGCN_WAVEFRONT_SIZE__ == 64
+  return __builtin_ctzll(mask);
+#else
+  return __builtin_ctz(mask);
+#endif
+}
+
+// Mask for lanes below 'lane' (all-ones of the right width shifted left).
+static __device__ __forceinline__ ballot_t lane_mask_below(int lane) {
+#if defined(__AMDGCN_WAVEFRONT_SIZE__) && __AMDGCN_WAVEFRONT_SIZE__ == 64
+  return ~(ballot_t(-1LL) << lane);
+#else
+  return ~(ballot_t(-1) << lane);
+#endif
+}
+
 static __device__ unsigned long long hi = 0;
 static __device__ int wSize = 0;
 
@@ -391,7 +435,7 @@ static __global__ void treelabel(
         }
       }
       const int currcount = lblinc;
-      for (int d = 1; d < 32; d *= 2) {
+      for (int d = 1; d < warpsize; d *= 2) {
         const int tmp = __shfl_up(lblinc, d);
         if (lane >= d) lblinc += tmp;
       }
@@ -404,7 +448,7 @@ static __global__ void treelabel(
         einfo[j].end = (einfo[j].end & 1) | ((lbl - 1) << 1);
         nlist[j] |= 1;  // child edge is in tree
       }
-      lbl = __shfl(lbl, 31);
+      lbl = __shfl(lbl, warpsize - 1);
     }
 
     // move tree nodes to front
@@ -423,10 +467,10 @@ static __global__ void treelabel(
           const int neighbor = n >> 1;
           state = ((neighbor != par) && ((parent[neighbor] >> 2) == node)) ? left : right;  // partitioning condition
         }
-        const int ball = __ballot(state == left);
-        const int balr = __ballot(state == right);
-        const int pfsl = __popc(ball & ~(-1 << lane));
-        const int pfsr = __popc(balr & ~(-1 << lane));
+        const ballot_t ball = __ballot(state == left);
+        const ballot_t balr = __ballot(state == right);
+        const int pfsl = warp_popc(ball & lane_mask_below(lane));
+        const int pfsr = warp_popc(balr & lane_mask_below(lane));
         const int pos = beg + ((state == right) ? (len - 1 - pfsr) : pfsl);
         if (state != none) {
           einfo[pos].beg = b;
@@ -452,8 +496,8 @@ static __global__ void treelabel(
             const int neighbor = n >> 1;
             state = ((neighbor != par) && ((parent[neighbor] >> 2) == node)) ? left : right;  // partitioning condition
           }
-          const int ball = __ballot(state == left);
-          const int pfsl = __popc(ball & ~(-1 << lane));
+          const ballot_t ball = __ballot(state == left);
+          const int pfsl = warp_popc(ball & lane_mask_below(lane));
           if (state == left) {
             int oldb, olde, oldin, oldneg, oldn;
             const int pos = lp + pfsl;
@@ -476,10 +520,10 @@ static __global__ void treelabel(
             n = oldn;
             state = (pos < read) ? none : some;
           }
-          lp += __popc(ball);
+          lp += warp_popc(ball);
           read = max(read, lp);
-          const int balr = __ballot(state == right);
-          const int pfsr = __popc(balr & ~(-1 << lane));
+          const ballot_t balr = __ballot(state == right);
+          const int pfsr = warp_popc(balr & lane_mask_below(lane));
           if (state == right) {
             int oldb, olde, oldin, oldneg, oldn;
             const int pos = rp - pfsr;
@@ -502,10 +546,10 @@ static __global__ void treelabel(
             n = oldn;
             state = (pos < read) ? none : some;
           }
-          rp -= __popc(balr);
+          rp -= warp_popc(balr);
           if (read <= rp) {
-            const int bal = __ballot(state == none);
-            const int pfs = __popc(bal & ~(-1 << lane));
+            const ballot_t bal = __ballot(state == none);
+            const int pfs = warp_popc(bal & lane_mask_below(lane));
             if (state == none) {
               const int pos = read + pfs;
               if (pos <= rp) {
@@ -517,7 +561,7 @@ static __global__ void treelabel(
                 state = some;
               }
             }
-            read += __popc(bal);  // may be too high but okay
+            read += warp_popc(bal);  // may be too high but okay
           }
         } while (__any(state == some));
       }
@@ -544,8 +588,8 @@ static __global__ void treelabel(
       }
       if (__any(pos >= 0)) break;
     }
-    unsigned int bal = __ballot(pos >= 0);
-    const int lid = __ffs(bal) - 1;
+    ballot_t bal = __ballot(pos >= 0);
+    const int lid = warp_ctz(bal); // 0-indexed first set bit
     pos = __shfl(pos, lid);
     if (paredge >= 0) {  // only one thread per warp
       einfo[paredge].beg = nodelabel | 1;
