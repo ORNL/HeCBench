@@ -164,12 +164,14 @@ void MPCcompress(
   const int tidm1 = tid - 1;
   const int tidmdim = tid - dim;
   const int ws    = warpSize;
-  const int lanex = tid & (ws - 1);
-  const int warpx = tid & ~(ws - 1);
+  // MPC processes 64-bit doubles: bit-transpose groups are always 64 elements,
+  // matching the data width.  This is independent of the hardware wavefront size.
+  const int lanex = tid & 63;
+  const int warpx = tid & ~63;
   const int bid   = blockIdx.x;
   const int gdim  = gridDim.x;
   const int bid1  = ((bid + 1) == gdim) ? 0 : (bid + 1);
-  const int init  = 1 + (n + ws - 1) / ws;
+  const int init  = 1 + (n + 63) / 64;
   const int chunksm1 = ((n + (TPB - 1)) / TPB) - 1;
 
   __shared__ int start, top;
@@ -208,15 +210,30 @@ void MPCcompress(
     int loc = 0;
     if (v2 != 0) loc = 1;
 
-    // __ballot returns a 64-bit mask on wave64 and a 32-bit mask (zero-extended)
-    // on wave32.  The first thread of each warp-sized group writes the bitmap.
-    unsigned long long bitmap = __ballot(loc);
-
-    if (lanex == 0) {
-      if (idx < n) compressed[1 + idx / ws] = (long)bitmap;
+    // __ballot covers the full hardware wavefront: 64 bits on wave64, 32 bits on
+    // wave32.  Each 64-element data group maps to one 64-bit bitmap word.  On
+    // wave64 a single ballot fills all 64 bits.  On wave32 two adjacent wavefronts
+    // cover the 64-element group; the upper half (lanex 32..63) stores its ballot
+    // to shared memory so lanex==0 can assemble the full 64-bit bitmap word.
+    unsigned long long ballot64 = __ballot(loc);
+    if (ws == 32 && lanex == 32) {
+      sbuf2[warpx + 32] = (long)ballot64;
     }
 
     __syncthreads();
+
+    if (lanex == 0) {
+      if (idx < n) {
+        unsigned long long bitmap;
+        if (ws == 64) {
+          bitmap = ballot64;
+        } else {
+          unsigned long long hi = (unsigned long long)(unsigned int)(long)sbuf2[warpx + 32];
+          bitmap = (hi << 32) | ballot64;
+        }
+        compressed[1 + idx / 64] = (long)bitmap;
+      }
+    }
     prefixsum(loc, (int*)sbuf1);
 
     if (v2 != 0) {
@@ -276,13 +293,13 @@ void MPCdecompress(
   const int n = compressed[0] >> 32;
   const int tid = threadIdx.x;
   const int ws    = warpSize;
-  const int lanex = tid & (ws - 1);
-  const int warpx = tid & ~(ws - 1);
+  const int lanex = tid & 63;
+  const int warpx = tid & ~63;
   const int bid   = blockIdx.x;
   const int gdim  = gridDim.x;
   const int bid1  = ((bid + 1) == gdim) ? 0 : (bid + 1);
-  const int init  = 1 + (n + ws - 1) / ws;
-  const int nru   = (n - 1) | (ws - 1);
+  const int init  = 1 + (n + 63) / 64;
+  const int nru   = (n - 1) | 63;
   const int chunksm1 = ((n + (TPB - 1)) / TPB) - 1;
 
   __shared__ int start, top;
