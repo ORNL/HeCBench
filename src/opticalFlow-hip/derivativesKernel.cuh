@@ -107,28 +107,55 @@ static void ComputeDerivatives(const float *I0, const float *I1, int w, int h,
   dim3 threads(32, 6);
   dim3 blocks(iDivUp(w, threads.x), iDivUp(h, threads.y));
 
-  hipTextureObject_t texSource, texTarget;
-  hipResourceDesc texRes;
-  memset(&texRes, 0, sizeof(hipResourceDesc));
-
-  texRes.resType = hipResourceTypePitch2D;
-  texRes.res.pitch2D.devPtr = (void *)I0;
-  texRes.res.pitch2D.desc = hipCreateChannelDesc<float>();
-  texRes.res.pitch2D.width = w;
-  texRes.res.pitch2D.height = h;
-  texRes.res.pitch2D.pitchInBytes = s * sizeof(float);
-
   hipTextureDesc texDescr;
   memset(&texDescr, 0, sizeof(hipTextureDesc));
-
   texDescr.normalizedCoords = true;
   texDescr.filterMode = hipFilterModeLinear;
   texDescr.addressMode[0] = hipAddressModeMirror;
   texDescr.addressMode[1] = hipAddressModeMirror;
   texDescr.readMode = hipReadModeElementType;
 
+  hipTextureObject_t texSource, texTarget;
+  hipResourceDesc texRes;
+
+#ifdef __HIP_PLATFORM_AMD__
+  // AMD: Pitch2D + normalizedCoords/linear filter is unsupported; stage into hipArrays
+  hipChannelFormatDesc channelDesc = hipCreateChannelDesc<float>();
+
+  hipArray_t sourceArray, targetArray;
+  checkCudaErrors(hipMallocArray(&sourceArray, &channelDesc, w, h));
+  checkCudaErrors(hipMemcpy2DToArray(sourceArray, 0, 0, I0,
+                                     s * sizeof(float),
+                                     w * sizeof(float), h,
+                                     hipMemcpyDeviceToDevice));
+  checkCudaErrors(hipMallocArray(&targetArray, &channelDesc, w, h));
+  checkCudaErrors(hipMemcpy2DToArray(targetArray, 0, 0, I1,
+                                     s * sizeof(float),
+                                     w * sizeof(float), h,
+                                     hipMemcpyDeviceToDevice));
+
+  memset(&texRes, 0, sizeof(hipResourceDesc));
+  texRes.resType = hipResourceTypeArray;
+  texRes.res.array.array = sourceArray;
   checkCudaErrors(
       hipCreateTextureObject(&texSource, &texRes, &texDescr, NULL));
+
+  memset(&texRes, 0, sizeof(hipResourceDesc));
+  texRes.resType = hipResourceTypeArray;
+  texRes.res.array.array = targetArray;
+  checkCudaErrors(
+      hipCreateTextureObject(&texTarget, &texRes, &texDescr, NULL));
+#else
+  memset(&texRes, 0, sizeof(hipResourceDesc));
+  texRes.resType = hipResourceTypePitch2D;
+  texRes.res.pitch2D.devPtr = (void *)I0;
+  texRes.res.pitch2D.desc = hipCreateChannelDesc<float>();
+  texRes.res.pitch2D.width = w;
+  texRes.res.pitch2D.height = h;
+  texRes.res.pitch2D.pitchInBytes = s * sizeof(float);
+  checkCudaErrors(
+      hipCreateTextureObject(&texSource, &texRes, &texDescr, NULL));
+
   memset(&texRes, 0, sizeof(hipResourceDesc));
   texRes.resType = hipResourceTypePitch2D;
   texRes.res.pitch2D.devPtr = (void *)I1;
@@ -138,7 +165,15 @@ static void ComputeDerivatives(const float *I0, const float *I1, int w, int h,
   texRes.res.pitch2D.pitchInBytes = s * sizeof(float);
   checkCudaErrors(
       hipCreateTextureObject(&texTarget, &texRes, &texDescr, NULL));
+#endif
 
   ComputeDerivativesKernel<<<blocks, threads>>>(w, h, s, Ix, Iy, Iz, texSource,
                                                 texTarget);
+
+  checkCudaErrors(hipDestroyTextureObject(texSource));
+  checkCudaErrors(hipDestroyTextureObject(texTarget));
+#ifdef __HIP_PLATFORM_AMD__
+  checkCudaErrors(hipFreeArray(sourceArray));
+  checkCudaErrors(hipFreeArray(targetArray));
+#endif
 }

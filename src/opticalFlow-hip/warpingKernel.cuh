@@ -73,16 +73,28 @@ static void WarpImage(const float *src, int w, int h, int s, const float *u,
   dim3 threads(32, 6);
   dim3 blocks(iDivUp(w, threads.x), iDivUp(h, threads.y));
 
-  hipTextureObject_t texToWarp;
   hipResourceDesc texRes;
   memset(&texRes, 0, sizeof(hipResourceDesc));
 
+#ifdef __HIP_PLATFORM_AMD__
+  // AMD: Pitch2D + normalizedCoords/linear filter is unsupported; stage into a hipArray
+  hipChannelFormatDesc channelDesc = hipCreateChannelDesc<float>();
+  hipArray_t srcArray;
+  checkCudaErrors(hipMallocArray(&srcArray, &channelDesc, w, h));
+  checkCudaErrors(hipMemcpy2DToArray(srcArray, 0, 0, src,
+                                     s * sizeof(float),
+                                     w * sizeof(float), h,
+                                     hipMemcpyDeviceToDevice));
+  texRes.resType = hipResourceTypeArray;
+  texRes.res.array.array = srcArray;
+#else
   texRes.resType = hipResourceTypePitch2D;
   texRes.res.pitch2D.devPtr = (void *)src;
   texRes.res.pitch2D.desc = hipCreateChannelDesc<float>();
   texRes.res.pitch2D.width = w;
   texRes.res.pitch2D.height = h;
   texRes.res.pitch2D.pitchInBytes = s * sizeof(float);
+#endif
 
   hipTextureDesc texDescr;
   memset(&texDescr, 0, sizeof(hipTextureDesc));
@@ -93,8 +105,14 @@ static void WarpImage(const float *src, int w, int h, int s, const float *u,
   texDescr.addressMode[1] = hipAddressModeMirror;
   texDescr.readMode = hipReadModeElementType;
 
+  hipTextureObject_t texToWarp;
   checkCudaErrors(
       hipCreateTextureObject(&texToWarp, &texRes, &texDescr, NULL));
 
   WarpingKernel<<<blocks, threads>>>(w, h, s, u, v, out, texToWarp);
+
+  checkCudaErrors(hipDestroyTextureObject(texToWarp));
+#ifdef __HIP_PLATFORM_AMD__
+  checkCudaErrors(hipFreeArray(srcArray));
+#endif
 }

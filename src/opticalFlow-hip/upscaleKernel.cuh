@@ -68,16 +68,28 @@ static void Upscale(const float *src, int width, int height, int stride,
   dim3 threads(32, 8);
   dim3 blocks(iDivUp(newWidth, threads.x), iDivUp(newHeight, threads.y));
 
-  hipTextureObject_t texCoarse;
   hipResourceDesc texRes;
   memset(&texRes, 0, sizeof(hipResourceDesc));
 
+#ifdef __HIP_PLATFORM_AMD__
+  // AMD: Pitch2D + normalizedCoords/linear filter is unsupported; stage into a hipArray
+  hipChannelFormatDesc channelDesc = hipCreateChannelDesc<float>();
+  hipArray_t srcArray;
+  checkCudaErrors(hipMallocArray(&srcArray, &channelDesc, width, height));
+  checkCudaErrors(hipMemcpy2DToArray(srcArray, 0, 0, src,
+                                     stride * sizeof(float),
+                                     width * sizeof(float), height,
+                                     hipMemcpyDeviceToDevice));
+  texRes.resType = hipResourceTypeArray;
+  texRes.res.array.array = srcArray;
+#else
   texRes.resType = hipResourceTypePitch2D;
   texRes.res.pitch2D.devPtr = (void *)src;
   texRes.res.pitch2D.desc = hipCreateChannelDesc<float>();
   texRes.res.pitch2D.width = width;
   texRes.res.pitch2D.height = height;
   texRes.res.pitch2D.pitchInBytes = stride * sizeof(float);
+#endif
 
   hipTextureDesc texDescr;
   memset(&texDescr, 0, sizeof(hipTextureDesc));
@@ -88,9 +100,15 @@ static void Upscale(const float *src, int width, int height, int stride,
   texDescr.addressMode[1] = hipAddressModeMirror;
   texDescr.readMode = hipReadModeElementType;
 
+  hipTextureObject_t texCoarse;
   checkCudaErrors(
       hipCreateTextureObject(&texCoarse, &texRes, &texDescr, NULL));
 
   UpscaleKernel<<<blocks, threads>>>(newWidth, newHeight, newStride, scale, out,
                                      texCoarse);
+
+  checkCudaErrors(hipDestroyTextureObject(texCoarse));
+#ifdef __HIP_PLATFORM_AMD__
+  checkCudaErrors(hipFreeArray(srcArray));
+#endif
 }
