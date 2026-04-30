@@ -1,4 +1,5 @@
 #include <chrono>
+#include <cstring>
 #include <fstream>
 #include <string>
 #include "hip_error.hpp"
