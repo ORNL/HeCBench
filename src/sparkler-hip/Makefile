@@ -8,7 +8,7 @@ HIPRT_ROOT   ?= $(ROCM_PATH)
 
 # Compiler can be set below, or via environment variable
 CC        = hipcc
-LD       ?= mpiCC
+LD        = mpiCC
 OPTIMIZE  = yes
 DEBUG     = no
 LAUNCHER ?=
