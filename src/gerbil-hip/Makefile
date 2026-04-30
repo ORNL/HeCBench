@@ -1,3 +1,5 @@
+ROCM_PATH ?= /opt/rocm
+
 #===============================================================================
 # User Options
 #===============================================================================
@@ -40,13 +42,13 @@ obj = AddKernel.o        \
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fpermissive -DGERBIL_USE_GPU \
 	  -DBOOST_ALL_NO_LIB -DBOOST_ATOMIC_DYN_LINK -DBOOST_FILESYSTEM_DYN_LINK \
           -DBOOST_REGEX_DYN_LINK -DBOOST_SYSTEM_DYN_LINK -DBOOST_THREAD_DYN_LINK \
-	  -I/opt/rocm/include -D__HIP_PLATFORM_AMD__
+	  -I$(ROCM_PATH)/include -D__HIP_PLATFORM_AMD__
 
 HIPCCFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -DGERBIL_USE_GPU
 
 # Linker Flags
 LDFLAGS = -lboost_system -lboost_thread -lboost_regex -lboost_filesystem \
-          -lbz2 -lz -L/opt/rocm/lib -lamdhip64
+          -lbz2 -lz -L$(ROCM_PATH)/lib -lamdhip64
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
