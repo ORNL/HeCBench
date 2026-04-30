@@ -139,7 +139,7 @@ float
 compute_maxmag (float2 *d_array, const size_t array_size)
 {
   int max_idx;
-  hipblas_status = hipblasIcamax_v2(hipblas_handle, array_size, d_array, 1, &max_idx);
+  hipblas_status = hipblasIcamax(hipblas_handle, array_size, d_array, 1, &max_idx);
   if (hipblas_status != HIPBLAS_STATUS_SUCCESS) {
      printf ("CUBLAS Scnrm2 failed:%d\n", hipblas_status);
      exit(EXIT_FAILURE);
@@ -833,11 +833,11 @@ tgv_cs(float2 *d_imgl, float2 *d_imgs, float2 *h_img, float2 *h_mask,
 
     shrink<<<gridsize, blocksize>>>(d_ls2, d_ls, beta, lds);
 
-    hipblas_status = hipblasCdgmm_v2(hipblas_handle, HIPBLAS_SIDE_LEFT,
+    hipblas_status = hipblasCdgmm(hipblas_handle, HIPBLAS_SIDE_LEFT,
       lds, ldvt, d_lvt, ldvt, d_ls2, 1, d_lsvt, ldvt);
     assert(hipblas_status == HIPBLAS_STATUS_SUCCESS);
 
-    hipblas_status = hipblasCgemm_v2(hipblas_handle, HIPBLAS_OP_N, HIPBLAS_OP_N,
+    hipblas_status = hipblasCgemm(hipblas_handle, HIPBLAS_OP_N, HIPBLAS_OP_N,
       ldu, ldvt, lds, &a, d_lu, ldu, d_lsvt, ldvt, &b, d_imgl, ldu);
     assert(hipblas_status == HIPBLAS_STATUS_SUCCESS);
 
