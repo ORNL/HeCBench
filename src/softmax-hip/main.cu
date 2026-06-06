@@ -26,6 +26,7 @@ void softMax_cpu(const int numSlice, const int sliceSize, const float* src, floa
   }
 }
 
+__launch_bounds__(BLOCK_SIZE)
 __global__
 void softMax (const int numSlice, const int sliceSize,
               const float* src, float* dest)
@@ -45,6 +46,7 @@ void softMax (const int numSlice, const int sliceSize,
   }
 }
 
+__launch_bounds__(BLOCK_SIZE)
 __global__
 void softMax2 (const int numSlice, const int sliceSize,
               const float* src, float* dest)

@@ -43,6 +43,7 @@
 
 #define BLOCK_SIZE 256
 
+__launch_bounds__(BLOCK_SIZE)
 __global__
 void bitonic_sort (const int seq_len, const int two_power, int *a)
 {

@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
     auto fp16Fn = [&](sycl::handler &cgh) {
         sycl::local_accessor<sycl::half2> sm(sycl::range<1>(NUM_OF_THREADS), cgh);
         cgh.parallel_for(sycl::nd_range<1>(sycl::range<1>(grid*NUM_OF_THREADS),
-                            sycl::range<1>(NUM_OF_THREADS)), [=](sycl::nd_item<1> item) {
+                            sycl::range<1>(NUM_OF_THREADS)), [[sycl::reqd_work_group_size(NUM_OF_THREADS)]] [=](sycl::nd_item<1> item) {
           scalarProductKernel_native(d_a, d_b, d_r,
                                      sm.get_multi_ptr<sycl::access::decorated::no>().get(),
                                      size, item);
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
     auto fp32Fn = [&](sycl::handler &cgh) {
         sycl::local_accessor<sycl::float2> sm(sycl::range<1>(NUM_OF_THREADS), cgh);
         cgh.parallel_for(sycl::nd_range<1>(sycl::range<1>(grid*NUM_OF_THREADS),
-                            sycl::range<1>(NUM_OF_THREADS)), [=](sycl::nd_item<1> item) {
+                            sycl::range<1>(NUM_OF_THREADS)), [[sycl::reqd_work_group_size(NUM_OF_THREADS)]] [=](sycl::nd_item<1> item) {
           scalarProductKernel_native_fp32(d_a, d_b, d_r,
                                           sm.get_multi_ptr<sycl::access::decorated::no>().get(),
                                           size, item);
@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
         cgh.parallel_for(
           sycl::nd_range<1>(sycl::range<1>(grid*NUM_OF_THREADS),
                             sycl::range<1>(NUM_OF_THREADS)),
-          [=](sycl::nd_item<1> item) {
+          [[sycl::reqd_work_group_size(NUM_OF_THREADS)]] [=](sycl::nd_item<1> item) {
           scalarProductKernel_native2_fp32(d_a, d_b, d_r, size, item);
         });
       });
@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
         cgh.parallel_for(
           sycl::nd_range<1>(sycl::range<1>(grid*NUM_OF_THREADS),
                             sycl::range<1>(NUM_OF_THREADS)),
-          [=](sycl::nd_item<1> item) {
+          [[sycl::reqd_work_group_size(NUM_OF_THREADS)]] [=](sycl::nd_item<1> item) {
           scalarProductKernel_native2_fp32(d_a, d_b, d_r, size, item);
         });
       });

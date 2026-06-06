@@ -49,6 +49,7 @@ __device__ void BlockReduce(T &input1, T &input2) {
 
 template <typename T, int kBlockDimX, int kBlockDimY>
 __global__
+__launch_bounds__(kBlockDimX * kBlockDimY)
 void ChannelSumNCHW(
     const int N,
     const int C,
@@ -79,6 +80,7 @@ void ChannelSumNCHW(
 
 template <typename T>
 __global__
+__launch_bounds__(NUM_THREADS)
 void ChannelSumNHWC(
     const int N,
     const int C,

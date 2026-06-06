@@ -158,7 +158,7 @@ int main(int argc, char* argv[]) {
         auto start = std::chrono::steady_clock::now();
         q.submit([&] (sycl::handler &cgh) {
           cgh.parallel_for<class merged_kernel>(
-            sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+            sycl::nd_range<1>(gws, lws), [[sycl::reqd_work_group_size(BLOCK_SIZE)]] [=] (sycl::nd_item<1> item) {
             merge ( item, imgSize, d_Img, d_Img1, d_Img2, d_Tn, d_Bn );
           });
         }).wait();
@@ -169,19 +169,19 @@ int main(int argc, char* argv[]) {
         auto start = std::chrono::steady_clock::now();
         q.submit([&] (sycl::handler &cgh) {
           cgh.parallel_for<class k1>(
-            sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+            sycl::nd_range<1>(gws, lws), [[sycl::reqd_work_group_size(BLOCK_SIZE)]] [=] (sycl::nd_item<1> item) {
             findMovingPixels ( item, imgSize, d_Img, d_Img1, d_Img2, d_Tn, d_Mp );
           });
         });
         q.submit([&] (sycl::handler &cgh) {
           cgh.parallel_for<class k2>(
-            sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+            sycl::nd_range<1>(gws, lws), [[sycl::reqd_work_group_size(BLOCK_SIZE)]] [=] (sycl::nd_item<1> item) {
             updateBackground  ( item, imgSize, d_Img, d_Mp, d_Bn );
           });
         });
         q.submit([&] (sycl::handler &cgh) {
           cgh.parallel_for<class k3>(
-            sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+            sycl::nd_range<1>(gws, lws), [[sycl::reqd_work_group_size(BLOCK_SIZE)]] [=] (sycl::nd_item<1> item) {
             updateThreshold  ( item, imgSize, d_Img, d_Mp, d_Bn, d_Tn );
           });
         });

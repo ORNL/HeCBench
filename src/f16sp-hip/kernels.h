@@ -1,5 +1,6 @@
 #define NUM_OF_BLOCKS (1024 * 1024)
 #define NUM_OF_THREADS 128
+// __launch_bounds__ tells the compiler the block size for register allocation
 
 // fp16 reduction
 __forceinline__ __device__
@@ -29,6 +30,7 @@ void reduceInShared_native(float2 * const v)
 }
 
 
+__launch_bounds__(NUM_OF_THREADS)
 __global__
 void scalarProductKernel_intrinsics(
     half2 const *__restrict__ const a,
@@ -59,6 +61,7 @@ void scalarProductKernel_intrinsics(
 }
 
 // compute type is float for high precision
+__launch_bounds__(NUM_OF_THREADS)
 __global__
 void scalarProductKernel_native_fp32(
     half2 const *__restrict__ const a,
@@ -90,6 +93,7 @@ void scalarProductKernel_native_fp32(
 
 
 // CUB reduction with float2
+__launch_bounds__(NUM_OF_THREADS)
 __global__
 void scalarProductKernel_native2_fp32(
     half2 const *__restrict__ const a,

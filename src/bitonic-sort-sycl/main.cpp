@@ -76,7 +76,7 @@ void ParallelBitonicSort(int input[], int n) {
       // Offload the work to kernel.
       q.submit([&](sycl::handler &h) {
         h.parallel_for(sycl::nd_range<1>(
-          sycl::range<1>(size), sycl::range<1>(BLOCK_SIZE)), [=](sycl::nd_item<1> item) {
+          sycl::range<1>(size), sycl::range<1>(BLOCK_SIZE)), [[sycl::reqd_work_group_size(BLOCK_SIZE)]] [=](sycl::nd_item<1> item) {
           int i = item.get_global_id(0);
  
           // Assign the bitonic sequence number.
