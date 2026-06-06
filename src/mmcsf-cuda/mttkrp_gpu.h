@@ -2,7 +2,11 @@
 #define MTTKRP_GPU_H
 
 #include "util.h"
-#include <cuda.h>
+#if defined(__HIPCC__)
+  #include <hip/hip_runtime.h>
+#else
+  #include <cuda.h>
+#endif
 
 int MTTKRP_MIHCSR_GPU(TiledTensor *TiledX, Matrix *U, const Options &Opt);
 
