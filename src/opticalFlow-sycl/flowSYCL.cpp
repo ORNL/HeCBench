@@ -1,3 +1,30 @@
+/* Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *  * Neither the name of NVIDIA CORPORATION nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include "common.h"
 
 // include kernels
@@ -7,7 +34,6 @@
 #include "derivativesKernel.hpp"
 #include "solverKernel.hpp"
 #include "addKernel.hpp"
-
 
 ///////////////////////////////////////////////////////////////////////////////
 /// \brief method logic
@@ -25,15 +51,17 @@
 /// \param[out] u            horizontal displacement
 /// \param[out] v            vertical displacement
 ///////////////////////////////////////////////////////////////////////////////
-void ComputeFlowSYCL(const float *I0, const float *I1, int width, int height,
+void ComputeFlowCUDA(const float *I0, const float *I1, int width, int height,
                      int stride, float alpha, int nLevels, int nWarpIters,
                      int nSolverIters, float *u, float *v) {
+
+#ifdef USE_GPU
+  sycl::queue q(sycl::gpu_selector_v, sycl::property::queue::in_order());
+#else
+  sycl::queue q(sycl::cpu_selector_v, sycl::property::queue::in_order());
+#endif
   printf("Computing optical flow on Device...\n");
 
-  sycl::queue q{aspect_selector(sycl::aspect::ext_intel_legacy_image), sycl::property::queue::in_order()};
-
-  std::cout << "\nRunning on "
-            << q.get_device().get_info<sycl::info::device::name>() << "\n";
   // pI0 and pI1 will hold device pointers
   const float **pI0 = new const float *[nLevels];
   const float **pI1 = new const float *[nLevels];
@@ -82,22 +110,8 @@ void ComputeFlowSYCL(const float *I0, const float *I1, int width, int height,
   CHECK_ERROR(*(pI0 + currentLevel) = (const float *)sycl::malloc_device(dataSize, q));
   CHECK_ERROR(*(pI1 + currentLevel) = (const float *)sycl::malloc_device(dataSize, q));
 
-  float *pI0_h = (float *)sycl::malloc_host(stride * height * sizeof(sycl::float4), q);
-  float *I0_h = (float *)sycl::malloc_host(dataSize, q);
-
-  float *pI1_h = (float *)sycl::malloc_host(stride * height * sizeof(sycl::float4), q);
-  float *I1_h = (float *)sycl::malloc_host(dataSize, q);
-
-  float *src_d0 = (float *)sycl::malloc_device(stride * height * sizeof(sycl::float4), q);
-  float *src_d1 = (float *)sycl::malloc_device(stride * height * sizeof(sycl::float4), q);
-
-  q.memcpy((void *)I0_h, I0, dataSize);
-  q.memcpy((void *)I1_h, I1, dataSize);
-
-  q.memcpy((void *)pI0[currentLevel], I0, dataSize);
-  q.memcpy((void *)pI1[currentLevel], I1, dataSize);
-
-  q.wait();
+  CHECK_ERROR(q.memcpy((void *)pI0[currentLevel], I0, dataSize));
+  CHECK_ERROR(q.memcpy((void *)pI1[currentLevel], I1, dataSize));
 
   pW[currentLevel] = width;
   pH[currentLevel] = height;
@@ -108,20 +122,16 @@ void ComputeFlowSYCL(const float *I0, const float *I1, int width, int height,
     int nh = pH[currentLevel] / 2;
     int ns = iAlignUp(nw);
 
-    CHECK_ERROR(
-        *(pI0 + currentLevel - 1) = (const float *)sycl::malloc_device(
-            ns * nh * sizeof(float), q));
-    CHECK_ERROR(
-        *(pI1 + currentLevel - 1) = (const float *)sycl::malloc_device(
-            ns * nh * sizeof(float), q));
+    CHECK_ERROR(*(pI0 + currentLevel - 1) = (const float *)sycl::malloc_device(
+                                             ns * nh * sizeof(float), q));
+    CHECK_ERROR(*(pI1 + currentLevel - 1) = (const float *)sycl::malloc_device(
+                                             ns * nh * sizeof(float), q));
 
-    Downscale(pI0[currentLevel], pI0_h, I0_h, src_d0, pW[currentLevel],
-              pH[currentLevel], pS[currentLevel], nw, nh, ns,
-              (float *)pI0[currentLevel - 1], q);
+    Downscale(pI0[currentLevel], pW[currentLevel], pH[currentLevel],
+              pS[currentLevel], nw, nh, ns, (float *)pI0[currentLevel - 1], q);
 
-    Downscale(pI1[currentLevel], pI0_h, I0_h, src_d0, pW[currentLevel],
-              pH[currentLevel], pS[currentLevel], nw, nh, ns,
-              (float *)pI1[currentLevel - 1], q);
+    Downscale(pI1[currentLevel], pW[currentLevel], pH[currentLevel],
+              pS[currentLevel], nw, nh, ns, (float *)pI1[currentLevel - 1], q);
 
     pW[currentLevel - 1] = nw;
     pH[currentLevel - 1] = nh;
@@ -143,11 +153,10 @@ void ComputeFlowSYCL(const float *I0, const float *I1, int width, int height,
 
       // on current level we compute optical flow
       // between frame 0 and warped frame 1
-       WarpImage(pI1[currentLevel], pI0_h, I0_h, src_d0, pW[currentLevel], pH[currentLevel],
+      WarpImage(pI1[currentLevel], pW[currentLevel], pH[currentLevel],
                 pS[currentLevel], d_u, d_v, d_tmp, q);
 
-      ComputeDerivatives(pI0[currentLevel], d_tmp, pI0_h, pI1_h, I0_h, I1_h,
-                         src_d0, src_d1, pW[currentLevel],
+      ComputeDerivatives(pI0[currentLevel], d_tmp, pW[currentLevel],
                          pH[currentLevel], pS[currentLevel], d_Ix, d_Iy, d_Iz, q);
 
       for (int iter = 0; iter < nSolverIters; ++iter) {
@@ -167,13 +176,13 @@ void ComputeFlowSYCL(const float *I0, const float *I1, int width, int height,
       // prolongate solution
       float scaleX = (float)pW[currentLevel + 1] / (float)pW[currentLevel];
 
-      Upscale(d_u, pI0_h, I0_h, src_d0, pW[currentLevel], pH[currentLevel], pS[currentLevel],
+      Upscale(d_u, pW[currentLevel], pH[currentLevel], pS[currentLevel],
               pW[currentLevel + 1], pH[currentLevel + 1], pS[currentLevel + 1],
               scaleX, d_nu, q);
 
       float scaleY = (float)pH[currentLevel + 1] / (float)pH[currentLevel];
 
-      Upscale(d_v, pI0_h, I0_h, src_d0, pW[currentLevel], pH[currentLevel], pS[currentLevel],
+      Upscale(d_v, pW[currentLevel], pH[currentLevel], pS[currentLevel],
               pW[currentLevel + 1], pH[currentLevel + 1], pS[currentLevel + 1],
               scaleY, d_nv, q);
 

@@ -530,7 +530,7 @@ inline bool compareData(const T *reference, const T *data,
 
     error_count += !comp;
 
-#if 0
+#ifdef DEBUG
 
     if (!comp) {
       std::cerr << "ERROR, i = " << i << ",\t "

@@ -1,13 +1,38 @@
+/* Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *  * Neither the name of NVIDIA CORPORATION nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 const static char *const sSDKsample = "HSOpticalFlow";
 
 // CPU-GPU discrepancy threshold for self-test
 const float THRESHOLD = 0.05f;
 
-
 #include "common.h"
 #include "flowGold.h"
 #include "flowSYCL.h"
-
 #include "helper_functions.h"
 #include <cmath>
 #include <chrono>
@@ -125,7 +150,7 @@ bool CompareWithGold(int width, int height, int stride, const float *h_uGold,
 
   printf("L1 error : %.6f\n", error);
 
-  return (error < 1.0f);
+  return (error < THRESHOLD);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -189,18 +214,20 @@ int main(int argc, char **argv) {
 
   auto duration = std::chrono::duration_cast<float_ms>(stop - start).count();
   printf("Processing time on CPU: %f (ms)\n", duration);
-  
+
   start = Time::now();
-  ComputeFlowSYCL(h_source, h_target, width, height, stride, alpha, nLevels,
+  ComputeFlowCUDA(h_source, h_target, width, height, stride, alpha, nLevels,
                   nWarpIters, nSolverIters, h_u, h_v);
   stop = Time::now();
   duration = std::chrono::duration_cast<float_ms>(stop - start).count();
   printf("Processing time on Device: %f (ms)\n", duration);
 
   // compare results (L1 norm)
-  bool status = CompareWithGold(width, height, stride, h_uGold, h_vGold, h_u, h_v);
+  bool status =
+      CompareWithGold(width, height, stride, h_uGold, h_vGold, h_u, h_v);
 
   WriteFloFile("FlowGPU.flo", width, height, stride, h_u, h_v);
+
   WriteFloFile("FlowCPU.flo", width, height, stride, h_uGold, h_vGold);
 
   // free resources

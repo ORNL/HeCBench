@@ -1,7 +1,34 @@
+/* Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *  * Neither the name of NVIDIA CORPORATION nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include "common.h"
 
 ///////////////////////////////////////////////////////////////////////////////
-/// \brief one iteration of classical Horn-Schunck method, CUDA kernel.
+/// \brief one iteration of classical Horn-Schunck method
 ///
 /// It is one iteration of Jacobi method for a corresponding linear system.
 /// Template parameters are describe CTA size
@@ -24,9 +51,6 @@ void JacobiIteration(const float *du0, const float *dv0,
                                 float alpha, float *du1, float *dv1,
                                 const sycl::nd_item<3> &item,
                                 volatile float *du, volatile float *dv) {
-  // Handle to thread block group
-  auto cta = item.get_group();
-
   const int ix = item.get_global_id(2);
   const int iy = item.get_global_id(1);
 
@@ -140,24 +164,26 @@ void JacobiIteration(const float *du0, const float *dv0,
 ///////////////////////////////////////////////////////////////////////////////
 static void SolveForUpdate(const float *du0, const float *dv0, const float *Ix,
                            const float *Iy, const float *Iz, int w, int h,
-                           int s, float alpha, float *du1, float *dv1, sycl::queue &q) {
+                           int s, float alpha, float *du1, float *dv1,
+                           sycl::queue &q) {
   // CTA size
   sycl::range<3> threads(1, 6, 32);
   // grid size
   sycl::range<3> blocks(1, iDivUp(h, threads[1]), iDivUp(w, threads[2]));
 
   q.submit([&](sycl::handler &cgh) {
-    sycl::local_accessor<float, 1> du_acc_ct1(
+    sycl::local_accessor<float, 1> du_acc(
         sycl::range<1>((32 + 2) * (6 + 2)), cgh);
-    sycl::local_accessor<float, 1> dv_acc_ct1(
+    sycl::local_accessor<float, 1> dv_acc(
         sycl::range<1>((32 + 2) * (6 + 2)), cgh);
 
-    cgh.parallel_for(sycl::nd_range<3>(blocks * threads, threads),
-                     [=](sycl::nd_item<3> item) {
-                       JacobiIteration<32, 6>(du0, dv0, Ix, Iy, Iz, w, h, s,
-                                              alpha, du1, dv1, item,
-                                              du_acc_ct1.get_multi_ptr<sycl::access::decorated::no>().get(),
-                                              dv_acc_ct1.get_multi_ptr<sycl::access::decorated::no>().get());
-                     });
+    cgh.parallel_for(
+        sycl::nd_range<3>(blocks * threads, threads),
+        [=](sycl::nd_item<3> item) {
+          JacobiIteration<32, 6>(
+              du0, dv0, Ix, Iy, Iz, w, h, s, alpha, du1, dv1, item,
+              du_acc.get_multi_ptr<sycl::access::decorated::no>().get(),
+              dv_acc.get_multi_ptr<sycl::access::decorated::no>().get());
+        });
   });
 }
