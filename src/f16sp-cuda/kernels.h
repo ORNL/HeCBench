@@ -38,12 +38,13 @@ void scalarProductKernel_intrinsics(
     float *__restrict__ const results,
     size_t const size)
 {
-  const int stride = gridDim.x*blockDim.x;
+  const size_t stride = (size_t)gridDim.x * blockDim.x;
   __shared__ half2 shArray[NUM_OF_THREADS];
 
   half2 value = __float2half2_rn(0.f);
 
-  for (int i = threadIdx.x + blockDim.x * blockIdx.x; i < size; i+=stride)
+  for (size_t i = (size_t)blockIdx.x * blockDim.x + threadIdx.x;
+              i < size; i+=stride)
   {
     value = __hfma2(a[i], b[i], value);
   }
@@ -69,12 +70,13 @@ void scalarProductKernel_native_fp32(
     float *__restrict__ const results,
     size_t const size)
 {
-  const int stride = gridDim.x*blockDim.x;
+  const size_t stride = (size_t)gridDim.x * blockDim.x;
   __shared__ float2 shArray[NUM_OF_THREADS];
 
   float2 value = {0.f, 0.f};
 
-  for (int i = threadIdx.x + blockDim.x * blockIdx.x; i < size; i+=stride)
+  for (size_t i = (size_t)blockIdx.x * blockDim.x + threadIdx.x;
+              i < size; i+=stride)
   {
     value.x += (float)a[i].x * (float)b[i].x;
     value.y += (float)a[i].y * (float)b[i].y;
@@ -101,14 +103,15 @@ void scalarProductKernel_native2_fp32(
     float *__restrict__ const results,
     size_t const size)
 {
-  const int stride = gridDim.x*blockDim.x;
+  const size_t stride = (size_t)gridDim.x * blockDim.x;
 
   typedef cub::BlockReduce<float, NUM_OF_THREADS> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
 
   float2 value = {0.f, 0.f};
 
-  for (int i = threadIdx.x + blockDim.x * blockIdx.x; i < size; i+=stride)
+  for (size_t i = (size_t)blockIdx.x * blockDim.x + threadIdx.x;
+              i < size; i+=stride)
   {
     value.x += (float)a[i].x * (float)b[i].x;
     value.y += (float)a[i].y * (float)b[i].y;

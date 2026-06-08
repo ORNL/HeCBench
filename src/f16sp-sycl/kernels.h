@@ -33,12 +33,12 @@ void scalarProductKernel_native(const sycl::half2 *a,
 {
   int lid = item.get_local_id(0);
 
-  const int stride = item.get_group_range(0) * item.get_local_range(0);
+  const size_t stride = item.get_group_range(0) * item.get_local_range(0);
 
   sycl::half2 value(0.f, 0.f);
   shArray[lid] = value;
 
-  for (int i = item.get_global_id(0); i < size; i += stride)
+  for (size_t i = item.get_global_id(0); i < size; i += stride)
   {
     value = a[i] * b[i] + value;
   }
@@ -67,12 +67,12 @@ void scalarProductKernel_native_fp32(const sycl::half2 *a,
 {
   int lid = item.get_local_id(0);
 
-  const int stride = item.get_group_range(0) * item.get_local_range(0);
+  const size_t stride = item.get_group_range(0) * item.get_local_range(0);
 
   sycl::float2 value(0.f, 0.f);
   shArray[lid] = value;
 
-  for (int i = item.get_global_id(0); i < size; i += stride)
+  for (size_t i = item.get_global_id(0); i < size; i += stride)
   {
     value.x() += (float)a[i].x() * (float)b[i].x();
     value.y() += (float)a[i].y() * (float)b[i].y();
@@ -100,11 +100,11 @@ void scalarProductKernel_native2_fp32(const sycl::half2 *a,
 {
   int lid = item.get_local_id(0);
 
-  const int stride = item.get_group_range(0) * item.get_local_range(0);
+  const size_t stride = item.get_group_range(0) * item.get_local_range(0);
 
   sycl::float2 value(0.f, 0.f);
 
-  for (int i = item.get_global_id(0); i < size; i += stride)
+  for (size_t i = item.get_global_id(0); i < size; i += stride)
   {
     value.x() += (float)a[i].x() * (float)b[i].x();
     value.y() += (float)a[i].y() * (float)b[i].y();

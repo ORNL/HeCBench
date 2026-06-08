@@ -36,11 +36,11 @@ void kernel1(const __half* __restrict__ ax,
     #pragma omp parallel num_threads(NUM_OF_THREADS)
     {
       int lid    = omp_get_thread_num();
-      int stride = grid * NUM_OF_THREADS;
-      int base   = omp_get_team_num() * NUM_OF_THREADS + lid;
+      size_t stride = (size_t)grid * NUM_OF_THREADS;
+      size_t base   = (size_t)omp_get_team_num() * NUM_OF_THREADS + lid;
 
       __half val_x = 0, val_y = 0;
-      for (size_t i = base; (size_t)i < size; i += stride) {
+      for (size_t i = base; i < size; i += stride) {
         val_x += ax[i] * bx[i];
         val_y += ay[i] * by[i];
       }
@@ -82,11 +82,11 @@ void kernel2(const __half* __restrict__ ax,
     #pragma omp parallel num_threads(NUM_OF_THREADS)
     {
       int lid    = omp_get_thread_num();
-      int stride = grid * NUM_OF_THREADS;
-      int base   = omp_get_team_num() * NUM_OF_THREADS + lid;
+      size_t stride = (size_t)grid * NUM_OF_THREADS;
+      size_t base   = (size_t)omp_get_team_num() * NUM_OF_THREADS + lid;
 
       float val_x = 0.f, val_y = 0.f;
-      for (int i = base; (size_t)i < size; i += stride) {
+      for (size_t i = base; i < size; i += stride) {
         val_x += float(ax[i]) * float(bx[i]);
         val_y += float(ay[i]) * float(by[i]);
       }
