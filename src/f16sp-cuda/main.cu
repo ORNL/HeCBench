@@ -12,11 +12,27 @@
 #include <cstdlib>
 #include <ctime>
 #include <chrono>
-#include <cuda.h>
+#include <cuda_runtime.h>
 #include <cuda_fp16.h>
 #include <cub/cub.cuh>
+#include <thrust/iterator/counting_iterator.h>
+#include <thrust/iterator/transform_iterator.h>
 #include <cublas_v2.h>
 #include "kernels.h"
+
+const int WARMUP = 1000;
+
+struct Half2Mul {
+  const half2* a;
+  const half2* b;
+  Half2Mul(const half2* _a, const half2* _b) : a(_a), b(_b) {}
+
+  __host__ __device__
+  float operator()(int idx) const {
+    half2 prod = __hmul2(a[idx], b[idx]);
+    return __low2float(prod) + __high2float(prod);
+  }
+};
 
 // The analytical result of dot product is 65504
 void generateInput(half2 * a, size_t size)
@@ -71,8 +87,8 @@ int main(int argc, char *argv[])
 
     printf("\nGPU grid size is %d\n", grid);
 
-    // warmup
-    for (int i = 0; i < 1000; i++)
+    // WARMUP
+    for (int i = 0; i < WARMUP; i++)
       scalarProductKernel_intrinsics<<<grid, NUM_OF_THREADS>>>(d_a, d_b, d_r, size);
 
     cudaDeviceSynchronize();
@@ -91,8 +107,8 @@ int main(int argc, char *argv[])
     cudaMemcpy(&r, d_r, result_bytes, cudaMemcpyDeviceToHost);
     printf("Error rate: %e\n", fabsf(r - 65504.f)/65504.f);
 
-    // warmup
-    for (int i = 0; i < 1000; i++)
+    // WARMUP
+    for (int i = 0; i < WARMUP; i++)
       scalarProductKernel_native_fp32<<<grid, NUM_OF_THREADS>>>(d_a, d_b, d_r, size);
 
     cudaDeviceSynchronize();
@@ -111,8 +127,8 @@ int main(int argc, char *argv[])
     cudaMemcpy(&r, d_r, result_bytes, cudaMemcpyDeviceToHost);
     printf("Error rate: %e\n", fabsf(r - 65504.f)/65504.f);
 
-    // warmup
-    for (int i = 0; i < 1000; i++)
+    // WARMUP
+    for (int i = 0; i < WARMUP; i++)
       scalarProductKernel_native2_fp32<<<grid, NUM_OF_THREADS>>>(d_a, d_b, d_r, size);
 
     cudaDeviceSynchronize();
@@ -142,24 +158,50 @@ int main(int argc, char *argv[])
   xType = yType = rType = CUDA_R_16F;
   eType = CUDA_R_32F;
 
-  // warmup
-  for (int i = 0; i < 1000; i++) {
-    cublasDotEx(h, size*2, (half*)d_a, xType, 1, (half*)d_b,
+  // WARMUP
+  for (int i = 0; i < WARMUP; i++) {
+    cublasDotEx_64(h, size*2, (half*)d_a, xType, 1, (half*)d_b,
                 yType, 1, d_r2, rType, eType);
   }
   cudaDeviceSynchronize();
 
   auto start = std::chrono::steady_clock::now();
   for (int i = 0; i < repeat; i++) {
-    cublasDotEx(h, size*2, (half*)d_a, xType, 1, (half*)d_b,
+    cublasDotEx_64(h, size*2, (half*)d_a, xType, 1, (half*)d_b,
                 yType, 1, d_r2, rType, eType);
   }
   cudaDeviceSynchronize();
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-  printf("Average kernel (cublasDot) execution time %f (us)\n", (time * 1e-3f) / repeat);
+  printf("Average cublasDotEx_64 execution time %f (us)\n", (time * 1e-3f) / repeat);
   cudaMemcpy(&r2, d_r2, result2_bytes, cudaMemcpyDeviceToHost);
   printf("Error rate: %e\n", fabsf((float)r2 - 65504.f)/65504.f);
+
+  printf("\n");
+
+  for (int i = 0; i < WARMUP + repeat; i++) {
+    if (i == WARMUP) {
+      cudaDeviceSynchronize();
+      start = std::chrono::steady_clock::now();
+    }
+
+    thrust::counting_iterator<size_t> counting(0);
+    auto iter = thrust::make_transform_iterator(counting, Half2Mul(d_a, d_b));
+
+    void* d_temp = nullptr; size_t temp_bytes = 0;
+    cub::DeviceReduce::Sum(d_temp, temp_bytes, iter, d_r, size);
+    if (temp_bytes != 0) cudaMalloc(&d_temp, temp_bytes);
+    auto status = cub::DeviceReduce::Sum(d_temp, temp_bytes, iter, d_r, size);
+    if (status != cudaSuccess) printf("cub::DeviceReduce::Sum failed\n");
+    if (temp_bytes != 0) cudaFree(d_temp);
+  }
+  cudaDeviceSynchronize();
+  end = std::chrono::steady_clock::now();
+  time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  printf("Average cub::DeviceReduce::Sum execution time: %f (us)\n", time * 1e-3f / repeat);
+
+  cudaMemcpy(&r, d_r, result_bytes, cudaMemcpyDeviceToHost);
+  printf("Error rate: %e\n", fabsf(r - 65504.f)/65504.f);
 
   cudaFree(d_a);
   cudaFree(d_b);
