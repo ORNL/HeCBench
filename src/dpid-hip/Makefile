@@ -23,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../dpid-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -36,7 +36,7 @@ endif
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-  CFLAGS += -O3
+  CFLAGS += -O3 -ffast-math
 endif
 #===============================================================================
 # Targets to Build
@@ -45,7 +45,10 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu shared.h Makefile
+main.o: main.cu shared.h ../dpid-cuda/reference.h Makefile
+	$(CC) $(CFLAGS) -c $< -o $@
+
+kernels.o: kernels.cu shared.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

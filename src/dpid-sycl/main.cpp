@@ -8,10 +8,7 @@
 #include <cmath>
 #include <cstdint>
 #include "shared.h"
-
-//-------------------------------------------------------------------
-// SHARED
-//-------------------------------------------------------------------
+#include "reference.h"
 
 double LCG_random_double(uint64_t * seed)
 {
@@ -24,7 +21,6 @@ double LCG_random_double(uint64_t * seed)
 
 void run(const Params& i, const uchar3* hInput, uchar3* hOutput);
 
-//-------------------------------------------------------------------
 int main(int argc, char** argv) {
   // generate a random image for testing
   if(argc != 5) {
@@ -66,23 +62,44 @@ int main(int argc, char** argv) {
   uchar3 *hOutput  = (uchar3*) malloc (sizeof(uchar3) * p.oWidth * p.oHeight);
 
   uint64_t seed = 123;
-  for (int i = 0; i < p.iWidth * p.iHeight; i++) {
-    hInput[i].x() = (unsigned char)(256*LCG_random_double(&seed));
-    hInput[i].y() = (unsigned char)(256*LCG_random_double(&seed));
-    hInput[i].z() = (unsigned char)(256*LCG_random_double(&seed));
+  for (uint32_t i = 0; i < p.iWidth * p.iHeight; i++) {
+    hInput[i][0] = (unsigned char)(256*LCG_random_double(&seed));
+    hInput[i][1] = (unsigned char)(256*LCG_random_double(&seed));
+    hInput[i][2] = (unsigned char)(256*LCG_random_double(&seed));
   }
   
   // run downsampling on a device
   run(p, hInput, hOutput);
 
-  int x = 0, y = 0, z = 0;
-  for (int i = 0; i < p.oWidth * p.oHeight; i++) {
-    x += hOutput[i].x();
-    y += hOutput[i].y();
-    z += hOutput[i].z();
+  // per-pixel comparison for validation
+  uchar3 *hRef = (uchar3*) malloc(sizeof(uchar3) * p.oWidth * p.oHeight);
+  reference(p.oWidth, p.oHeight, p.iWidth, p.iHeight,
+            p.pWidth, p.pHeight, p.lambda,
+            hInput, hRef);
+  uint32_t mismatches = 0;
+  int maxDiff = 0;
+  for (uint32_t i = 0; i < p.oWidth * p.oHeight; i++) {
+    int dx = std::abs((int)hOutput[i][0] - (int)hRef[i][0]);
+    int dy = std::abs((int)hOutput[i][1] - (int)hRef[i][1]);
+    int dz = std::abs((int)hOutput[i][2] - (int)hRef[i][2]);
+    if (dx > 0 || dy > 0 || dz > 0) mismatches++;
+    if (dx > maxDiff) maxDiff = dx;
+    if (dy > maxDiff) maxDiff = dy;
+    if (dz > maxDiff) maxDiff = dz;
   }
-  printf("Checksums %d %d %d\n", x, y, z);
+  uint32_t total = p.oWidth * p.oHeight;
+  if (mismatches == 0) {
+    printf("Verification PASS: GPU matches CPU reference exactly.\n");
+  } else {
+    printf("Verification: %u / %u pixels differ (%.2f%%), max channel diff = %d\n",
+           mismatches, total, 100.0 * mismatches / total, maxDiff);
+    if (maxDiff <= 1)
+      printf("  -> within rounding tolerance (maxDiff<=1, likely OK)\n");
+    else
+      printf("  -> WARNING: differences exceed rounding tolerance\n");
+  }
 
+  free(hRef);
   free(hInput);
   free(hOutput);
   return 0;

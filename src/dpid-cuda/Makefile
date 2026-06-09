@@ -37,7 +37,7 @@ endif
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-  CFLAGS += -O3
+  CFLAGS += -O3 -use_fast_math
 endif
 #===============================================================================
 # Targets to Build
@@ -46,7 +46,10 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu shared.h Makefile
+main.o: main.cu shared.h reference.h Makefile
+	$(CC) $(CFLAGS) -c $< -o $@
+
+kernels.o: kernels.cu shared.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

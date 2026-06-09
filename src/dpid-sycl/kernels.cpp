@@ -19,17 +19,17 @@
 
 inline
 void normalize(float4& var) {
-  var.x() /= var.w();
-  var.y() /= var.w();
-  var.z() /= var.w();
-  var.w() = 1.f;
+  var[0] /= var[3];
+  var[1] /= var[3];
+  var[2] /= var[3];
+  var[3] = 1.f;
 }
 
 void add(float4& output, const uchar3& color, const float factor) {
-  output.x() += (float)color.x() * factor;  
-  output.y() += (float)color.y() * factor;  
-  output.z() += (float)color.z() * factor;  
-  output.w() += factor;
+  output[0] += (float)color[0] * factor;  
+  output[1] += (float)color[1] * factor;  
+  output[2] += (float)color[2] * factor;  
+  output[3] += factor;
 }
 
 inline
@@ -76,10 +76,10 @@ float4 __shfl_down(sycl::nd_item<2> &item, const float4 var, const uint32_t srcL
 {
   float4 output;
   auto sg = item.get_sub_group();
-  output.x() = sycl::shift_group_left(sg, var.x(), srcLane);
-  output.y() = sycl::shift_group_left(sg, var.y(), srcLane);
-  output.z() = sycl::shift_group_left(sg, var.z(), srcLane);
-  output.w() = sycl::shift_group_left(sg, var.w(), srcLane);
+  output[0] = sycl::shift_group_left(sg, var[0], srcLane);
+  output[1] = sycl::shift_group_left(sg, var[1], srcLane);
+  output[2] = sycl::shift_group_left(sg, var[2], srcLane);
+  output[3] = sycl::shift_group_left(sg, var[3], srcLane);
   return output;
 }
 
@@ -94,9 +94,9 @@ void reduce(sycl::nd_item<2> &item, float4& value) {
 
 inline
 float distance(const float4& avg, const uchar3& color) {
-  const float x = avg.x() - color.x();
-  const float y = avg.y() - color.y();
-  const float z = avg.z() - color.z();
+  const float x = avg[0] - color[0];
+  const float y = avg[1] - color[1];
+  const float z = avg[2] - color[2];
   return sycl::sqrt(x * x + y * y + z * z) / 441.6729559f; // L2-Norm / sqrt(255^2 * 3)
 }
 
@@ -118,7 +118,7 @@ void kernelGuidance(sycl::nd_item<2> &item,
     float f = contribution(l, 1.f, x, y);  
 
     const uchar3& pixel = input[x + y * p.iWidth];
-    color += {pixel.x() * f, pixel.y() * f, pixel.z() * f, f};
+    color += {pixel[0] * f, pixel[1] * f, pixel[2] * f, f};
   }
 
   // reduce warps
@@ -127,7 +127,7 @@ void kernelGuidance(sycl::nd_item<2> &item,
   // store results
   if((TX % 32) == 0) {
     normalize(color);
-    patches[PX + PY * p.oWidth] = uchar3(color.x(), color.y(), color.z());
+    patches[PX + PY * p.oWidth] = uchar3(color[0], color[1], color[2]);
   }
 }
 
@@ -213,11 +213,11 @@ void kernelDownsampling(sycl::nd_item<2> &item,
   if(WTHREAD == 0) {
     uchar3& ref = output[PX + PY * p.oWidth];
 
-    if(color.w() == 0.0f)
-      ref = uchar3((unsigned char)avg.x(), (unsigned char)avg.y(), (unsigned char)avg.z());
+    if(color[3] == 0.0f)
+      ref = uchar3((unsigned char)avg[0], (unsigned char)avg[1], (unsigned char)avg[2]);
     else {
       normalize(color);
-      ref = uchar3((unsigned char)color.x(), (unsigned char)color.y(), (unsigned char)color.z());
+      ref = uchar3((unsigned char)color[0], (unsigned char)color[1], (unsigned char)color[2]);
     }
   }
 }
@@ -249,14 +249,14 @@ void run(const Params& p, const uchar3* hInput, uchar3* hOutput) {
   for (uint32_t i = 0; i < p.repeat; i++) {
     q.submit([&] (sycl::handler &cgh) {
       cgh.parallel_for<class guidance>(sycl::nd_range<2>(gws, lws),
-        [=] (sycl::nd_item<2> item) [[intel::reqd_sub_group_size(32)]] {
+        [=] (sycl::nd_item<2> item) {
         kernelGuidance (item, dInput, dGuidance, p);
       });
     });
 
     q.submit([&] (sycl::handler &cgh) {
       cgh.parallel_for<class downsample>(sycl::nd_range<2>(gws, lws),
-        [=] (sycl::nd_item<2> item) [[intel::reqd_sub_group_size(32)]] {
+        [=] (sycl::nd_item<2> item) {
         kernelDownsampling (item, dInput, dGuidance, p, dOutput);
       });
     });

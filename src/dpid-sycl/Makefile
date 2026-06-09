@@ -30,8 +30,8 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../include -fsycl \
-          --gcc-toolchain=$(GCC_TOOLCHAIN)
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../dpid-cuda \
+          -fsycl --gcc-toolchain=$(GCC_TOOLCHAIN)
 
 ifeq ($(VENDOR), AdaptiveCpp)
     CFLAGS_TMP := $(CFLAGS)
@@ -59,7 +59,7 @@ endif
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-  CFLAGS += -O3
+  CFLAGS += -O3 -ffast-math
 endif
 
 ifeq ($(GPU),yes)
@@ -72,7 +72,10 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp shared.h
+main.o: main.cpp shared.h ../dpid-cuda/reference.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+kernels.o: kernels.cpp shared.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
