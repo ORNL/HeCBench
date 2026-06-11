@@ -8,6 +8,7 @@
 
 #define BLOCK_SIZE 256
 
+__launch_bounds__(BLOCK_SIZE)
 __global__ void findMovingPixels(
   const size_t imgSize,
   const unsigned char *__restrict__ Img,
@@ -26,6 +27,7 @@ __global__ void findMovingPixels(
 }
 
 // alpha = 0.92
+__launch_bounds__(BLOCK_SIZE)
 __global__ void updateBackground(
   const size_t imgSize,
   const unsigned char *__restrict__ Img,
@@ -38,6 +40,7 @@ __global__ void updateBackground(
 }
 
 // alpha = 0.92, c = 3
+__launch_bounds__(BLOCK_SIZE)
 __global__ void updateThreshold(
   const size_t imgSize,
   const unsigned char *__restrict__ Img,
@@ -56,6 +59,7 @@ __global__ void updateThreshold(
 //
 // merge three kernels into a single kernel
 //
+__launch_bounds__(BLOCK_SIZE)
 __global__ void merge(
   const size_t imgSize,
   const unsigned char *__restrict__ Img,

@@ -73,7 +73,8 @@ int main(int argc, char* argv[]) {
     for (int n = 0; n < repeat; n++) {
       q.submit([&](sycl::handler &h) {
         h.parallel_for<class sm2>(
-          sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item)
+          sycl::nd_range<1>(gws, lws),
+          [=] [[sycl::reqd_work_group_size(BLOCK_SIZE)]] (sycl::nd_item<1> item)
           //[[sycl::reqd_sub_group_size(warpSize)]]
         {
           sycl::sub_group warp = item.get_sub_group();
@@ -111,7 +112,8 @@ int main(int argc, char* argv[]) {
     for (int n = 0; n < repeat; n++) {
       q.submit([&](sycl::handler &h) {
         h.parallel_for<class sm>(
-          sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
+          sycl::nd_range<1>(gws, lws),
+          [=] [[sycl::reqd_work_group_size(BLOCK_SIZE)]] (sycl::nd_item<1> item) {
           int i = item.get_global_id(0);
           if (i >= numSlice) return;
           float max_ = d_input[i * sliceSize];

@@ -19,7 +19,7 @@ typedef int scalar_t;
      sycl::range<2> lws (128, 1);                                      \
      q.submit([&](sycl::handler &cgh) {                                \
        cgh.parallel_for(                                               \
-         sycl::nd_range<2>(gws, lws), [=] (sycl::nd_item<2> item) {    \
+         sycl::nd_range<2>(gws, lws), [=] [[sycl::reqd_work_group_size(128, 1)]] (sycl::nd_item<2> item) {    \
          Func<T>(item, __VA_ARGS__);                                   \
        });                                                             \
      });                                                               \
@@ -28,7 +28,7 @@ typedef int scalar_t;
      sycl::range<2> lws (64, 2);                                       \
      q.submit([&](sycl::handler &cgh) {                                \
        cgh.parallel_for(                                               \
-         sycl::nd_range<2>(gws, lws), [=] (sycl::nd_item<2> item) {    \
+         sycl::nd_range<2>(gws, lws), [=] [[sycl::reqd_work_group_size(64, 2)]] (sycl::nd_item<2> item) {    \
          Func<T>(item, __VA_ARGS__);                                   \
        });                                                             \
      });                                                               \
@@ -37,7 +37,7 @@ typedef int scalar_t;
      sycl::range<2> lws (32, 4);                                       \
      q.submit([&](sycl::handler &cgh) {                                \
        cgh.parallel_for(                                               \
-         sycl::nd_range<2>(gws, lws), [=] (sycl::nd_item<2> item) {    \
+         sycl::nd_range<2>(gws, lws), [=] [[sycl::reqd_work_group_size(32, 4)]] (sycl::nd_item<2> item) {    \
          Func<T>(item, __VA_ARGS__);                                   \
        });                                                             \
      });                                                               \
@@ -46,7 +46,7 @@ typedef int scalar_t;
      sycl::range<2> lws (16, 8);                                       \
      q.submit([&](sycl::handler &cgh) {                                \
        cgh.parallel_for(                                               \
-         sycl::nd_range<2>(gws, lws), [=] (sycl::nd_item<2> item) {    \
+         sycl::nd_range<2>(gws, lws), [=] [[sycl::reqd_work_group_size(16, 8)]] (sycl::nd_item<2> item) {    \
          Func<T>(item, __VA_ARGS__);                                   \
        });                                                             \
      });                                                               \
