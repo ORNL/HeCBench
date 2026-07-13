@@ -9,3 +9,7 @@ add_hecbench_benchmark(
     COMPILE_OPTIONS -ffast-math
     CATEGORIES algorithms
 )
+
+set_source_files_properties(${INC_DIR}/utils.cpp PROPERTIES
+    COMPILE_OPTIONS "-include;${CMAKE_CURRENT_LIST_DIR}/bitcracker.h"
+)

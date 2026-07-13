@@ -49,7 +49,7 @@ $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 utils.o: ../bitcracker-cuda/utils.cpp Makefile
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -include bitcracker.h -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)

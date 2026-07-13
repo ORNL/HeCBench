@@ -19,6 +19,9 @@
  * along with BitCracker. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef BITCRACKER_H
+#define BITCRACKER_H
+
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <stdio.h>
@@ -112,3 +115,5 @@ int parse_data(char *input_hash, unsigned char ** salt, unsigned char ** nonce,	
 char * strtokm(char *s1, const char *delims);
 void attack(char *dname, uint32_t * d_w_words_uint32, unsigned char * encryptedVMK, unsigned char * nonce, unsigned char * encryptedMAC, int gridBlocks);
 void * Calloc(size_t len, size_t size);
+
+#endif
