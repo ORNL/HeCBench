@@ -335,11 +335,14 @@ __device__ void TableInsert(int in0, int in1, int C0, int C1, TableNode* hashTab
     key %= P;
     hashTable[P + index].val = idx;
     while(true) {
-        int res = atomicCAS(&hashTable[key].next, -1, P + index);
-        if(res == -1)
+        int expected = -1;
+        bool swapped = __hip_atomic_compare_exchange_strong(
+            &hashTable[key].next, &expected, P + index,
+            __ATOMIC_RELEASE, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
+        if (swapped)
             break;
         else
-            key = res;
+            key = expected;
     }
 }
 
@@ -358,7 +361,9 @@ __device__ int TableLookup(int in0, int in1, int C0, int C1, TableNode* hashTabl
     key ^= C0 * 911;
     key ^= C1 * 353;
     key %= P;
-    for(int cur = hashTable[key].next; cur != -1; cur = hashTable[cur].next) {
+    for(int cur = __hip_atomic_load(&hashTable[key].next, __ATOMIC_ACQUIRE, __HIP_MEMORY_SCOPE_AGENT);
+         cur != -1;
+         cur = __hip_atomic_load(&hashTable[cur].next, __ATOMIC_ACQUIRE, __HIP_MEMORY_SCOPE_AGENT)) {
         int val = hashTable[cur].val;
         if(fanin0[val] == in0 && fanin1[val] == in1 && isC0[val] == C0 && isC1[val] == C1)
             return val;
