@@ -86,7 +86,7 @@ static inline __device__ int representative(const int idx, int* const __restrict
   if (curr != idx) {
     int next, prev = idx;
     while (curr > (next = nstat[curr])) {
-      nstat[prev] = next;
+      atomicExch(&nstat[prev], next);
       prev = curr;
       curr = next;
     }
