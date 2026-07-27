@@ -568,6 +568,21 @@ int main(int argc, char* argv[])
     // SCF converged
     fprintf(stdout, "SCF converged! E_total = %20.10f\n", ene_total);
 
+    // Validate against known Hartree-Fock/STO-3G energy of H2O (geometry in example/geom.xyz).
+    // Reference: Szabo & Ostlund, "Modern Quantum Chemistry", Table 3.1 — RHF/STO-3G H2O ≈ -74.942 Eh.
+    // SP and DP converge to slightly different values due to floating-point accumulation in SCF.
+    {
+        const double ref_energy = use_dp ? -74.9420799262 : -74.9420731793;
+        const double tol = use_dp ? 1.0e-6 : 1.0e-4;
+        const double err = fabs(ene_total - ref_energy);
+        if (err < tol) {
+            fprintf(stdout, "PASS: E_total error %.2e within tolerance %.0e\n", err, tol);
+        } else {
+            fprintf(stderr, "FAIL: E_total = %.10f, expected %.10f (error %.2e > tol %.0e)\n",
+                    ene_total, ref_energy, err, tol);
+            return 1;
+        }
+    }
 
     end = std::chrono::steady_clock::now();
     time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
