@@ -57,9 +57,9 @@ void ptrChasingKernel(struct LatencyNode *data,
     p = p->next;
   }
 
-  // avoid compiler optimization
+  // avoid compiler optimization — must not use assert() (disabled by -DNDEBUG)
   if (p == nullptr) {
-    assert(0); //__trap();
+    __builtin_trap();
   }
 }
 
