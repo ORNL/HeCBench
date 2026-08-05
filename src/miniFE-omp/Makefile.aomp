@@ -1,0 +1,14 @@
+.PHONY: all clean run
+
+ARCH         ?= gfx906
+EXTRA_CFLAGS ?=
+LAUNCHER     ?=
+
+all:
+	$(MAKE) -C src -f Makefile.aomp ARCH=$(ARCH) EXTRA_CFLAGS="$(EXTRA_CFLAGS)"
+
+clean:
+	$(MAKE) -C src -f Makefile.aomp clean
+
+run: all
+	cd src && $(LAUNCHER) ./main -nx 128 -ny 128 -nz 128
