@@ -8,8 +8,12 @@ OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
 ARCH      = gfx906
-GSL_INC   =$(shell gsl-config --cflags 2>/dev/null)
-GSL_LIB   =$(shell gsl-config --libs 2>/dev/null)
+GSL_INC   ?= $(shell gsl-config --cflags)
+GSL_LIB   ?= $(shell gsl-config --libs)
+
+ifeq ($(GSL_LIB),)
+$(error gsl-config not found; install libgsl-dev or set GSL_INC/GSL_LIB)
+endif
 LAUNCHER  =
 
 
