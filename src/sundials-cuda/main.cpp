@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
   in.h = 1e-3; in.r = 0.75; in.fract = 0.1; in.uround = 1e-13;
   in.gamma = 0.1; in.damp = 0.1;
 
-  printf("SUNDIALS implicit-integration miniapp (CUDA)\n");
+  printf("SUNDIALS implicit-integration miniapp\n");
   printf("Batch: %d systems of size %d  (vector length n = %zu)\n", nblocks, m,
          n);
   printf("Block-CSR: %d nonzeros/block (%d per row), %zu total nonzeros\n",
