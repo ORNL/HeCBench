@@ -1,0 +1,228 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <chrono>
+#include <omp.h>
+
+// Depthwise 2D convolution forward.
+
+// kSize is the kernel extent when it is known at compile time, and zero when
+// the extent is only known at run time.
+template <int kSize, typename scalar_t>
+void conv_depthwise2d_forward_kernel(
+          scalar_t *__restrict__ input,
+          scalar_t *__restrict__ output,
+          scalar_t *__restrict__ weight,
+          scalar_t *__restrict__ bias,
+    bool biasEnabled,
+    int totalElements,
+    const int outputChannels,
+    const int depthwiseMultiplier,
+    const int inputWidth, const int inputHeight,
+    const int outputWidth, const int outputHeight,
+    const int kernelWidth, const int kernelHeight,
+    const int strideWidth, const int strideHeight,
+    const int padWidth, const int padHeight,
+    const int dilationWidth, const int dilationHeight)
+{
+  const int KW_LIMIT = (kSize != 0) ? kSize : kernelWidth;
+  const int KH_LIMIT = (kSize != 0) ? kSize : kernelHeight;
+
+  #pragma omp target teams distribute parallel for
+  for (int linearIndex = 0; linearIndex < totalElements; linearIndex++) {
+    //calculate n,c,h,w indices, replacing modulos by divide and multiply add,
+    //result is same as would be in the code below
+    //const int n = linearIndex / batchStride; //batchStride = outputChannels * outputHeight * outputWidth
+    //const int c = (linearIndex / channelStride) % outputChannels; //channelStride = outputHeight * outputWidth
+    //const int h = (linearIndex / outputWidth) % outputHeight;
+    //const int w = linearIndex % outputWidth;
+
+    int indtmp1 = linearIndex/outputWidth;
+    const int w = linearIndex - indtmp1 * outputWidth;
+    int indtmp2 = indtmp1/outputHeight;
+    const int h = indtmp1 - indtmp2 * outputHeight;
+    indtmp1 = indtmp2;
+    indtmp2 = indtmp1/outputChannels;
+    const int c = indtmp1 - indtmp2 * outputChannels;
+    const int n = indtmp2;
+
+    int inputChannel = c;
+    int inputChannels = outputChannels;
+    if (depthwiseMultiplier != 1) {
+      inputChannel /= depthwiseMultiplier;
+      inputChannels /= depthwiseMultiplier;
+    }
+
+    int weightOffset = c * kernelHeight * kernelWidth;
+
+    scalar_t value = biasEnabled ? bias[c] : (scalar_t)0;
+    const int offset0 = (n * inputChannels + inputChannel) * inputHeight * inputWidth;
+    #pragma unroll
+    for (int kH = 0; kH < KH_LIMIT; ++kH) {
+      #pragma unroll
+      for (int kW = 0; kW < KW_LIMIT; ++kW) {
+        const int h_in = -padHeight + h * strideHeight + kH * dilationHeight;
+        const int w_in = -padWidth + w * strideWidth + kW * dilationWidth;
+
+        if ((h_in >= 0) && (h_in < inputHeight) && (w_in >= 0) && (w_in < inputWidth)) {
+          const int offset = offset0 + h_in * inputWidth + w_in;
+          value += weight[weightOffset] * input[offset];
+        }
+        ++weightOffset;
+      }
+    }
+    output[linearIndex] = value;
+  }
+}
+
+template <typename scalar_t>
+void dwconv2d_forward (const int m,
+                       const int n,
+                       const int input_channels,
+                       const int H,
+                       const int W,
+                       const int kH,
+                       const int kW,
+                       const int repeat,
+                       const int padH = 1,
+                       const int padW = 1,
+                       const int strideH = 1,
+                       const int strideW = 1,
+                       const int dilateH = 1,
+                       const int dilateW = 1)
+{
+  // The number of output_channels is a multiple of input_channels
+  const int output_channels = input_channels * m;
+
+  // Weight Tensor is shape (output_channels, 1, kH, kW)
+  int weight_size = output_channels * kH * kW;
+  size_t weight_size_bytes = weight_size * sizeof(scalar_t);
+
+  // Input Tensor is shape (N, input_channels, H, W)
+  int input_size = n * input_channels * H * W;
+  size_t input_size_bytes = input_size * sizeof(scalar_t);
+  int input_sizes[] = {n, input_channels, H, W};
+
+  // Bias has same number of channels as output
+  int bias_size = output_channels;
+  size_t bias_size_bytes = bias_size * sizeof(scalar_t);
+
+  int pad_sizes[] = {padH, padW};
+  int stride_sizes[] = {strideH, strideW};
+  int dilation_sizes[] = {dilateH, dilateW};
+
+  int weight_sizes[] = {output_channels, 1, kH, kW};
+
+  int height = input_sizes[2];  // H
+  int width = input_sizes[3];   // W
+  int outputChannels = weight_sizes[0]; // output_channels
+
+  int output_sizes[4];
+  output_sizes[0] = input_sizes[0];
+  output_sizes[1] = weight_sizes[0];
+
+  for (int d = 2; d < 4; d++) {
+    auto dilation_ = dilation_sizes[d - 2];
+    auto kernel = dilation_ * (weight_sizes[d] - 1) + 1;
+    output_sizes[d] = (input_sizes[d] + (2 * pad_sizes[d - 2]) - kernel) / stride_sizes[d - 2] + 1;
+  }
+
+  int outputHeight = output_sizes[2];
+  int outputWidth = output_sizes[3];
+
+  int inputChannels = input_sizes[1];
+  int depthwiseMultiplier = outputChannels / inputChannels;
+
+  int output_size = 1;
+  for (int i = 0; i < 4; i++)
+    output_size *= output_sizes[i];
+
+  size_t output_size_bytes = output_size * sizeof(scalar_t);
+
+  scalar_t *h_input = (scalar_t*) malloc (input_size_bytes);
+  scalar_t *h_weight = (scalar_t*) malloc (weight_size_bytes);
+  scalar_t *h_bias = (scalar_t*) malloc (bias_size_bytes);
+  scalar_t *h_output = (scalar_t*) malloc (output_size_bytes);
+
+  srand(123);
+  for (int i = 0; i < input_size; i++) {
+    h_input[i] = rand() / (float)RAND_MAX;
+  }
+  for (int i = 0; i < weight_size; i++) {
+    h_weight[i] = rand() / (float)RAND_MAX;
+  }
+  for (int i = 0; i < bias_size; i++) {
+    h_bias[i] = rand() / (float)RAND_MAX;
+  }
+
+  const bool has_bias = true;
+
+  #pragma omp target data map(to: h_input[0:input_size], \
+                                  h_weight[0:weight_size], \
+                                  h_bias[0:bias_size]) \
+                          map(from: h_output[0:output_size])
+  {
+    auto start = std::chrono::steady_clock::now();
+
+    for (int i = 0; i < repeat; i++) {
+      if (kW == 3 && kH == 3) {
+        conv_depthwise2d_forward_kernel<3, scalar_t>(
+          h_input, h_output, h_weight, h_bias, has_bias, output_size, outputChannels, depthwiseMultiplier,
+          width, height, outputWidth, outputHeight,
+          kW, kH, strideW, strideH, padW, padH, dilateW, dilateH);
+      } else if (kW == 1 && kH == 1) {
+        conv_depthwise2d_forward_kernel<1, scalar_t>(
+          h_input, h_output, h_weight, h_bias, has_bias, output_size, outputChannels, depthwiseMultiplier,
+          width, height, outputWidth, outputHeight,
+          kW, kH, strideW, strideH, padW, padH, dilateW, dilateH);
+      } else {
+        conv_depthwise2d_forward_kernel<0, scalar_t>(
+          h_input, h_output, h_weight, h_bias, has_bias, output_size, outputChannels, depthwiseMultiplier,
+          width, height, outputWidth, outputHeight,
+          kW, kH, strideW, strideH, padW, padH, dilateW, dilateH);
+      }
+    }
+
+    auto end = std::chrono::steady_clock::now();
+    auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    printf("Average execution time of dwconv2d_forward kernel: %f (ms)\n",
+            time * 1e-6f / repeat);
+  }
+
+  scalar_t sum = 0;
+  for (int i = 0; i < output_size; i++) {
+    sum += h_output[i];
+  }
+  printf("Checksum = %f\n", sum / output_size);
+
+  free(h_input);
+  free(h_output);
+  free(h_weight);
+  free(h_bias);
+}
+
+int main(int argc, char* argv[])
+{
+  if (argc != 6) {
+    printf("Usage: %s <batch size> <number of input channels> ", argv[0]);
+    printf("<input height> <input width> <repeat>\n");
+    return 1;
+  }
+
+  const int n = atoi(argv[1]);
+  const int c = atoi(argv[2]);
+  const int h = atoi(argv[3]);
+  const int w = atoi(argv[4]);
+  const int repeat = atoi(argv[5]);
+
+  // sweep over depth multipliers and kernel sizes
+  for (int m = 1; m <= 4; m = m + 1) {
+    for (int k = 1; k <= 5; k = k + 2) {
+      printf("batch = %d, input channel = %d, height = %d, width = %d, ",
+             n, c, h, w);
+      printf("kernel size = %d, output channel = %d\n", k, m * c);
+      dwconv2d_forward<float>(m, n, c, h, w, k, k, repeat);
+    }
+  }
+
+  return 0;
+}
