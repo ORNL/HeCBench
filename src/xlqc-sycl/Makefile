@@ -6,8 +6,8 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
-GSL_INC   =-I/path/to/gsl/include
-GSL_LIB   =-L/path/to/gsl/lib -lgsl -lgslcblas 
+GSL_INC   ?= $(shell gsl-config --cflags)
+GSL_LIB   ?= $(shell gsl-config --libs)
 LAUNCHER  =
 
 GPU       = yes
@@ -16,6 +16,10 @@ CUDA_ARCH = sm_70
 HIP       = no
 HIP_ARCH  = gfx908
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+
+ifeq ($(GSL_LIB),)
+$(error gsl-config not found; install libgsl-dev or set GSL_INC/GSL_LIB)
+endif
 
 #===============================================================================
 # Program name & source code list

@@ -7,10 +7,13 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
-GSL_INC   =-I/path/to/gsl/include
-GSL_LIB   =-L/path/to/gsl/lib -lgsl -lgslcblas 
+GSL_INC   ?= $(shell gsl-config --cflags)
+GSL_LIB   ?= $(shell gsl-config --libs)
 LAUNCHER  =
 
+ifeq ($(GSL_LIB),)
+$(error gsl-config not found; install libgsl-dev or set GSL_INC/GSL_LIB)
+endif
 
 #===============================================================================
 # Program name & source code list
