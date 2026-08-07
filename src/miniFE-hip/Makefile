@@ -1,4 +1,6 @@
-.PHONY: all clean run
+.PHONY: all clean realclean run
+
+LAUNCHER  =
 
 all:
 	$(MAKE) -C src
@@ -6,7 +8,10 @@ all:
 clean:
 	$(MAKE) -C src clean
 
-# src/Makefile builds miniFE.x but doesn't define a `run:` target; invoke
-# the binary directly with a small default problem size.
+realclean:
+	$(MAKE) -C src realclean
+
+# Run from src/: miniFE writes its .yaml report into the working directory,
+# and only realclean removes it.
 run: all
-	cd src && ./main -nx 128 -ny 128 -nz 128
+	cd src && $(LAUNCHER) ./main -nx 128 -ny 128 -nz 128

@@ -12,7 +12,8 @@ MINIFE_MATRIX_TYPE = -DMINIFE_CSR_MATRIX
 
 #-----------------------------------------------------------------------
 
-CFLAGS = -v -O3 -Minfo -mp=gpu -gpu=cc70,fastmath
+SM = cc70
+CFLAGS = $(EXTRA_CFLAGS) -v -O3 -Minfo -mp=gpu -gpu=$(SM),fastmath
 #	-S -emit-llvm
 #\
 #	-S -emit-llvm
@@ -40,7 +41,6 @@ LIBS=
 
 CXX=nvc++
 CC=nvc
-LAUNCHER  =
 
 #CXX=clang++
 #CC=clang

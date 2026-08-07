@@ -24,7 +24,6 @@ HIP_ARCH  = gfx908
 # reduce per-launch overhead of the many small CG kernels.
 ENQUEUE_FUNCTIONS = yes
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
-LAUNCHER       =
 
 CPPFLAGS = -I. -I../utils -I../fem $(MINIFE_TYPES) $(MINIFE_MATRIX_TYPE) \
            -std=c++17 -Wall -fsycl --gcc-toolchain=$(GCC_TOOLCHAIN)

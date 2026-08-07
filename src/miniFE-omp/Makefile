@@ -3,7 +3,7 @@
 LAUNCHER  =
 
 all:
-	$(MAKE) -C src
+	$(MAKE) -C src EXTRA_CFLAGS="$(EXTRA_CFLAGS)"
 
 clean:
 	$(MAKE) -C src clean
