@@ -31,7 +31,7 @@ obj = $(source:.cpp=.o)
 
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall \
-          -fsycl -I../tensorAccessor-cuda \
+          -fsycl -I../tensorAccessor-cuda -I../dwconv-cuda \
           --gcc-toolchain=$(GCC_TOOLCHAIN)
 
 ifeq ($(VENDOR), AdaptiveCpp)
@@ -73,7 +73,7 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp ../tensorAccessor-cuda/tensorAccessor.h
+%.o: %.cpp ../dwconv-cuda/reference.h ../tensorAccessor-cuda/tensorAccessor.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

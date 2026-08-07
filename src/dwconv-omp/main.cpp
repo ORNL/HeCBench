@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <chrono>
+#include <math.h>
 #include <omp.h>
+#include "reference.h"
 
 // Depthwise 2D convolution forward.
 
@@ -142,6 +144,7 @@ void dwconv2d_forward (const int m,
   scalar_t *h_weight = (scalar_t*) malloc (weight_size_bytes);
   scalar_t *h_bias = (scalar_t*) malloc (bias_size_bytes);
   scalar_t *h_output = (scalar_t*) malloc (output_size_bytes);
+  scalar_t *h_reference = (scalar_t*) malloc (output_size_bytes);
 
   srand(123);
   for (int i = 0; i < input_size; i++) {
@@ -188,14 +191,22 @@ void dwconv2d_forward (const int m,
             time * 1e-6f / repeat);
   }
 
-  scalar_t sum = 0;
+  reference<scalar_t>(
+      h_input, h_reference, h_weight, h_bias, has_bias,
+      n, inputChannels, height, width, outputChannels, outputHeight, outputWidth,
+      kH, kW, strideH, strideW, padH, padW, dilateH, dilateW);
+
+  int errors = 0;
   for (int i = 0; i < output_size; i++) {
-    sum += h_output[i];
+    const scalar_t tolerance = 1e-4f + 1e-4f * fabs(h_reference[i]);
+    if (fabs(h_output[i] - h_reference[i]) > tolerance)
+      errors++;
   }
-  printf("Checksum = %f\n", sum / output_size);
+  printf("%s\n", errors == 0 ? "PASS" : "FAIL");
 
   free(h_input);
   free(h_output);
+  free(h_reference);
   free(h_weight);
   free(h_bias);
 }

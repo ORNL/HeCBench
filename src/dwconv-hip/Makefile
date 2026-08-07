@@ -23,7 +23,8 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../tensorAccessor-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../tensorAccessor-cuda \
+          -I../dwconv-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -45,7 +46,7 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu ../tensorAccessor-cuda/tensorAccessor.h Makefile
+%.o: %.cu ../dwconv-cuda/reference.h ../tensorAccessor-cuda/tensorAccessor.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
