@@ -1,6 +1,8 @@
 #ifndef READ_MTX_H
 #define READ_MTX_H
 
+#include <limits.h>
+
 int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
              int **csrRowPtrA_add, int **csrColIdxA_add, VALUE_TYPE **csrValA_add)
 {
@@ -26,12 +28,14 @@ int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
     if (mm_read_banner(f, &matcode) != 0)
     {
         printf("Could not process Matrix Market banner.\n");
+        fclose(f);
         return -2;
     }
     
     if ( mm_is_complex( matcode ) )
     {
         printf("Sorry, data type 'COMPLEX' is not supported.\n");
+        fclose(f);
         return -3;
     }
     
@@ -43,27 +47,57 @@ int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
     ret_code = mm_read_mtx_crd_size(f, &m, &n, &nnzA_mtx_report);
     
     if (ret_code != 0)
+    {
+        fclose(f);
         return -4;
+    }
+
+    // the row loops below count with int up to m inclusive, so m + 1 has to
+    // stay representable
+    if (m <= 0 || m == INT_MAX || n <= 0 || nnzA_mtx_report < 0)
+    {
+        fprintf(stderr, "ERROR: invalid matrix dimensions in %s\n", filename);
+        fclose(f);
+        return -7;
+    }
 
     if ( mm_is_symmetric( matcode ) || mm_is_hermitian( matcode ) )
     {
         isSymmetric = 1;
         //printf("input matrix is symmetric = true\n");
     }
-    else
+
+    // a symmetric entry is mirrored into the row of its column index, so a
+    // column index must address a valid row as well
+    if (isSymmetric && m != n)
     {
-        //printf("input matrix is symmetric = false\n");
+        fprintf(stderr, "ERROR: symmetric matrix is not square in %s\n", filename);
+        fclose(f);
+        return -8;
     }
+
+    size_t csrRowPtrA_size = ((size_t)m + 1) * sizeof(int);
     
-    int *csrRowPtrA_counter = (int *)malloc((m+1) * sizeof(int));
-    memset(csrRowPtrA_counter, 0, (m+1) * sizeof(int));
+    int *csrRowPtrA_counter = (int *)malloc(csrRowPtrA_size);
     
-    int *csrRowIdxA_tmp = (int *)malloc(nnzA_mtx_report * sizeof(int));
-    int *csrColIdxA_tmp = (int *)malloc(nnzA_mtx_report * sizeof(int));
-    VALUE_TYPE *csrValA_tmp    = (VALUE_TYPE *)malloc(nnzA_mtx_report * sizeof(VALUE_TYPE));
+    int *csrRowIdxA_tmp = (int *)malloc((size_t)nnzA_mtx_report * sizeof(int));
+    int *csrColIdxA_tmp = (int *)malloc((size_t)nnzA_mtx_report * sizeof(int));
+    VALUE_TYPE *csrValA_tmp    = (VALUE_TYPE *)malloc((size_t)nnzA_mtx_report * sizeof(VALUE_TYPE));
     
-    if(csrRowIdxA_tmp==NULL || csrColIdxA_tmp==NULL || csrValA_tmp==NULL)
+    if(csrRowPtrA_counter == NULL ||
+       (nnzA_mtx_report > 0 &&
+        (csrRowIdxA_tmp == NULL || csrColIdxA_tmp == NULL || csrValA_tmp == NULL)))
+    {
+        fprintf(stderr, "ERROR: failed to allocate memory for %s\n", filename);
+        fclose(f);
+        free(csrRowPtrA_counter);
+        free(csrRowIdxA_tmp);
+        free(csrColIdxA_tmp);
+        free(csrValA_tmp);
         return -2;
+    }
+
+    memset(csrRowPtrA_counter, 0, csrRowPtrA_size);
     
     /* NOTE: when reading in doubles, ANSI C requires the use of the "l"  */
     /*   specifier as in "%lg", "%lf", "%le", otherwise errors will occur */
@@ -76,19 +110,47 @@ int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
         int idxi = 0, idxj = 0;
         int ival = 0;
         double fval = 0.0;
-        int returnvalue;
+        int returnvalue = 0;
+        int expected_values = 0;
         
         if (isReal)
+        {
             returnvalue = fscanf(f, "%d %d %lg\n", &idxi, &idxj, &fval);
+            expected_values = 3;
+        }
         else if (isInteger)
         {
             returnvalue = fscanf(f, "%d %d %d\n", &idxi, &idxj, &ival);
             fval = ival;
+            expected_values = 3;
         }
         else if (isPattern)
         {
             returnvalue = fscanf(f, "%d %d\n", &idxi, &idxj);
             fval = 1.0;
+            expected_values = 2;
+        }
+
+        if (returnvalue != expected_values)
+        {
+            fprintf(stderr, "ERROR: malformed entry line in %s\n", filename);
+            fclose(f);
+            free(csrRowPtrA_counter);
+            free(csrRowIdxA_tmp);
+            free(csrColIdxA_tmp);
+            free(csrValA_tmp);
+            return -5;
+        }
+
+        if (idxi < 1 || idxi > m || idxj < 1 || idxj > n)
+        {
+            fprintf(stderr, "ERROR: entry index out of range in %s\n", filename);
+            fclose(f);
+            free(csrRowPtrA_counter);
+            free(csrRowIdxA_tmp);
+            free(csrColIdxA_tmp);
+            free(csrValA_tmp);
+            return -6;
         }
         
         // adjust from 1-based to 0-based
@@ -101,8 +163,7 @@ int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
         csrValA_tmp[i] = fval;
     }
     
-    if (f != stdin)
-        fclose(f);
+    fclose(f);
     
     if (isSymmetric)
     {
@@ -126,12 +187,25 @@ int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
     }
     
     nnzA = csrRowPtrA_counter[m];
-    csrRowPtrA = (int *)malloc((m+1) * sizeof(int));
-    memcpy(csrRowPtrA, csrRowPtrA_counter, (m+1) * sizeof(int));
-    memset(csrRowPtrA_counter, 0, (m+1) * sizeof(int));
+    csrRowPtrA = (int *)malloc(csrRowPtrA_size);
+    csrColIdxA = (int *)malloc((size_t)nnzA * sizeof(int));
+    csrValA    = (VALUE_TYPE *)malloc((size_t)nnzA * sizeof(VALUE_TYPE));
+
+    if (csrRowPtrA == NULL || (nnzA > 0 && (csrColIdxA == NULL || csrValA == NULL)))
+    {
+        fprintf(stderr, "ERROR: failed to allocate memory for %s\n", filename);
+        free(csrRowPtrA);
+        free(csrColIdxA);
+        free(csrValA);
+        free(csrRowPtrA_counter);
+        free(csrRowIdxA_tmp);
+        free(csrColIdxA_tmp);
+        free(csrValA_tmp);
+        return -2;
+    }
     
-    csrColIdxA = (int *)malloc(nnzA * sizeof(int));
-    csrValA    = (VALUE_TYPE *)malloc(nnzA * sizeof(VALUE_TYPE));
+    memcpy(csrRowPtrA, csrRowPtrA_counter, csrRowPtrA_size);
+    memset(csrRowPtrA_counter, 0, csrRowPtrA_size);
     
     if (isSymmetric)
     {
@@ -188,14 +262,27 @@ int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
 }
 
 
-void change2tran(int m, int nnzA,int *csrRowPtrA, int *csrColIdxA,
+int change2tran(int m, int nnzA,int *csrRowPtrA, int *csrColIdxA,
                  VALUE_TYPE *csrValA, int *nnzL_add, int **csrRowPtrL_tmp_add,
                  int **csrColIdxL_tmp_add, VALUE_TYPE **csrValL_tmp_add)
 {
     int nnzL = 0;
-    int *csrRowPtrL_tmp = (int *)malloc((m+1) * sizeof(int));
-    int *csrColIdxL_tmp = (int *)malloc(nnzA * sizeof(int));
-    VALUE_TYPE *csrValL_tmp    = (VALUE_TYPE *)malloc(nnzA * sizeof(VALUE_TYPE));
+    // besides the strictly lower entries of A, every row contributes a unit
+    // diagonal that A itself does not necessarily store
+    size_t max_nnzL = (size_t)nnzA + (size_t)m;
+
+    int *csrRowPtrL_tmp = (int *)malloc(((size_t)m + 1) * sizeof(int));
+    int *csrColIdxL_tmp = (int *)malloc(max_nnzL * sizeof(int));
+    VALUE_TYPE *csrValL_tmp    = (VALUE_TYPE *)malloc(max_nnzL * sizeof(VALUE_TYPE));
+
+    if (csrRowPtrL_tmp==NULL || csrColIdxL_tmp==NULL || csrValL_tmp==NULL)
+    {
+        fprintf(stderr, "ERROR: failed to allocate memory for matrix L\n");
+        free(csrRowPtrL_tmp);
+        free(csrColIdxL_tmp);
+        free(csrValL_tmp);
+        return -1;
+    }
     
     int i,j,k;
     int tmp_col;
@@ -245,13 +332,22 @@ void change2tran(int m, int nnzA,int *csrRowPtrA, int *csrColIdxA,
     
     nnzL = csrRowPtrL_tmp[m];
     
-    csrColIdxL_tmp = (int *)realloc(csrColIdxL_tmp, sizeof(int) * nnzL);
-    csrValL_tmp = (VALUE_TYPE *)realloc(csrValL_tmp, sizeof(VALUE_TYPE) * nnzL);
+    // shrinking to the exact size is an optimization, so keep the larger
+    // buffer if it fails
+    int *csrColIdxL_shrunk = (int *)realloc(csrColIdxL_tmp, sizeof(int) * nnzL);
+    if (csrColIdxL_shrunk != NULL)
+        csrColIdxL_tmp = csrColIdxL_shrunk;
+
+    VALUE_TYPE *csrValL_shrunk = (VALUE_TYPE *)realloc(csrValL_tmp, sizeof(VALUE_TYPE) * nnzL);
+    if (csrValL_shrunk != NULL)
+        csrValL_tmp = csrValL_shrunk;
     
     *nnzL_add=nnzL;
     *csrRowPtrL_tmp_add=csrRowPtrL_tmp;
     *csrColIdxL_tmp_add=csrColIdxL_tmp;
     *csrValL_tmp_add=csrValL_tmp;
+
+    return 0;
 }
 
 

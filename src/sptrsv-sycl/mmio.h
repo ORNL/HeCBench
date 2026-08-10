@@ -339,60 +339,59 @@ int mm_read_banner(FILE *f, MM_typecode *matcode)
 int mm_read_mtx_crd_size(FILE *f, int *M, int *N, int *nz)
 {
     char line[MM_MAX_LINE_LENGTH];
-    int num_items_read;
+    char extra;
+    char *p;
 
     /* set return null parameter values, in case we exit with errors */
     *M = *N = *nz = 0;
 
-    /* now continue scanning until you reach the end-of-comments */
-    do
+    /* continue scanning past comments and blank lines */
+    while (fgets(line, MM_MAX_LINE_LENGTH, f) != NULL)
     {
-        if (fgets(line,MM_MAX_LINE_LENGTH,f) == NULL)
-            return MM_PREMATURE_EOF;
-    }while (line[0] == '%');
+        p = line;
+        while (isspace((unsigned char)*p))
+            p++;
 
-    /* line[] is either blank or has M,N, nz */
-    if (sscanf(line, "%d %d %d", M, N, nz) == 3)
-        return 0;
+        if (*p == '\0' || *p == '%')
+            continue;
 
-    else
-    do
-    {
-        num_items_read = fscanf(f, "%d %d %d", M, N, nz);
-        if (num_items_read == EOF) return MM_PREMATURE_EOF;
+        if (sscanf(p, "%d %d %d %c", M, N, nz, &extra) == 3)
+            return 0;
+
+        *M = *N = *nz = 0;
+        return MM_PREMATURE_EOF;
     }
-    while (num_items_read != 3);
 
-    return 0;
+    return MM_PREMATURE_EOF;
 }
 
 int mm_read_mtx_array_size(FILE *f, int *M, int *N)
 {
     char line[MM_MAX_LINE_LENGTH];
-    int num_items_read;
+    char extra;
+    char *p;
+
     /* set return null parameter values, in case we exit with errors */
     *M = *N = 0;
 
-    /* now continue scanning until you reach the end-of-comments */
-    do
+    /* continue scanning past comments and blank lines */
+    while (fgets(line, MM_MAX_LINE_LENGTH, f) != NULL)
     {
-        if (fgets(line,MM_MAX_LINE_LENGTH,f) == NULL)
-            return MM_PREMATURE_EOF;
-    }while (line[0] == '%');
+        p = line;
+        while (isspace((unsigned char)*p))
+            p++;
 
-    /* line[] is either blank or has M,N, nz */
-    if (sscanf(line, "%d %d", M, N) == 2)
-        return 0;
+        if (*p == '\0' || *p == '%')
+            continue;
 
-    else /* we have a blank line */
-    do
-    {
-        num_items_read = fscanf(f, "%d %d", M, N);
-        if (num_items_read == EOF) return MM_PREMATURE_EOF;
+        if (sscanf(p, "%d %d %c", M, N, &extra) == 2)
+            return 0;
+
+        *M = *N = 0;
+        return MM_PREMATURE_EOF;
     }
-    while (num_items_read != 2);
 
-    return 0;
+    return MM_PREMATURE_EOF;
 }
 
 int mm_write_banner(FILE *f, MM_typecode matcode)
