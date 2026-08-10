@@ -48,6 +48,7 @@ int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
     
     if (ret_code != 0)
     {
+        fprintf(stderr, "ERROR: could not parse matrix size in %s\n", filename);
         fclose(f);
         return -4;
     }
