@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <math.h>
 #include <chrono>
 #include <vector>
@@ -16,6 +17,15 @@ int main(int argc, char* argv[])
   const int m = atoi(argv[1]);
   const int nnz_row = atoi(argv[2]);
   const int repeat = atoi(argv[3]);
+
+  // the CSR row pointers and column indices are 32-bit, as in HiOp
+  if (m <= 0 || nnz_row <= 0 || repeat <= 0 ||
+      (long long)m * nnz_row > INT_MAX ||
+      (long long)8 * nnz_row + 1024 > INT_MAX) {
+    printf("Invalid arguments: <rows>, <nnz per row> and <repeat> must be "
+           "positive, and the number of nonzeros must fit in a 32-bit int\n");
+    return 1;
+  }
 
   const int nx = 8 * nnz_row + 1024;
   const double alpha = -1.0;
@@ -47,10 +57,10 @@ int main(int argc, char* argv[])
   // --- diagonal block: W += alpha * J D^{-1} J^T ---------------------------
 
   // host/device correctness check (run once, verify against reference) before timing
-  #pragma omp target teams distribute parallel for thread_limit(128)
+  #pragma omp target teams distribute parallel for
   for (size_t k = 0; k < w_elems; k++) W[k] = 0.0;
 
-  #pragma omp target teams distribute parallel for collapse(2) thread_limit(128)
+  #pragma omp target teams distribute parallel for collapse(2) num_threads(256)
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < m; j++) {
       if (j < i) continue;
@@ -80,14 +90,14 @@ int main(int argc, char* argv[])
       }
 
   // benchmark
-  #pragma omp target teams distribute parallel for thread_limit(128)
+  #pragma omp target teams distribute parallel for
   for (size_t k = 0; k < w_elems; k++) W[k] = 0.0;
 
   auto start = std::chrono::steady_clock::now();
 
   for (int r = 0; r < repeat; r++) {
     // one iteration per (i,j) row pair (collapsed) instead of per row i
-    #pragma omp target teams distribute parallel for collapse(2) thread_limit(128)
+    #pragma omp target teams distribute parallel for collapse(2) num_threads(256)
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < m; j++) {
         if (j < i) continue;
@@ -115,10 +125,10 @@ int main(int argc, char* argv[])
   // --- off-diagonal block: W += alpha * J1 D^{-1} J2^T ---------------------
 
   // host/device correctness check before timing
-  #pragma omp target teams distribute parallel for thread_limit(128)
+  #pragma omp target teams distribute parallel for
   for (size_t k = 0; k < w_elems; k++) W[k] = 0.0;
 
-  #pragma omp target teams distribute parallel for collapse(2) thread_limit(128)
+  #pragma omp target teams distribute parallel for collapse(2) num_threads(256)
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < m; j++) {
       double acc = 0.0;
@@ -140,13 +150,13 @@ int main(int argc, char* argv[])
     if (!close_enough(h_W[k], h_ref[k], 1e-10)) { errors++; break; }
 
   // benchmark
-  #pragma omp target teams distribute parallel for thread_limit(128)
+  #pragma omp target teams distribute parallel for
   for (size_t k = 0; k < w_elems; k++) W[k] = 0.0;
 
   start = std::chrono::steady_clock::now();
 
   for (int r = 0; r < repeat; r++) {
-    #pragma omp target teams distribute parallel for collapse(2) thread_limit(128)
+    #pragma omp target teams distribute parallel for collapse(2) num_threads(256)
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < m; j++) {
         double acc = 0.0;

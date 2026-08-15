@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <math.h>
 #include <chrono>
 #include <vector>
@@ -92,6 +93,15 @@ int main(int argc, char* argv[])
   const int m = atoi(argv[1]);
   const int nnz_row = atoi(argv[2]);
   const int repeat = atoi(argv[3]);
+
+  // the CSR row pointers and column indices are 32-bit, as in HiOp
+  if (m <= 0 || nnz_row <= 0 || repeat <= 0 ||
+      (long long)m * nnz_row > INT_MAX ||
+      (long long)8 * nnz_row + 1024 > INT_MAX) {
+    printf("Invalid arguments: <rows>, <nnz per row> and <repeat> must be "
+           "positive, and the number of nonzeros must fit in a 32-bit int\n");
+    return 1;
+  }
 
   const int nx = 8 * nnz_row + 1024;
   const double alpha = -1.0;

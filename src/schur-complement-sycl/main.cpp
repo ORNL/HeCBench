@@ -1,10 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <math.h>
 #include <chrono>
 #include <vector>
 #include <sycl/sycl.hpp>
 #include "reference.h"
+
+// Original HiOp mapping is one thread per row i, looping over all partner rows
+// j -- only O(m) work items, which leaves the GPU underused. Here each thread
+// instead owns a single (i,j) row pair and performs one merge, raising the
+// parallelism to O(m^2). Threads are laid out 2D with the fast (x) dimension on
+// j so the writes to W[i][j] are coalesced; BLOCK_X is warp-aligned.
+#define BLOCK_X 32
+#define BLOCK_Y 8
 
 int main(int argc, char* argv[])
 {
@@ -16,6 +25,15 @@ int main(int argc, char* argv[])
   const int m = atoi(argv[1]);
   const int nnz_row = atoi(argv[2]);
   const int repeat = atoi(argv[3]);
+
+  // the CSR row pointers and column indices are 32-bit, as in HiOp
+  if (m <= 0 || nnz_row <= 0 || repeat <= 0 ||
+      (long long)m * nnz_row > INT_MAX ||
+      (long long)8 * nnz_row + 1024 > INT_MAX) {
+    printf("Invalid arguments: <rows>, <nnz per row> and <repeat> must be "
+           "positive, and the number of nonzeros must fit in a 32-bit int\n");
+    return 1;
+  }
 
   const int nx = 8 * nnz_row + 1024;
   const double alpha = -1.0;
@@ -57,13 +75,9 @@ int main(int argc, char* argv[])
   const int m_W = m;
   const int row_dest_start = 0, col_dest_start = 0;
 
-  // Each work-item owns a single (i,j) row pair (O(m^2) parallelism) rather
-  // than a whole row (O(m)). The 2D nd_range puts j on the fast dimension so
-  // writes to W[i][j] are contiguous within a work-group; the x extent (32) is
-  // wavefront-aligned.
-  const int BX = 32, BY = 8;
-  const size_t gx = ((size_t)(m + BX - 1) / BX) * BX;
-  const size_t gy = ((size_t)(m + BY - 1) / BY) * BY;
+  const int BX = BLOCK_X, BY = BLOCK_Y;
+  const size_t gx = (m + BX - 1) / BX * BX;
+  const size_t gy = (m + BY - 1) / BY * BY;
   const sycl::range<2> local(BY, BX);
   const sycl::range<2> glob(gy, gx);
 
