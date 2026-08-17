@@ -1,7 +1,7 @@
 .PHONY: all clean realclean run
 
-SM        = cc70
-LAUNCHER  =
+SM        ?= cc70
+LAUNCHER  ?=
 
 all:
 	$(MAKE) -C src -f Makefile.nvc SM=$(SM) EXTRA_CFLAGS="$(EXTRA_CFLAGS)"

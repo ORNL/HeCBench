@@ -1,6 +1,6 @@
 .PHONY: all clean realclean run
 
-LAUNCHER  =
+LAUNCHER  ?=
 
 all:
 	$(MAKE) -C src

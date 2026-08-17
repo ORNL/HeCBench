@@ -1,7 +1,7 @@
 .PHONY: all clean realclean run
 
 ARCH      = gfx906
-LAUNCHER  =
+LAUNCHER  ?=
 
 all:
 	$(MAKE) -C src -f Makefile.aomp ARCH=$(ARCH) EXTRA_CFLAGS="$(EXTRA_CFLAGS)"
