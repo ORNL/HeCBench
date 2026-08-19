@@ -7,9 +7,9 @@ ROCM_PATH ?= /opt/rocm
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
-HIP_ARCH  = gfx90a
+HIP_ARCH  ?= gfx90a
 #===============================================================================
 # Program name & source code list
 #===============================================================================

@@ -2,7 +2,7 @@ CC          = icpx
 OPTIMIZE    = yes
 DEBUG       = no
 DEVICE      = gpu
-LAUNCHER    =
+LAUNCHER    ?=
 
 # Matrix library path
 MATRIX_DIR = ./meschach_lib

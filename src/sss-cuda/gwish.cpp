@@ -1,3 +1,4 @@
+#include <cmath>
 // gwish.cpp:  This is a collection of device functions that manipulate graph
 // objects according to the G-Wishart distribution. Note: this depends on the
 // graph.cpp library Chiranjit Mukherjee : chiranjit@soe.ucsc.edu -- based on

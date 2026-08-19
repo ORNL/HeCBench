@@ -9,9 +9,9 @@ DEBUG     = no
 ARCH      = sm_60
 #MPI_ROOT  = /usr/lib/x86_64-linux-gnu/openmpi
 #LAUNCHER  = /usr/bin/mpirun -n 2
-NVHPC_SDK = /opt/nvidia/hpc_sdk/Linux_x86_64/25.7
-MPI_ROOT  = $(NVHPC_SDK)/comm_libs/12.9/openmpi4/openmpi-4.1.5/
-LAUNCHER  = $(NVHPC_SDK)/comm_libs/mpi/bin/mpirun --mca coll ^hcoll -n 2
+NVHPC_SDK ?= /opt/nvidia/hpc_sdk/Linux_x86_64/25.7
+MPI_ROOT  ?= $(NVHPC_SDK)/comm_libs/12.9/openmpi4/openmpi-4.1.5/
+LAUNCHER  ?= $(NVHPC_SDK)/comm_libs/mpi/bin/mpirun --mca coll ^hcoll -n 2
 
 #===============================================================================
 # Program name & source code list

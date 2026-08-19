@@ -9,7 +9,7 @@ DEBUG     = no
 DEVICE    = gpu
 VERIFY    = yes
 FP64      = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

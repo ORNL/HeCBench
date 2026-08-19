@@ -370,6 +370,7 @@ set(HECBENCH_POC_BENCHMARKS
     scatterAdd
     scatterThrust
     scel
+    schur-complement
     score
     sddmm-batch
     seam-carving
@@ -391,6 +392,7 @@ set(HECBENCH_POC_BENCHMARKS
     sortKV
     sosfil
     sparkler
+    sparseMLA
     spaxpby
     spd2s
     spgeam

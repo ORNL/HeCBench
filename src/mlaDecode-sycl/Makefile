@@ -6,13 +6,13 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 GPU       = yes
 CUDA      = no
-CUDA_ARCH = sm_70
+CUDA_ARCH ?= sm_70
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
 ONEMKL    = no
 
 # Backends to build (both on by default). Set MKL=no or DNN=no to disable one.
@@ -20,9 +20,9 @@ MKL       = yes
 DNN       = yes
 
 # path to the install of the oneMKL interface (only needed for CUDA/HIP targets)
-ONEMKL_PATH = /path/to/oneMKL
+ONEMKL_PATH ?= /path/to/oneMKL
 # path to the oneDNN (DNNL) install
-DNNL_PATH   = /opt/intel/oneapi/dnnl/latest
+DNNL_PATH   ?= /opt/intel/oneapi/dnnl/latest
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================

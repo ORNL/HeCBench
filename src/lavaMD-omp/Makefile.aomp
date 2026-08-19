@@ -9,7 +9,7 @@ DEBUG     = no
 DEVICE    = gpu
 ARCH      = gfx906
 OUTPUT    = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

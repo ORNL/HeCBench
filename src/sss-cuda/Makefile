@@ -7,8 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
-GSL       = /path/to/GSL
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -25,11 +24,10 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Xcompiler -Wall -arch=$(ARCH) \
-          -I$(GSL)/include
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Xcompiler -Wall -arch=$(ARCH)
 
 # Linker Flags
-LDFLAGS = -L$(GSL)/lib -lgsl
+LDFLAGS =
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
@@ -49,11 +47,11 @@ $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
 %.o: %.cu DPmixGGM.cpp  DPmixGGM_Lists.cpp  DPmixGGM_SSSmoves.cpp  \
-           kernels.cu graph.cpp  gwish.cpp  utilities.cpp Makefile
+           kernels.cu graph.cpp  gwish.cpp  utilities.cpp gsl_compat.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj) RES/f9_n150_p50_modes_GPU.txt
 
 run: $(program)
-	$(LAUNCHER) GSL_RNG_SEED=123 ./$(program) f9_n150_p50
+	$(LAUNCHER) ./$(program) f9_n150_p50

@@ -376,6 +376,7 @@ int main(int argc, char* argv[])
   }
 
   ECLgraph g = readECLgraph(argv[1]);
+  verifyUndirectedECLgraph(g);
   const int repeat = atoi(argv[2]);
 
   int* nodestatus = NULL;

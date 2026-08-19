@@ -3,7 +3,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
 PROFILE   = yes
-LAUNCHER  =
+LAUNCHER  ?=
 
 
 # Standard flags

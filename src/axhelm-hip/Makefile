@@ -6,7 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -25,7 +25,15 @@ CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -Ddfloat=float -Ddlong=int \
           -I../axhelm-cuda
 
 # Linker Flags
-LDFLAGS = BlasLapack/libBlasLapack.a -lgfortran
+FC = gfortran
+
+# Resolved on demand, so goals that do not link need no Fortran compiler.
+# $(FC) echoes the bare name when it cannot resolve the library, hence /%.
+LIBGFORTRAN_PATH = $(filter /%,$(shell $(FC) -print-file-name=libgfortran.so))
+LIBGFORTRAN = $(or $(wildcard $(LIBGFORTRAN_PATH)),\
+              $(error Could not find libgfortran using $(FC)))
+
+LDLIBS = BlasLapack/libBlasLapack.a $(LIBGFORTRAN)
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
@@ -43,7 +51,7 @@ endif
 # Targets to Build
 #===============================================================================
 $(program): $(obj) BlasLapack/libBlasLapack.a 
-	$(CC) $(CFLAGS) $+ -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $+ -o $@ $(LDFLAGS) $(LDLIBS)
 
 main.o : main.cu axhelmKernel.cpp ../axhelm-cuda/axhelmReference.cpp
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -55,7 +63,7 @@ BlasLapack/libBlasLapack.a:
 	cd BlasLapack && make -j8 && cd ..
 
 clean:
-	cd BlasLapack && make clean && cd ..
+	if [ -d BlasLapack ]; then cd BlasLapack && make clean; fi
 	rm -rf $(program) $(obj)
 
 # run one- and three-dimensional kernels

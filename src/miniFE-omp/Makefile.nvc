@@ -1,0 +1,18 @@
+.PHONY: all clean realclean run
+
+SM        ?= cc70
+LAUNCHER  ?=
+
+all:
+	$(MAKE) -C src -f Makefile.nvc SM=$(SM) EXTRA_CFLAGS="$(EXTRA_CFLAGS)"
+
+clean:
+	$(MAKE) -C src -f Makefile.nvc clean
+
+realclean:
+	$(MAKE) -C src -f Makefile.nvc realclean
+
+# Run from src/: miniFE writes its .yaml report into the working directory,
+# and only realclean removes it.
+run: all
+	cd src && $(LAUNCHER) ./main -nx 128 -ny 128 -nz 128

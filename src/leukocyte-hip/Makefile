@@ -1,7 +1,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 # Matrix library path
 MATRIX_DIR = ./meschach_lib

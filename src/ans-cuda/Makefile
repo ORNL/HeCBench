@@ -1,8 +1,8 @@
-ARCH = 60
+ARCH = sm_60
 
 NVCC = nvcc
-NVCC_ARCH = -gencode arch=compute_$(ARCH),code=sm_$(ARCH)
-NVCC_FLAGS = --std=c++17 -O3 -arch=sm_$(ARCH)
+NVCC_ARCH = -gencode arch=compute_$(ARCH:sm_%=%),code=$(ARCH)
+NVCC_FLAGS = --std=c++17 -O3
 
 INC_DIR = include
 SRC_DIR = src

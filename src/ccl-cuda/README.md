@@ -13,13 +13,14 @@ and bandwidth for `float32` and `bfloat16` data.
 
 Paths are set at the top of the `Makefile` and assume an NVIDIA HPC SDK layout.
 Point `NVHPC_SDK` at your installation; the MPI and NCCL locations are derived
-from it:
+from it. All four use `?=`, so an exported environment variable takes precedence
+over the default:
 
 ```make
-NVHPC_SDK = /home/user/Linux_x86_64/26.5
-MPI_ROOT  = $(NVHPC_SDK)/comm_libs/13.2/hpcx/hpcx-2.50/ompi4
-NCCL_ROOT = $(NVHPC_SDK)/comm_libs/nccl
-LAUNCHER  = $(NVHPC_SDK)/comm_libs/mpi/bin/mpirun -n 2
+NVHPC_SDK ?= /opt/nvidia/hpc_sdk/Linux_x86_64/26.5
+MPI_ROOT  ?= $(NVHPC_SDK)/comm_libs/13.2/hpcx/hpcx-2.50/ompi4
+NCCL_ROOT ?= $(NVHPC_SDK)/comm_libs/nccl
+LAUNCHER  ?= $(NVHPC_SDK)/comm_libs/mpi/bin/mpirun -n 2
 ```
 
 Adjust the HPC-X / NCCL sub-paths if your SDK version differs.
