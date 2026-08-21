@@ -848,6 +848,9 @@ Early results are shown [here](results/README.md)
 ### gru2 (cuda)
   Forward operations of a multi-layer gated recurrent unit (https://pytorch.org/)
 
+### gsplat4d (cuda)
+  Physics-coupled 4D Gaussian splatting: a material point method step that advects the Gaussians, the conditioning of each 4D Gaussian on the current time with its projection to a 2D conic, and the tile-based alpha blending rasterizer (https://arxiv.org/abs/2308.04079, https://arxiv.org/abs/2310.10642, https://arxiv.org/abs/1806.01923)
+
 ### haccmk (c)
   The HACC microkernel (https://asc.llnl.gov/CORAL-benchmarks/#haccmk)
 

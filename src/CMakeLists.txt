@@ -184,6 +184,7 @@ set(HECBENCH_POC_BENCHMARKS
     grrt
     gru
     gru2
+    gsplat4d
     haccmk
     hausdorff
     haversine
