@@ -6,10 +6,14 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-GSL_INC   =-I/path/to/gsl/include
-GSL_LIB   =-L/path/to/gsl/lib -lgsl -lgslcblas 
-LAUNCHER  =
+EIGEN_INC ?= $(shell pkg-config --cflags eigen3 2>/dev/null)
+LAUNCHER  ?=
 
+ifneq ($(MAKECMDGOALS),clean)
+ifeq ($(EIGEN_INC),)
+$(error Eigen not found; install libeigen3-dev or set EIGEN_INC=-I/path/to/eigen)
+endif
+endif
 
 #===============================================================================
 # Program name & source code list
@@ -25,10 +29,10 @@ obj=basis.o scf.o main.o crys.o cints.o cuda_rys_sp.o cuda_rys_dp.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../xlqc-cuda -I../xlqc-cuda/int_lib $(GSL_INC)
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../xlqc-cuda -I../xlqc-cuda/int_lib $(EIGEN_INC)
 
 # Linker Flags
-LDFLAGS = $(GSL_LIB) -fgpu-rdc --hip-link
+LDFLAGS = -fgpu-rdc --hip-link
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
@@ -53,16 +57,16 @@ $(program): $(obj)
 	$(CC) -fgpu-rdc -c -o $@ $< $(CFLAGS)
 
 scf.o: ../xlqc-cuda/scf.cc
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) -fgpu-rdc -c -o $@ $< $(CFLAGS)
 
 basis.o: ../xlqc-cuda/basis.cc
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) -fgpu-rdc -c -o $@ $< $(CFLAGS)
 
 crys.o: ../xlqc-cuda/int_lib/crys.cc
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) -fgpu-rdc -c -o $@ $< $(CFLAGS)
 
 cints.o: ../xlqc-cuda/int_lib/cints.cc
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) -fgpu-rdc -c -o $@ $< $(CFLAGS)
 
 clean:
 	rm -rf $(program) $(obj)

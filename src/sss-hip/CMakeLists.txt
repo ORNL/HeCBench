@@ -4,7 +4,6 @@ add_hecbench_benchmark(
     NAME sss
     MODEL hip
     SOURCES main.cu
-    INCLUDE_DIRS ${GSL_INCLUDE_DIRS}
+    INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR}/../sss-cuda
     CATEGORIES algorithms
-    LINK_LIBRARIES gsl  
 )

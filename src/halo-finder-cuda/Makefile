@@ -3,7 +3,7 @@ NVCC_BIN=nvcc
 ARCH    = sm_60
 
 # the path may be adjusted for each platform
-MPI_INCLUDE=/usr/lib/x86_64-linux-gnu/openmpi/include
+MPI_INCLUDE ?= /usr/lib/x86_64-linux-gnu/openmpi/include
 #MPI_INCLUDE=/usr/include/openmpi-x86_64/
 
 OPT=-O3 -DRCB_UNTHREADED_BUILD -DUSE_SERIAL_COSMO

@@ -24,9 +24,6 @@ of this software, even if advised of the possibility of such damage.
 
 #include <string>
 
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_linalg.h>
-
 #include "typedef.h"
 #include "int_lib/cints.h"
 #include "int_lib/crys.h"

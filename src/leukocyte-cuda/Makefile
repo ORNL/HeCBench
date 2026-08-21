@@ -2,7 +2,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
-LAUNCHER  =
+LAUNCHER  ?=
 
 # Matrix library path
 MATRIX_DIR = ./meschach_lib

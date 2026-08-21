@@ -3,7 +3,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
 PROFILE   = yes
-LAUNCHER  =
+LAUNCHER  ?=
 
 
 # Standard flags

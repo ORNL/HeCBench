@@ -7,10 +7,14 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
-GSL_INC   =-I/path/to/gsl/include
-GSL_LIB   =-L/path/to/gsl/lib -lgsl -lgslcblas 
-LAUNCHER  =
+EIGEN_INC ?= $(shell pkg-config --cflags eigen3 2>/dev/null)
+LAUNCHER  ?=
 
+ifneq ($(MAKECMDGOALS),clean)
+ifeq ($(EIGEN_INC),)
+$(error Eigen not found; install libeigen3-dev or set EIGEN_INC=-I/path/to/eigen)
+endif
+endif
 
 #===============================================================================
 # Program name & source code list
@@ -26,10 +30,11 @@ obj=basis.o scf.o main.o crys.o cints.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../xlqc-cuda -I../xlqc-cuda/int_lib $(GSL_INC)
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall \
+          -I../xlqc-cuda -I../xlqc-cuda/int_lib $(EIGEN_INC)
 
 # Linker Flags
-LDFLAGS = $(GSL_LIB)
+LDFLAGS =
 
 # Debug Flags
 ifeq ($(DEBUG),yes)

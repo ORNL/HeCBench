@@ -6,7 +6,7 @@
 #define  bidx  item.get_group(0)
 #define  tidx  item.get_local_id(0)
 
-#include "modP.h"
+#include "reference.h"
 
 void intt_3_64k_modcrt(
         sycl::nd_item<1> &item,
@@ -55,8 +55,11 @@ int main(int argc, char* argv[]) {
   const int repeat = atoi(argv[1]);
 
   const int nttLen = 64 * 1024;
+  const int blockSize = 512;
+  const int threadsPerBlock = 64;
   uint64 *ntt = (uint64*) malloc (nttLen*sizeof(uint64));
   uint32 *res = (uint32*) malloc (nttLen*sizeof(uint32));
+  uint32 *ref = (uint32*) malloc (nttLen*sizeof(uint32));
 
   srand(123);
   for (int i = 0; i < nttLen; i++) {
@@ -75,13 +78,10 @@ int main(int argc, char* argv[]) {
   uint32 *d_res = sycl::malloc_device<uint32>(nttLen, q);
   q.memcpy(d_ntt, ntt, nttLen*sizeof(uint64));
 
-  sycl::range<1> gws (nttLen/512 * 64);
-  sycl::range<1> lws (64);
+  sycl::range<1> gws (nttLen/blockSize * threadsPerBlock);
+  sycl::range<1> lws (threadsPerBlock);
 
-  q.wait();
-  auto start = std::chrono::steady_clock::now();
-
-  for (int i = 0; i < repeat; i++) {
+  auto launch = [&]() {
     q.submit([&] (sycl::handler &cgh) {
       sycl::local_accessor<uint64, 1> sm (sycl::range<1>(512), cgh);
       cgh.parallel_for<class intt_modcrt>(
@@ -89,23 +89,40 @@ int main(int argc, char* argv[]) {
         intt_3_64k_modcrt(item, sm.get_multi_ptr<sycl::access::decorated::no>().get(), d_res, d_ntt);
       });
     });
+  };
+
+  reference(ref, ntt, nttLen, blockSize, threadsPerBlock);
+  launch();
+  q.memcpy(res, d_res, nttLen*sizeof(uint32)).wait();
+
+  for (int i = 0; i < nttLen; i++) {
+    if (res[i] != ref[i]) {
+      //printf("Mismatch at index %d: device=%u, reference=%u\n", i, res[i], ref[i]);
+      printf("FAIL\n");
+      sycl::free(d_ntt, q);
+      sycl::free(d_res, q);
+      free(ntt);
+      free(res);
+      free(ref);
+      return 1;
+    }
   }
+  printf("PASS\n");
+
+  auto start = std::chrono::steady_clock::now();
+
+  for (int i = 0; i < repeat; i++)
+    launch();
 
   q.wait();
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average kernel execution time: %f (us)\n", (time * 1e-3f) / repeat);
 
-  q.memcpy(res, d_res, nttLen*sizeof(uint32)).wait();
-
-  uint64_t checksum = 0;
-  for (int i = 0; i < nttLen; i++)
-    checksum += res[i];
-  printf("Checksum: %lu\n", checksum);
-
   sycl::free(d_ntt, q);
   sycl::free(d_res, q);
   free(ntt);
   free(res);
+  free(ref);
   return 0;
 }

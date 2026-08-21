@@ -24,7 +24,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(Boost)
 find_package(MPI)
 find_package(GDAL CONFIG)
-find_package(GSL)
+find_package(Eigen3)
 find_package(BZip2)
 
 # Build options - which programming models to enable

@@ -66,13 +66,11 @@
 #define ISFLOAT 10
 using namespace std;
 
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_sf.h>
+#include "gsl_compat.h"
 #define GSL_INTEGRATION_GRIDSIZE 1000
 gsl_integration_workspace *w;
 gsl_function F;
 
-#include <gsl/gsl_randist.h>
 #define RANDOMSEED 314159265
 
 // Define hyperparameters for the prior distribution of (mu, K | G)

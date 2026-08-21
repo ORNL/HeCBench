@@ -8,7 +8,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
 INPUT_SIZE = 1024
-LAUNCHER   =
+LAUNCHER   ?=
 
 #===============================================================================
 # Program name & source code list

@@ -7,7 +7,7 @@
   1. Wang, G., Wu, M., Sun, Y., & Cavallaro, J. R. (2011, June). A massively parallel implementation of QC-LDPC decoder on GPU. In Application Specific Processors (SASP), 2011 IEEE 9th Symposium on (pp. 82-85). IEEE.
   2. Wang, G., Wu, M., Yin, B., & Cavallaro, J. R. (2013, December). High throughput low latency LDPC decoding on GPU for SDR systems. In Global Conference on Signal and Information Processing (GlobalSIP), 2013 IEEE (pp. 1258-1261). IEEE.
 
-  The current release is close to the GlobalSIP2013 paper. 
+  The current release is close to the GlobalSIP2013 paper.
  */
 
 #include <stdio.h>
@@ -22,6 +22,104 @@
 
 float sigma ;
 int *info_bin ;
+
+// The check-node update rules the benchmark exercises, in the order they run.
+#define NUM_ALGO 2
+static const char *const algo_name[NUM_ALGO] = {"normalized min-sum", "log-SPA"};
+
+// Decode the codewords currently held in llr_gpu MAX_SIM times and return the
+// accumulated kernel time in nanoseconds. The check-node rule is a template
+// parameter so that both variants live in one binary at no run-time cost.
+template <bool MinSum>
+static float run_decode(
+    float * dev_llr,
+    float * dev_dt,
+    float * dev_R,
+    int * dev_hard_decision,
+    const char * dev_h_element_count1,
+    const h_element * dev_h_compact1,
+    const char * dev_h_element_count2,
+    const h_element * dev_h_compact2,
+    const float * llr_gpu,
+    int memorySize_llr_gpu)
+{
+  // Define kernel dimension
+  dim3 dimGridKernel1(BLK_ROW, MCW, 1); // dim of the thread blocks
+  dim3 dimBlockKernel1(BLOCK_SIZE_X, CW, 1);
+  int sharedRCacheSize = THREADS_PER_BLOCK * NON_EMPTY_ELMENT * sizeof(float);
+
+  dim3 dimGridKernel2(BLK_COL, MCW, 1);
+  dim3 dimBlockKernel2(BLOCK_SIZE_X, CW, 1);
+
+  float total_time = 0.f;
+
+  for(int j = 0; j < MAX_SIM; j++)
+  {
+    // Transfer LLR data into device.
+    cudaMemcpy(dev_llr, llr_gpu, memorySize_llr_gpu, cudaMemcpyHostToDevice);
+
+    // kernel launch
+    cudaDeviceSynchronize();
+    auto start = std::chrono::steady_clock::now();
+
+    for(int ii = 0; ii < MAX_ITERATION; ii++)
+    {
+      // run check-node processing kernel
+      // TODO: run a special kernel the first iteration?
+      if(ii == 0) {
+        ldpc_cnp_kernel_1st_iter<MinSum><<<
+          dimGridKernel1,
+          dimBlockKernel1>>>
+            (dev_llr,
+             dev_dt,
+             dev_R,
+             dev_h_element_count1,
+             dev_h_compact1);
+      } else {
+        ldpc_cnp_kernel<MinSum><<<
+          dimGridKernel1,
+          dimBlockKernel1,
+          sharedRCacheSize>>>
+            (dev_llr,
+             dev_dt,
+             dev_R,
+             dev_h_element_count1,
+             dev_h_compact1);
+      }
+
+      // run variable-node processing kernel
+      // for the last iteration we run a special
+      // kernel. this is because we can make a hard
+      // decision instead of writing back the belief
+      // for the value of each bit.
+      if(ii < MAX_ITERATION - 1) {
+        ldpc_vnp_kernel_normal<<<
+          dimGridKernel2,
+          dimBlockKernel2>>>
+            (dev_llr,
+             dev_dt,
+             dev_h_element_count2,
+             dev_h_compact2);
+      } else {
+        ldpc_vnp_kernel_last_iter<<<
+          dimGridKernel2,
+          dimBlockKernel2>>>
+            (dev_llr,
+             dev_dt,
+             dev_hard_decision,
+             dev_h_element_count2,
+             dev_h_compact2);
+      }
+    }
+
+    cudaDeviceSynchronize();
+    auto end = std::chrono::steady_clock::now();
+    auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    total_time += time;
+  } // end of MAX-SIM
+
+  return total_time;
+}
 
 int main()
 {
@@ -97,7 +195,7 @@ int main()
       if(h_base[i][j] != -1)
       {
         // although h is transposed, the (x,y) is still (iBlkRow, iBlkCol)
-        h_element_temp.x = i; 
+        h_element_temp.x = i;
         h_element_temp.y = j;
         h_element_temp.value = h_base[i][j];
         h_element_temp.valid = 1;
@@ -141,8 +239,8 @@ int main()
 
   error_result this_error;
 
-  int total_frame_error = 0;
-  int total_bit_error = 0;
+  int total_frame_error[NUM_ALGO] = {0};
+  int total_bit_error[NUM_ALGO] = {0};
   int total_codeword = 0;
 
   // create device memory
@@ -154,7 +252,7 @@ int main()
   h_element * dev_h_compact2;
   char * dev_h_element_count1;
   char * dev_h_element_count2;
-  
+
   cudaMalloc((void **)&dev_llr, memorySize_llr_gpu);
   cudaMalloc((void **)&dev_dt, memorySize_dt_gpu);
   cudaMalloc((void **)&dev_R, memorySize_R_gpu);
@@ -177,11 +275,16 @@ int main()
     sigma = 1.0f/sqrt(2.0f*rate*pow(10.0f,(snr/10.0f)));
 
     total_codeword = 0;
-    total_frame_error = 0;
-    total_bit_error = 0;
+    for(int algo = 0; algo < NUM_ALGO; algo++)
+    {
+      total_frame_error[algo] = 0;
+      total_bit_error[algo] = 0;
+    }
 
     // Adjust MIN_CODWORD in LDPC.h to reduce simulation time
-    while ( (total_frame_error <= MIN_FER) && (total_codeword <= MIN_CODEWORD))
+    while ( (total_frame_error[0] <= MIN_FER ||
+             total_frame_error[1] <= MIN_FER) &&
+            (total_codeword <= MIN_CODEWORD))
     {
       total_codeword += CW * MCW;
 
@@ -207,101 +310,41 @@ int main()
         memcpy(llr_gpu + i * CODEWORD_LEN, llr, memorySize_llr);
       }
 
-      // Define kernel dimension
-      dim3 dimGridKernel1(BLK_ROW, MCW, 1); // dim of the thread blocks
-      dim3 dimBlockKernel1(BLOCK_SIZE_X, CW, 1);
-      int sharedRCacheSize = THREADS_PER_BLOCK * NON_EMPTY_ELMENT * sizeof(float);
-
-      dim3 dimGridKernel2(BLK_COL, MCW, 1);
-      dim3 dimBlockKernel2(BLOCK_SIZE_X, CW, 1);
-      //int sharedDtCacheSize = THREADS_PER_BLOCK * NON_EMPTY_ELMENT_VNP * sizeof(float);
-
-      // run the kernel
-      float total_time = 0.f;
-
-      for(int j = 0; j < MAX_SIM; j++)
+      // Both check-node rules decode the same received block, so their error
+      // rates are directly comparable.
+      for(int algo = 0; algo < NUM_ALGO; algo++)
       {
-        // Transfer LLR data into device.
-        cudaMemcpy(dev_llr, llr_gpu, memorySize_llr_gpu, cudaMemcpyHostToDevice);
+        float total_time = (algo == 0)
+          ? run_decode<true>(dev_llr, dev_dt, dev_R, dev_hard_decision,
+                             dev_h_element_count1, dev_h_compact1,
+                             dev_h_element_count2, dev_h_compact2,
+                             llr_gpu, memorySize_llr_gpu)
+          : run_decode<false>(dev_llr, dev_dt, dev_R, dev_hard_decision,
+                              dev_h_element_count1, dev_h_compact1,
+                              dev_h_element_count2, dev_h_compact2,
+                              llr_gpu, memorySize_llr_gpu);
 
-        // kernel launch
-        cudaDeviceSynchronize();
-        auto start = std::chrono::steady_clock::now();
-
-        for(int ii = 0; ii < MAX_ITERATION; ii++)
-        {
-          // run check-node processing kernel
-          // TODO: run a special kernel the first iteration?
-          if(ii == 0) {
-            ldpc_cnp_kernel_1st_iter<<<
-              dimGridKernel1,
-              dimBlockKernel1>>>
-                (dev_llr, 
-                 dev_dt, 
-                 dev_R, 
-                 dev_h_element_count1, 
-                 dev_h_compact1);
-          } else {
-            ldpc_cnp_kernel<<<
-              dimGridKernel1,
-              dimBlockKernel1, 
-              sharedRCacheSize>>>
-                (dev_llr, 
-                 dev_dt, 
-                 dev_R, 
-                 dev_h_element_count1, 
-                 dev_h_compact1);
-          }
-
-          // run variable-node processing kernel
-          // for the last iteration we run a special
-          // kernel. this is because we can make a hard
-          // decision instead of writing back the belief
-          // for the value of each bit.
-          if(ii < MAX_ITERATION - 1) {
-            ldpc_vnp_kernel_normal<<<
-              dimGridKernel2,
-              dimBlockKernel2>>>
-                (dev_llr, 
-                 dev_dt, 
-                 dev_h_element_count2, 
-                 dev_h_compact2);
-          } else {
-            ldpc_vnp_kernel_last_iter<<<
-              dimGridKernel2,
-              dimBlockKernel2>>>
-                (dev_llr, 
-                 dev_dt, 
-                 dev_hard_decision, 
-                 dev_h_element_count2, 
-                 dev_h_compact2);
-          }
-        }
-
-        cudaDeviceSynchronize();
-        auto end = std::chrono::steady_clock::now();
-        auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-        total_time += time;
-
-        // copy the decoded data from device to host
-        cudaMemcpy(hard_decision_gpu, 
-              dev_hard_decision, 
-              memorySize_hard_decision_gpu, 
+        // Every repetition inside run_decode decodes the same block of codewords,
+        // so the error statistics are collected once instead of MAX_SIM times.
+        cudaMemcpy(hard_decision_gpu,
+              dev_hard_decision,
+              memorySize_hard_decision_gpu,
               cudaMemcpyDeviceToHost);
 
         this_error = error_check(info_bin_gpu, hard_decision_gpu);
-        total_bit_error += this_error.bit_error;
-        total_frame_error += this_error.frame_error;
-      } // end of MAX-SIM
+        total_bit_error[algo] += this_error.bit_error;
+        total_frame_error[algo] += this_error.frame_error;
 
-      printf ("\n");
-      printf ("Total kernel execution time: %f (s)\n", total_time * 1e-9f);
-      printf ("# codewords = %d, CW=%d, MCW=%d\n",total_codeword, CW, MCW);
-      printf ("total bit error = %d\n", total_bit_error);
-      printf ("total frame error = %d\n", total_frame_error);
-      printf ("BER = %1.2e, FER = %1.2e\n", 
-          (float) total_bit_error/total_codeword/INFO_LEN, 
-          (float) total_frame_error/total_codeword);
+        printf ("\n");
+        printf ("Check-node update: %s\n", algo_name[algo]);
+        printf ("Total kernel execution time: %f (s)\n", total_time * 1e-9f);
+        printf ("# codewords = %d, CW=%d, MCW=%d\n",total_codeword, CW, MCW);
+        printf ("total bit error = %d\n", total_bit_error[algo]);
+        printf ("total frame error = %d\n", total_frame_error[algo]);
+        printf ("BER = %1.2e, FER = %1.2e\n",
+            (float) total_bit_error[algo]/total_codeword/INFO_LEN,
+            (float) total_frame_error[algo]/total_codeword);
+      }
     } // end of the MAX frame error.
   }// end of the snr loop
 

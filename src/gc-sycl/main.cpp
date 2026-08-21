@@ -345,6 +345,7 @@ int main(int argc, char *argv[]) {
 
   printf("input: %s\n", argv[1]);
   ECLgraph g = readECLgraph(argv[1]);
+  verifyUndirectedECLgraph(g);
 
   const int nodes = g.nodes;
   const int edges = g.edges;

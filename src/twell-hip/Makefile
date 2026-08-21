@@ -7,7 +7,7 @@ CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = 
-LAUNCHER  =
+LAUNCHER  ?=
 
 KERNEL_DIR := twell_modules
 

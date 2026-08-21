@@ -6,7 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 POINTS    = 97178
 DATAPARS  = -d ../tpacf-cuda/data/small/Datapnts.1 -p $(POINTS)

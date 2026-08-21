@@ -7,7 +7,7 @@
 #define  bidx  blockIdx.x
 #define  tidx  threadIdx.x
 
-#include "modP.h"
+#include "reference.h"
 
 __global__ void intt_3_64k_modcrt(
         uint32 *__restrict__ dst,
@@ -55,8 +55,11 @@ int main(int argc, char* argv[]) {
   const int repeat = atoi(argv[1]);
 
   const int nttLen = 64 * 1024;
+  const int blockSize = 512;
+  const int threadsPerBlock = 64;
   uint64 *ntt = (uint64*) malloc (nttLen*sizeof(uint64));
   uint32 *res = (uint32*) malloc (nttLen*sizeof(uint32));
+  uint32 *ref = (uint32*) malloc (nttLen*sizeof(uint32));
 
   srand(123);
   for (int i = 0; i < nttLen; i++) {
@@ -71,27 +74,41 @@ int main(int argc, char* argv[]) {
   hipMalloc(&d_res, nttLen*sizeof(uint32));
   hipMemcpy(d_ntt, ntt, nttLen*sizeof(uint64), hipMemcpyHostToDevice);
 
+  reference(ref, ntt, nttLen, blockSize, threadsPerBlock);
+  hipLaunchKernelGGL(intt_3_64k_modcrt, nttLen/blockSize,
+                     threadsPerBlock, 0, 0, d_res, d_ntt);
+  hipMemcpy(res, d_res, nttLen*sizeof(uint32), hipMemcpyDeviceToHost);
+
+  for (int i = 0; i < nttLen; i++) {
+    if (res[i] != ref[i]) {
+      //printf("Mismatch at index %d: device=%u, reference=%u\n", i, res[i], ref[i]);
+      printf("FAIL\n");
+      hipFree(d_ntt);
+      hipFree(d_res);
+      free(ntt);
+      free(res);
+      free(ref);
+      return 1;
+    }
+  }
+  printf("PASS\n");
+
   hipDeviceSynchronize();
   auto start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < repeat; i++)
-    hipLaunchKernelGGL(intt_3_64k_modcrt, nttLen/512, 64, 0, 0, d_res, d_ntt);
+    hipLaunchKernelGGL(intt_3_64k_modcrt, nttLen/blockSize,
+                       threadsPerBlock, 0, 0, d_res, d_ntt);
 
   hipDeviceSynchronize();
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average kernel execution time: %f (us)\n", (time * 1e-3f) / repeat);
 
-  hipMemcpy(res, d_res, nttLen*sizeof(uint32), hipMemcpyDeviceToHost);
-
-  uint64_t checksum = 0;
-  for (int i = 0; i < nttLen; i++)
-    checksum += res[i];
-  printf("Checksum: %lu\n", checksum);
-
   hipFree(d_ntt);
   hipFree(d_res);
   free(ntt);
   free(res);
+  free(ref);
   return 0;
 }

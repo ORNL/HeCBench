@@ -9,7 +9,7 @@ DEBUG     = no
 DEVICE    = gpu
 ARCH      = gfx906
 INPUT_SIZE = 1024
-LAUNCHER   =
+LAUNCHER   ?=
 
 #===============================================================================
 # Program name & source code list

@@ -44,7 +44,6 @@ LIBS=
 
 CXX=clang++
 CC=clang
-LAUNCHER  =
 
 #CXX=xlC
 #CC=xlc

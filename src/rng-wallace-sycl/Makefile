@@ -6,13 +6,13 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 GPU       = yes
 CUDA      = no
-CUDA_ARCH = sm_70
+CUDA_ARCH ?= sm_70
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
@@ -72,7 +72,9 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp ../rng-wallace-cuda/reference.h constants.h rand_helpers.h
+%.o: %.cpp ../rng-wallace-cuda/reference.h \
+           ../rng-wallace-cuda/constants.h \
+           ../rng-wallace-cuda/rand_helpers.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
