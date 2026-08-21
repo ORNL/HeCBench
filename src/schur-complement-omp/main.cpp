@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <limits.h>
 #include <math.h>
 #include <chrono>
+#include <new>
 #include <vector>
 #include <omp.h>
 #include "reference.h"
@@ -18,10 +18,7 @@ int main(int argc, char* argv[])
   const int nnz_row = atoi(argv[2]);
   const int repeat = atoi(argv[3]);
 
-  // the CSR row pointers and column indices are 32-bit, as in HiOp
-  if (m <= 0 || nnz_row <= 0 || repeat <= 0 ||
-      (long long)m * nnz_row > INT_MAX ||
-      (long long)8 * nnz_row + 1024 > INT_MAX) {
+  if (!valid_problem_size(m, nnz_row, repeat)) {
     printf("Invalid arguments: <rows>, <nnz per row> and <repeat> must be "
            "positive, and the number of nonzeros must fit in a 32-bit int\n");
     return 1;
@@ -30,14 +27,23 @@ int main(int argc, char* argv[])
   const int nx = 8 * nnz_row + 1024;
   const double alpha = -1.0;
 
+  const size_t w_elems = (size_t)m * m;
+
   std::vector<int> h_rs1, h_jc1, h_rs2, h_jc2;
-  std::vector<double> h_v1, h_v2, h_D;
-  gen_csr(m, nx, nnz_row, 123, h_rs1, h_jc1, h_v1);
-  gen_csr(m, nx, nnz_row, 456, h_rs2, h_jc2, h_v2);
-  gen_diag(nx, 789, h_D);
+  std::vector<double> h_v1, h_v2, h_D, h_W, h_ref;
+  try {
+    gen_csr(m, nx, nnz_row, 123, h_rs1, h_jc1, h_v1);
+    gen_csr(m, nx, nnz_row, 456, h_rs2, h_jc2, h_v2);
+    gen_diag(nx, 789, h_D);
+    h_W.resize(w_elems);
+    h_ref.resize(w_elems);
+  } catch (const std::bad_alloc&) {
+    printf("Failed to allocate the host buffers: the dense block alone needs "
+           "%zu bytes\n", w_elems * sizeof(double));
+    return 1;
+  }
 
   const int nnz = (int)h_v1.size();
-  const size_t w_elems = (size_t)m * m;
 
   const int m_W = m;
   const int row_dest_start = 0, col_dest_start = 0;
@@ -45,9 +51,7 @@ int main(int argc, char* argv[])
   int* rs1 = h_rs1.data(); int* jc1 = h_jc1.data(); double* v1 = h_v1.data();
   int* rs2 = h_rs2.data(); int* jc2 = h_jc2.data(); double* v2 = h_v2.data();
   double* D = h_D.data();
-  std::vector<double> h_W(w_elems, 0.0);
   double* W = h_W.data();
-  std::vector<double> h_ref(w_elems);
   int errors = 0;
 
   #pragma omp target enter data map(to: rs1[0:m+1], jc1[0:nnz], v1[0:nnz], \

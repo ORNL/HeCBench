@@ -2,6 +2,7 @@
 #define REFERENCE_H
 
 #include <stdlib.h>
+#include <limits.h>
 #include <math.h>
 #include <vector>
 #include <algorithm>
@@ -14,6 +15,18 @@
 // J is a sparse matrix stored CSR-style with per-row sorted column indices,
 // D is a diagonal (stored as a vector), and W is a dense matrix into whose
 // upper triangle the (symmetric) result is scattered.
+
+// The CSR row pointers and column indices are 32-bit, as in HiOp, so reject
+// sizes whose derived quantities would overflow rather than silently
+// generating a corrupt matrix. The 1024 headroom on m covers both the m + 1
+// row pointers and rounding m up to a multiple of the block size.
+static bool valid_problem_size(int m, int nnz_row, int repeat)
+{
+  return m > 0 && nnz_row > 0 && repeat > 0 &&
+         m <= INT_MAX - 1024 &&                 // m + 1, and the launch range
+         nnz_row <= (INT_MAX - 1024) / 8 &&     // nx = 8 * nnz_row + 1024
+         (long long)m * nnz_row <= INT_MAX;     // number of nonzeros
+}
 
 // Build a CSR matrix with `m` rows, `nx` columns and exactly `nnz_row`
 // nonzeros per row (column indices sorted ascending within each row).
