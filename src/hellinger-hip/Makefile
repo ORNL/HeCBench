@@ -8,7 +8,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 VERIFY    = yes
 FP64      = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

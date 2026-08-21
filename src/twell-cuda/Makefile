@@ -9,7 +9,7 @@ DEBUG     = no
 # The kernels require the sm_90a feature set
 ARCH      = -gencode arch=compute_90a,code=sm_90a
 MIN_ARCH  = 900
-LAUNCHER  =
+LAUNCHER  ?=
 
 KERNEL_DIR := twell_modules
 

@@ -3,7 +3,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
 ARCH      = gfx906
-LAUNCHER  =
+LAUNCHER  ?=
 
 # Matrix library path
 MATRIX_DIR = ./meschach_lib

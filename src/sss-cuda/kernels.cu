@@ -23,12 +23,15 @@ __global__ void CanDeleteEdge(myInt *d_in_delete, myInt *isDecomposable) {
   }
   __shared__ myInt contain_a, contain_b, which_ab;
 
+  SYNC;
+
   for (i = 0; i < nCliques; i++) {
     ii = i * n;
     if (tid == 0) {
       contain_a = 0;
       contain_b = 0;
     }
+    SYNC;
     for (j = tid; j < CliquesDimens[i]; j += bdim) {
       k = Cliques[ii + j];
       if (k == a) {
@@ -38,12 +41,16 @@ __global__ void CanDeleteEdge(myInt *d_in_delete, myInt *isDecomposable) {
         contain_b = 1;
       }
     }
+    SYNC;
     if (tid == 0) {
       if (contain_a && contain_b) {
         count++;
         which_ab = i;
       }
     }
+    // count is updated by thread 0 only, so it must be visible to every thread
+    // before the loop-exit test below, or threads leave the loop divergently.
+    SYNC;
     if (count > 1) {
       break;
     }
@@ -145,6 +152,7 @@ __global__ void CanAddEdge(myInt *d_in_delete, myInt *d_in_add,
       contain_b = 0;
     };
     contain_S[tid] = 0;
+    SYNC;
     t = i * n;
     for (j = tid; j < CliquesDimens[i]; j += bdim) {
       c = Cliques[t + j];
@@ -160,6 +168,9 @@ __global__ void CanAddEdge(myInt *d_in_delete, myInt *d_in_add,
         }
       }
     }
+    // every thread contributes to contain_S[] and contain_a/contain_b above,
+    // so those writes must be visible before thread 0 reduces them.
+    SYNC;
     if (tid == 0) {
       k = 0;
       for (j = 0; j < BLOCK_SIZE; j++) {
@@ -172,6 +183,7 @@ __global__ void CanAddEdge(myInt *d_in_delete, myInt *d_in_add,
         bSi = i;
       }
     }
+    SYNC;
   }
 
   if (tid == 0) { // find the path from aSi to root
@@ -208,6 +220,8 @@ __global__ void CanAddEdge(myInt *d_in_delete, myInt *d_in_add,
       }
     }
   }
+  // R/pR are produced by thread 0 and T/pT by thread 1; both are read below.
+  SYNC;
 
   if (tid == 0) {
     // find the branching point

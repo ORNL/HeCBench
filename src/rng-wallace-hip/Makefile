@@ -6,7 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -46,7 +46,10 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu ../rng-wallace-cuda/wallace_kernel.h constants.h rand_helpers.h Makefile
+%.o: %.cu ../rng-wallace-cuda/wallace_kernel.h \
+          ../rng-wallace-cuda/constants.h \
+          ../rng-wallace-cuda/rand_helpers.h \
+          Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

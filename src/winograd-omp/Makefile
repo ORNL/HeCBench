@@ -8,7 +8,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
 INPUT_SIZE = 1024
-LAUNCHER   =
+LAUNCHER   ?=
 
 #===============================================================================
 # Program name & source code list

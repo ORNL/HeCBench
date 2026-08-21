@@ -10,7 +10,7 @@ DUMP      = no
 DEVICE    = gpu
 ARCH      = gfx906
 DUMP      = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

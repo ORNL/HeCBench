@@ -23,7 +23,9 @@ int main(int argc, char ** argv)
     int *csrColIdxA;
     VALUE_TYPE *csrValA;
     
-    read_mtx(filename, &m, &n, &nnzA, &csrRowPtrA, &csrColIdxA, &csrValA);
+    if (read_mtx(filename, &m, &n, &nnzA, &csrRowPtrA, &csrColIdxA,
+                 &csrValA) != 0)
+        return -2;
     
     // extract L with the unit-lower triangular sparsity structure of A
     int nnzL = 0;
@@ -35,14 +37,16 @@ int main(int argc, char ** argv)
         n=m;
     else
         m=n;
-    if (m<=1)
-        return 0;
+    if (m<=1) return 0;
     
-    change2tran(m, nnzA,csrRowPtrA, csrColIdxA, csrValA, &nnzL, &csrRowPtrL_tmp, &csrColIdxL_tmp, &csrValL_tmp);
+    int status = change2tran(m, nnzA,csrRowPtrA, csrColIdxA, csrValA, &nnzL,
+                             &csrRowPtrL_tmp, &csrColIdxL_tmp, &csrValL_tmp);
     
     free(csrColIdxA);
     free(csrValA);
     free(csrRowPtrA);
+
+    if (status != 0) return -2;
     
     if(m==0 || nnzL==0) return -3;
     

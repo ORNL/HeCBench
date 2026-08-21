@@ -199,7 +199,7 @@ void dwconv2d_forward (const int m,
   int errors = 0;
   for (int i = 0; i < output_size; i++) {
     const scalar_t tolerance = 1e-4f + 1e-4f * fabs(h_reference[i]);
-    if (fabs(h_output[i] - h_reference[i]) > tolerance)
+    if (!(fabs(h_output[i] - h_reference[i]) <= tolerance))
       errors++;
   }
   printf("%s\n", errors == 0 ? "PASS" : "FAIL");

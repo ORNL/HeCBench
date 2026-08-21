@@ -4,7 +4,7 @@
 
 # Set USE_DOCKER=yes to use PyTorch container, USE_DOCKER=no for local PyTorch
 USE_DOCKER = no
-LAUNCHER   =
+LAUNCHER   ?=
 
 #===============================================================================
 # PyTorch Configuration

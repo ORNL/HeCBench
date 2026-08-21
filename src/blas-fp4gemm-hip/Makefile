@@ -8,7 +8,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 ROCM_PATH ?= /opt/rocm
 ARCH      = gfx950
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

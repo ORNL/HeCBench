@@ -8,9 +8,9 @@ OPTIMIZE  = yes
 DEBUG     = no
 #MPI_ROOT  = /usr/lib/x86_64-linux-gnu/openmpi
 #LAUNCHER  = /usr/bin/mpirun -n 2
-ONEAPI_SDK = /opt/intel/oneapi
-MPI_ROOT  = $(ONEAPI_SDK)/mpi/latest
-LAUNCHER  = $(MPI_ROOT)/bin/mpirun -n 2
+ONEAPI_SDK ?= /opt/intel/oneapi
+MPI_ROOT  ?= $(ONEAPI_SDK)/mpi/latest
+LAUNCHER  ?= $(MPI_ROOT)/bin/mpirun -n 2
 
 #===============================================================================
 # Program name & source code list

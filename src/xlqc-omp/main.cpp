@@ -2,7 +2,6 @@
  This file is part of the XLQC program.                                      
  Copyright (C) 2015 Xin Li <lixin.reco@gmail.com>                            
                                                                            
- Filename:  main.cu                                                      
  License:   BSD 3-Clause License
 
  This software is provided by the copyright holders and contributors "as is"
@@ -18,21 +17,15 @@
  *****************************************************************************/
 
 #include <chrono>
-#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cassert>
 #include <string>
 #include <iostream>
-
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_eigen.h>
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_linalg.h>
-
 #include <omp.h>
+
+#include "gsl_compat.h"
 
 #include "int_lib/cints.h"
 #include "int_lib/crys.h"
@@ -51,6 +44,8 @@ int main(int argc, char* argv[])
     int use_5d = 1;
     // use double precision?
     int use_dp = 1;
+    // status is set on failure of result check
+    int status = 0;
 
     if (argc > 1) {
         for (int i = 1; i < argc; ++ i) {
@@ -571,26 +566,25 @@ int main(int argc, char* argv[])
     const double err = fabs(ene_total - ref_energy);
     if (err < tol) {
         fprintf(stdout, "PASS: E_total error %.2e within tolerance %.0e\n", err, tol);
+        // print MO information
+        fprintf(stdout, "%5s %10s %15s %12s\n", "MO", "State", "E(Eh)", "E(eV)");
+        for (ibasis = 0; ibasis < p_basis->num; ++ ibasis)
+        {
+            char occ[10];
+            if (ibasis < n_occ) { strcpy(occ, "occ."); }
+            else { strcpy(occ, "virt."); }
+
+            double ener = gsl_vector_get(emo, ibasis);
+            fprintf(stdout, "%5d %10s %15.5f %12.2f\n",
+                    ibasis + 1, occ, ener, ener * HARTREE2EV);
+        }
     } else {
         fprintf(stderr, "FAIL: E_total = %.10f, expected %.10f (error %.2e > tol %.0e)\n",
                 ene_total, ref_energy, err, tol);
-        return 1;
+        status = 1;
     }
 
-    // print MO information
     start = std::chrono::steady_clock::now();
-
-    fprintf(stdout, "%5s %10s %15s %12s\n", "MO", "State", "E(Eh)", "E(eV)");
-    for (ibasis = 0; ibasis < p_basis->num; ++ ibasis)
-    {
-        char occ[10];
-        if (ibasis < n_occ) { strcpy(occ, "occ."); }
-        else { strcpy(occ, "virt."); }
-
-        double ener = gsl_vector_get(emo, ibasis);
-        fprintf(stdout, "%5d %10s %15.5f %12.2f\n",
-                ibasis + 1, occ, ener, ener * HARTREE2EV);
-    }
 
   } // omp target
 
@@ -688,5 +682,5 @@ int main(int argc, char* argv[])
 
     //====== the end of program ========
 
-    return 0;
+    return status;
 }

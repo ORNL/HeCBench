@@ -17,7 +17,6 @@ Revision:  08/01/2013
 #define WIMAX  0
 #define WIFI  1
 #define MODE  WIMAX
-#define MIN_SUM  YES    //otherwise, log-SPA
 
 // Simulation parameters
 #define NUM_SNR 1

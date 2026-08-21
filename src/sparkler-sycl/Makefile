@@ -7,13 +7,13 @@ CC        = mpiicpc
 CXX       = icpx
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?= mpirun -n 4
 
 GPU       = yes
 CUDA      = no
-CUDA_ARCH = sm_70
+CUDA_ARCH ?= sm_70
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
@@ -92,4 +92,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	$(LAUNCHER) mpirun -n 4 ./$(program) --num_vector 4000 --num_field 90000 --num_iterations 10
+	$(LAUNCHER) ./$(program) --num_vector 4000 --num_field 90000 --num_iterations 10

@@ -7,7 +7,7 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -52,7 +52,9 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp constants.h rand_helpers.h ../rng-wallace-cuda/reference.h
+%.o: %.cpp ../rng-wallace-cuda/constants.h \
+           ../rng-wallace-cuda/rand_helpers.h \
+           ../rng-wallace-cuda/reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

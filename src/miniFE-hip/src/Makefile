@@ -43,7 +43,6 @@ LIBS=
 
 CXX=hipcc
 CC=hipcc
-LAUNCHER  =
 
 #CXX=xlC
 #CC=xlc

@@ -8,7 +8,7 @@ OPTIMIZE  = no
 DEBUG     = yes
 DEVICE    = gpu
 ARCH      = gfx906
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

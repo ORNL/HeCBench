@@ -7,7 +7,7 @@ CC        = g++
 HIPCC     = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 ROCM_PATH ?= /opt/rocm
 
 #===============================================================================

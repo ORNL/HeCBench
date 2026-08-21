@@ -12,7 +12,7 @@ CC        = hipcc
 LD        = mpiCC
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER ?=
+LAUNCHER ?= mpirun -n 4
 
 #===============================================================================
 # Program name & source code list
@@ -60,4 +60,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	$(LAUNCHER) mpirun -n 4 ./$(program) --num_vector 4000 --num_field 90000 --num_iterations 10
+	$(LAUNCHER) ./$(program) --num_vector 4000 --num_field 90000 --num_iterations 10
