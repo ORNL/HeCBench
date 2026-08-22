@@ -3,6 +3,7 @@
 #include <math.h>
 #include <chrono>
 #include <new>
+#include <optional>
 #include <vector>
 #include <sycl/sycl.hpp>
 #include "reference.h"
@@ -49,7 +50,7 @@ static void mpm_p2g(sycl::nd_item<1>& item, float* tile, int n, const MpmParams 
                     const Float4* __restrict mean,
                     const Float4* __restrict velocity,
                     const float* __restrict affine_in,
-                    float* __restrict defgrad,
+                    const float* __restrict defgrad,
                     float* __restrict grid)
 {
   const int lid = item.get_local_id(0);
@@ -121,8 +122,10 @@ static void mpm_p2g(sycl::nd_item<1>& item, float* tile, int n, const MpmParams 
         affine[a * 3 + b] = sycl::fma(s, acc, p.particle_mass * C[a * 3 + b]);
       }
 
-    #pragma unroll
-    for (int k = 0; k < 9; k++) defgrad[(size_t)k * n + i] = F[k];
+    // F is only used for the stress above; it is deliberately not persisted
+    // here. The single per-step deformation-gradient update is applied once, in
+    // mpm_g2p, from the original F0 (this matches the host reference; writing F
+    // back here would advance the gradient twice per step).
 
     const float gx = x.x * p.inv_dx, gy = x.y * p.inv_dx, gz = x.z * p.inv_dx;
     const int bx = (int)sycl::floor(gx - 0.5f);
@@ -596,17 +599,7 @@ static void render(sycl::nd_item<2>& item, Float2* s_xy, Float4* s_co,
 
 // ---------------------------------------------------------------------------
 
-static bool valid_problem_size(int n, int width, int height, int repeat)
-{
-  if (n <= 0 || width <= 0 || height <= 0 || repeat <= 0) return false;
-  if (n > INT_MAX / (SH_COEFFS * 3)) return false;
-  if (width > INT_MAX / height) return false;
-  const long long tiles = (long long)((width + BLOCK_X - 1) / BLOCK_X) *
-                          ((height + BLOCK_Y - 1) / BLOCK_Y);
-  return tiles + 1 <= INT_MAX;
-}
-
-int main(int argc, char* argv[])
+static int run(int argc, char* argv[])
 {
   if (argc != 5) {
     printf("Usage: %s <number of gaussians> <image width> <image height> <repeat>\n",
@@ -618,13 +611,6 @@ int main(int argc, char* argv[])
   const int width = atoi(argv[2]);
   const int height = atoi(argv[3]);
   const int repeat = atoi(argv[4]);
-
-  if (!valid_problem_size(n, width, height, repeat)) {
-    printf("Invalid arguments: the number of gaussians, the image size and "
-           "<repeat> must be positive, and the derived sizes must fit in a "
-           "32-bit int\n");
-    return 1;
-  }
 
   Camera cam;
   setup_camera(width, height, cam);
@@ -657,11 +643,20 @@ int main(int argc, char* argv[])
 
   Scene ref_scene = scene;
 
+  // held by value in an optional: a default constructed queue would run the
+  // default selector, which throws outside the handler when no device exists
+  std::optional<sycl::queue> queue;
+  try {
 #ifdef USE_GPU
-  sycl::queue q(sycl::gpu_selector_v, sycl::property::queue::in_order());
+    queue.emplace(sycl::gpu_selector_v, sycl::property::queue::in_order());
 #else
-  sycl::queue q(sycl::cpu_selector_v, sycl::property::queue::in_order());
+    queue.emplace(sycl::cpu_selector_v, sycl::property::queue::in_order());
 #endif
+  } catch (const sycl::exception& e) {
+    printf("Failed to select a SYCL device: %s\n", e.what());
+    return 1;
+  }
+  sycl::queue& q = *queue;
 
   const int num_chunks = (int)scene.chunk_block.size();
 
@@ -722,7 +717,7 @@ int main(int argc, char* argv[])
   q.memcpy(d_sh, scene.sh.data(), sizeof(float) * SH_COEFFS * 3 * (size_t)n);
   q.memcpy(d_chunk_start, scene.chunk_start.data(), sizeof(int) * (num_chunks + 1));
   q.memcpy(d_chunk_block, scene.chunk_block.data(), sizeof(int) * num_chunks);
-  q.wait();
+  q.wait_and_throw();
 
   const int cell_groups = (MPM_CELLS + GRID_BLOCK - 1) / GRID_BLOCK;
   const int particle_groups = (n + P2G_BLOCK - 1) / P2G_BLOCK;
@@ -756,11 +751,9 @@ int main(int argc, char* argv[])
     });
   };
 
-  int errors = 0;
-
   // --- stage 1 ------------------------------------------------------------
   mpm_step();
-  q.wait();
+  q.wait_and_throw();
 
   {
     std::vector<float> ref_grid(4 * (size_t)MPM_CELLS);
@@ -786,14 +779,13 @@ int main(int argc, char* argv[])
           !close_enough(got[i].z, r[2], 1e-3f))
         mpm_errors++;
     }
-    errors += mpm_errors;
     printf("MPM step: %s\n", mpm_errors == 0 ? "PASS" : "FAIL");
   }
 
-  q.wait();
+  q.wait_and_throw();
   auto start = std::chrono::steady_clock::now();
   for (int r = 0; r < repeat; r++) mpm_step();
-  q.wait();
+  q.wait_and_throw();
   auto end = std::chrono::steady_clock::now();
   auto time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average execution time of the MPM step (p2g, grid, g2p): %f (us)\n",
@@ -817,7 +809,7 @@ int main(int argc, char* argv[])
   };
 
   preprocess_launch();
-  q.wait();
+  q.wait_and_throw();
 
   std::vector<float> ref_mean2d(2 * (size_t)n), ref_conic(4 * (size_t)n),
       ref_color(4 * (size_t)n);
@@ -830,7 +822,7 @@ int main(int argc, char* argv[])
     q.memcpy(h_conic.data(), d_conic, sizeof(Float4) * n);
     q.memcpy(h_color.data(), d_color, sizeof(Float4) * n);
     q.memcpy(h_radii.data(), d_radii, sizeof(int) * n);
-    q.wait();
+    q.wait_and_throw();
 
     int pre_errors = 0;
     int visible = 0;
@@ -848,7 +840,6 @@ int main(int argc, char* argv[])
           pre_errors++;
       }
     }
-    errors += pre_errors;
     printf("4D preprocess (%d of %d gaussians visible): %s\n", visible, n,
            pre_errors == 0 ? "PASS" : "FAIL");
 
@@ -858,10 +849,10 @@ int main(int argc, char* argv[])
                      tile_offsets.data(), tile_list.data(), h_ref_image.data());
   }
 
-  q.wait();
+  q.wait_and_throw();
   start = std::chrono::steady_clock::now();
   for (int r = 0; r < repeat; r++) preprocess_launch();
-  q.wait();
+  q.wait_and_throw();
   end = std::chrono::steady_clock::now();
   time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average execution time of the 4D preprocess kernel: %f (us)\n",
@@ -882,7 +873,7 @@ int main(int argc, char* argv[])
   q.memcpy(d_tile_offsets, tile_offsets.data(), sizeof(int) * (num_tiles + 1));
   if (!tile_list.empty())
     q.memcpy(d_tile_list, tile_list.data(), sizeof(int) * tile_list.size());
-  q.wait();
+  q.wait_and_throw();
 
   printf("Gaussian instances after tiling: %zu (%.1f per tile)\n",
          tile_list.size(), (double)tile_list.size() / num_tiles);
@@ -916,20 +907,17 @@ int main(int argc, char* argv[])
     int render_errors = 0;
     for (size_t k = 0; k < h_image.size() && render_errors == 0; k++)
       if (!close_enough(h_image[k], h_ref_image[k], 1e-3f)) render_errors++;
-    errors += render_errors;
     printf("Rasterizer: %s\n", render_errors == 0 ? "PASS" : "FAIL");
   }
 
-  q.wait();
+  q.wait_and_throw();
   start = std::chrono::steady_clock::now();
   for (int r = 0; r < repeat; r++) render_launch();
-  q.wait();
+  q.wait_and_throw();
   end = std::chrono::steady_clock::now();
   time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average execution time of the rasterizer kernel: %f (us)\n",
          time_ns * 1e-3 / repeat);
-
-  printf("%s\n", errors == 0 ? "PASS" : "FAIL");
 
   sycl::free(d_mean, q); sycl::free(d_scale, q); sycl::free(d_quat_l, q);
   sycl::free(d_quat_r, q); sycl::free(d_velocity, q); sycl::free(d_opacity, q);
@@ -940,4 +928,15 @@ int main(int argc, char* argv[])
   sycl::free(d_tile_list, q);
 
   return 0;
+}
+
+int main(int argc, char* argv[])
+{
+  // allocation and submission can throw too, so the whole run is guarded
+  try {
+    return run(argc, argv);
+  } catch (const sycl::exception& e) {
+    printf("SYCL error: %s\n", e.what());
+    return 1;
+  }
 }

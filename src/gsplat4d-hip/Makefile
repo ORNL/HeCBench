@@ -26,7 +26,7 @@ obj = $(source:.cu=.o)
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../gsplat4d-cuda
 
 # Linker Flags
-LDFLAGS = 
+LDFLAGS =
 
 # Debug Flags
 ifeq ($(DEBUG),yes)

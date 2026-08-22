@@ -39,7 +39,7 @@ ifeq ($(VENDOR), AdaptiveCpp)
 endif
 
 # Linker Flags
-LDFLAGS = 
+LDFLAGS =
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
@@ -48,7 +48,7 @@ endif
 
 ifeq ($(HIP), yes)
   CFLAGS += -fsycl-targets=amdgcn-amd-amdhsa \
-	    -Xsycl-target-backend --offload-arch=$(HIP_ARCH) 
+	    -Xsycl-target-backend --offload-arch=$(HIP_ARCH)
 endif
 
 # Debug Flags

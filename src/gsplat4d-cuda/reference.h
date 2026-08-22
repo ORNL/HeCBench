@@ -1,6 +1,7 @@
 #ifndef REFERENCE_H
 #define REFERENCE_H
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
@@ -8,9 +9,19 @@
 #include <algorithm>
 #include <vector>
 
-// 4D Gaussian splatting of a deformable scene, as used by the physics-aware
-// endoscopic simulators built on 4DGS and the material point method
-// (EndoGSim, https://arxiv.org/abs/2605.16022). Three stages are benchmarked:
+// 4D Gaussian splatting of a deformable scene, the kind of workload found in
+// physics-aware endoscopic simulators built on 4DGS and the material point
+// method (inspired by EndoGSim, https://arxiv.org/abs/2605.16022). This is an
+// independently written synthetic benchmark: EndoGSim's own code and data are
+// not publicly released, so nothing here is ported from it. The scene is
+// procedurally generated (see generate_scene) and every stage is verified
+// against the host reference in this file.
+//
+// Three stages are benchmarked as independent microbenchmarks. They are each
+// timed and validated on their own from a well-defined input; they are NOT run
+// as one fused pipeline (the MPM step does not feed its deformed positions into
+// the preprocess, and the rasterizer consumes the reference splats), so the
+// three timings must not be read as a single end-to-end frame time:
 //
 //   1. an MLS-MPM step (Hu et al., https://arxiv.org/abs/1806.01923) that
 //      advects the Gaussians as material particles: particle-to-grid
@@ -21,6 +32,9 @@
 //      colour from spherical harmonics;
 //   3. the tile-based rasterizer, which alpha-blends the Gaussians of each
 //      16x16 tile front to back (Kerbl et al., https://arxiv.org/abs/2308.04079).
+//      The per-tile binning and depth sort are host-side setup shared by every
+//      backend (build_tile_lists) and are deliberately excluded from the timed
+//      region, which measures list-consumption rasterization only.
 //
 // The 4D Gaussian follows the native formulation of Yang et al.
 // (https://arxiv.org/abs/2310.10642): a 4x4 covariance built from a pair of
@@ -49,7 +63,7 @@
 #define MPM_TILE_CELLS (MPM_TILE * MPM_TILE * MPM_TILE)
 #define MPM_BLOCKS_PER_DIM (MPM_GRID / MPM_BLOCK)
 // the largest number of particles one thread block scatters in one pass
-#define MPM_CHUNK 256
+#define MPM_CHUNK 512
 
 // the transmittance below which a pixel stops accumulating
 #define MIN_TRANSMITTANCE 1e-4f
@@ -607,6 +621,18 @@ static void build_tile_lists(
     for (int ty = y0; ty <= y1; ty++)
       for (int tx = x0; tx <= x1; tx++)
         counts[ty * cam.tiles_x + tx]++;
+  }
+
+  // The prefix sums and per-tile cursors below are int, and the device tile
+  // buffers are int-indexed, so guard against a total gaussian/tile intersection
+  // count that would overflow int before it corrupts memory.
+  size_t total = 0;
+  for (int t = 0; t < num_tiles; t++) total += (size_t)counts[t];
+  if (total > (size_t)INT_MAX) {
+    fprintf(stderr,
+            "Too many gaussian/tile intersections (%zu); reduce the number of "
+            "gaussians or the image size\n", total);
+    exit(EXIT_FAILURE);
   }
 
   for (int t = 0; t < num_tiles; t++) tile_offsets[t + 1] = tile_offsets[t] + counts[t];

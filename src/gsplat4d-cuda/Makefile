@@ -27,7 +27,7 @@ obj = $(source:.cu=.o)
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Xcompiler -Wall -arch=$(ARCH)
 
 # Linker Flags
-LDFLAGS = 
+LDFLAGS =
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
