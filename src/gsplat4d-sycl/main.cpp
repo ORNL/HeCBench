@@ -53,6 +53,7 @@ static void mpm_p2g(sycl::nd_item<1>& item, float* tile, int n, const MpmParams 
                     const float* __restrict defgrad,
                     float* __restrict grid)
 {
+  auto group = item.get_group();
   const int lid = item.get_local_id(0);
 
   for (int k = lid; k < MPM_TILE_CELLS * 4; k += P2G_BLOCK) tile[k] = 0.0f;
@@ -66,7 +67,7 @@ static void mpm_p2g(sycl::nd_item<1>& item, float* tile, int n, const MpmParams 
   const int oby = ((gb / MPM_BLOCKS_PER_DIM) % MPM_BLOCKS_PER_DIM) * MPM_BLOCK - 1;
   const int obx = (gb / (MPM_BLOCKS_PER_DIM * MPM_BLOCKS_PER_DIM)) * MPM_BLOCK - 1;
 
-  item.barrier(sycl::access::fence_space::local_space);
+  sycl::group_barrier(group);
 
   for (int i = begin + lid; i < end; i += P2G_BLOCK) {
     const Float4 x = mean[i];
@@ -186,7 +187,7 @@ static void mpm_p2g(sycl::nd_item<1>& item, float* tile, int n, const MpmParams 
     }
   }
 
-  item.barrier(sycl::access::fence_space::local_space);
+  sycl::group_barrier(group);
 
   for (int c = lid; c < MPM_TILE_CELLS; c += P2G_BLOCK) {
     const int lz = c % MPM_TILE;
@@ -215,8 +216,7 @@ static void mpm_grid_update(sycl::nd_item<1>& item, const MpmParams p,
 
   Float4 g = grid[cell];
   if (g.w <= 0.0f) {
-    if (g.x != 0.0f || g.y != 0.0f || g.z != 0.0f)
-      grid[cell] = Float4{ 0.0f, 0.0f, 0.0f, g.w };
+    grid[cell] = Float4{ 0.0f, 0.0f, 0.0f, g.w };
     return;
   }
 
@@ -553,10 +553,12 @@ static void render(sycl::nd_item<2>& item, Float2* s_xy, Float4* s_co,
   float r = 0.0f, g = 0.0f, b = 0.0f;
 
   int todo = end - begin;
+  auto group = item.get_group();
+
   for (int round = 0; round < rounds; round++, todo -= BLOCK_SIZE) {
     // every pixel of the tile is saturated, so no further Gaussian can
     // contribute to this work group
-    if (sycl::all_of_group(item.get_group(), done)) break;
+    if (sycl::all_of_group(group, done)) break;
 
     const int fetch = begin + round * BLOCK_SIZE + lane;
     if (fetch < end) {
@@ -565,7 +567,7 @@ static void render(sycl::nd_item<2>& item, Float2* s_xy, Float4* s_co,
       s_co[lane] = conic_opacity[gid];
       s_color[lane] = color_depth[gid];
     }
-    item.barrier(sycl::access::fence_space::local_space);
+    sycl::group_barrier(group);
 
     const int count = sycl::min(BLOCK_SIZE, todo);
     for (int j = 0; j < count && !done; j++) {
@@ -590,7 +592,7 @@ static void render(sycl::nd_item<2>& item, Float2* s_xy, Float4* s_co,
       transmittance *= 1.0f - alpha;
       if (transmittance < MIN_TRANSMITTANCE) done = true;
     }
-    item.barrier(sycl::access::fence_space::local_space);
+    sycl::group_barrier(group);
   }
 
   if (valid)
@@ -611,6 +613,13 @@ static int run(int argc, char* argv[])
   const int width = atoi(argv[2]);
   const int height = atoi(argv[3]);
   const int repeat = atoi(argv[4]);
+
+  if (n <= 0 || width <= 0 || height <= 0 || repeat <= 0) {
+    printf("Error: number of gaussians, image width, image height, and repeat "
+           "must all be positive integers (got n=%d, width=%d, height=%d, "
+           "repeat=%d)\n", n, width, height, repeat);
+    return 1;
+  }
 
   Camera cam;
   setup_camera(width, height, cam);
@@ -717,7 +726,7 @@ static int run(int argc, char* argv[])
   q.memcpy(d_sh, scene.sh.data(), sizeof(float) * SH_COEFFS * 3 * (size_t)n);
   q.memcpy(d_chunk_start, scene.chunk_start.data(), sizeof(int) * (num_chunks + 1));
   q.memcpy(d_chunk_block, scene.chunk_block.data(), sizeof(int) * num_chunks);
-  q.wait_and_throw();
+  //q.wait_and_throw();
 
   const int cell_groups = (MPM_CELLS + GRID_BLOCK - 1) / GRID_BLOCK;
   const int particle_groups = (n + P2G_BLOCK - 1) / P2G_BLOCK;
@@ -753,7 +762,7 @@ static int run(int argc, char* argv[])
 
   // --- stage 1 ------------------------------------------------------------
   mpm_step();
-  q.wait_and_throw();
+  //q.wait_and_throw();
 
   {
     std::vector<float> ref_grid(4 * (size_t)MPM_CELLS);
@@ -809,7 +818,7 @@ static int run(int argc, char* argv[])
   };
 
   preprocess_launch();
-  q.wait_and_throw();
+  //q.wait_and_throw();
 
   std::vector<float> ref_mean2d(2 * (size_t)n), ref_conic(4 * (size_t)n),
       ref_color(4 * (size_t)n);
@@ -822,7 +831,7 @@ static int run(int argc, char* argv[])
     q.memcpy(h_conic.data(), d_conic, sizeof(Float4) * n);
     q.memcpy(h_color.data(), d_color, sizeof(Float4) * n);
     q.memcpy(h_radii.data(), d_radii, sizeof(int) * n);
-    q.wait_and_throw();
+    //q.wait_and_throw();
 
     int pre_errors = 0;
     int visible = 0;
@@ -873,7 +882,7 @@ static int run(int argc, char* argv[])
   q.memcpy(d_tile_offsets, tile_offsets.data(), sizeof(int) * (num_tiles + 1));
   if (!tile_list.empty())
     q.memcpy(d_tile_list, tile_list.data(), sizeof(int) * tile_list.size());
-  q.wait_and_throw();
+  //q.wait_and_throw();
 
   printf("Gaussian instances after tiling: %zu (%.1f per tile)\n",
          tile_list.size(), (double)tile_list.size() / num_tiles);

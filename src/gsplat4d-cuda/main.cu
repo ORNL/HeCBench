@@ -220,8 +220,7 @@ mpm_grid_kernel(MpmParams p, float4* __restrict__ grid)
 
   float4 g = grid[cell];
   if (g.w <= 0.0f) {
-    if (g.x != 0.0f || g.y != 0.0f || g.z != 0.0f)
-      grid[cell] = make_float4(0.0f, 0.0f, 0.0f, g.w);
+    grid[cell] = make_float4(0.0f, 0.0f, 0.0f, g.w);
     return;
   }
 
@@ -633,6 +632,13 @@ int main(int argc, char* argv[])
   const int height = atoi(argv[3]);
   const int repeat = atoi(argv[4]);
 
+  if (n <= 0 || width <= 0 || height <= 0 || repeat <= 0) {
+    printf("Error: number of gaussians, image width, image height, and repeat "
+           "must all be positive integers (got n=%d, width=%d, height=%d, "
+           "repeat=%d)\n", n, width, height, repeat);
+    return 1;
+  }
+
   Camera cam;
   setup_camera(width, height, cam);
   MpmParams mpm;
@@ -830,10 +836,11 @@ int main(int argc, char* argv[])
 
   CHECK(cudaDeviceSynchronize());
   start = std::chrono::steady_clock::now();
-  for (int r = 0; r < repeat; r++)
+  for (int r = 0; r < repeat; r++) {
     preprocess_kernel<<<preprocess_blocks, PREPROCESS_BLOCK>>>(
         n, time, cam, d_mean, d_scale, d_quat_l, d_quat_r, d_opacity, d_sh,
         d_mean2d, d_conic, d_color, d_radii);
+  }
   CHECK(cudaDeviceSynchronize());
   end = std::chrono::steady_clock::now();
   time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
@@ -876,9 +883,10 @@ int main(int argc, char* argv[])
 
   CHECK(cudaDeviceSynchronize());
   start = std::chrono::steady_clock::now();
-  for (int r = 0; r < repeat; r++)
+  for (int r = 0; r < repeat; r++) {
     render_kernel<<<render_grid, render_block>>>(
         cam, d_mean2d, d_conic, d_color, d_tile_offsets, d_tile_list, d_image);
+  }
   CHECK(cudaDeviceSynchronize());
   end = std::chrono::steady_clock::now();
   time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();

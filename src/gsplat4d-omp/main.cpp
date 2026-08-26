@@ -7,6 +7,7 @@
 #include <omp.h>
 #include "reference.h"
 
+#define GRID_BLOCK 256
 #define P2G_BLOCK 128
 #define PREPROCESS_BLOCK 128
 
@@ -195,7 +196,7 @@ static void mpm_p2g(int n, int num_chunks,
 
 static void mpm_grid_update(float* grid, float dt, float gravity, int boundary)
 {
-  #pragma omp target teams distribute parallel for
+  #pragma omp target teams distribute parallel for num_threads(GRID_BLOCK)
   for (int cell = 0; cell < MPM_CELLS; cell++) {
     const size_t o = 4 * (size_t)cell;
     const float mass = grid[o + 3];
@@ -295,7 +296,7 @@ static void mpm_step(int n, int num_chunks, const int* chunk_start,
                      float* affine, float* defgrad, float* grid,
                      const MpmParams p)
 {
-  #pragma omp target teams distribute parallel for
+  #pragma omp target teams distribute parallel for num_threads(GRID_BLOCK)
   for (size_t k = 0; k < 4 * (size_t)MPM_CELLS; k++) grid[k] = 0.0f;
 
   mpm_p2g(n, num_chunks, chunk_start, chunk_block, mean, velocity, affine,
@@ -624,6 +625,13 @@ int main(int argc, char* argv[])
   const int width = atoi(argv[2]);
   const int height = atoi(argv[3]);
   const int repeat = atoi(argv[4]);
+
+  if (n <= 0 || width <= 0 || height <= 0 || repeat <= 0) {
+    printf("Error: number of gaussians, image width, image height, and repeat "
+           "must all be positive integers (got n=%d, width=%d, height=%d, "
+           "repeat=%d)\n", n, width, height, repeat);
+    return 1;
+  }
 
   Camera cam;
   setup_camera(width, height, cam);
