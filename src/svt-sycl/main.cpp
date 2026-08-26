@@ -139,12 +139,19 @@ inline bool d_cast_ray(const float* origin, const float* dir,
           cur_t = vtMax[2]; vi[2] += step[2]; gv[2] += step[2];
           vtMax[2] += vtDelta[2];
         }
-        if (vi[0] < 0 || vi[0] >= LEAF_DIM ||
+        const bool left_leaf =
+            vi[0] < 0 || vi[0] >= LEAF_DIM ||
             vi[1] < 0 || vi[1] >= LEAF_DIM ||
-            vi[2] < 0 || vi[2] >= LEAF_DIM ||
-            cur_t > t_next) break;
+            vi[2] < 0 || vi[2] >= LEAF_DIM;
 
-        float cur = leaf_base[(vi[0] * LEAF_DIM + vi[1]) * LEAF_DIM + vi[2]];
+        // When the fine DDA steps out of the current leaf, gv[] already
+        // holds the global coordinate of the neighboring voxel. Sample it
+        // through the global lookup (which transparently resolves the
+        // neighboring block/leaf) so a surface crossing that straddles the
+        // leaf boundary is not silently discarded.
+        float cur = left_leaf
+            ? d_lookup_tsdf(block_offset, leaf_data, gv[0], gv[1], gv[2])
+            : leaf_base[(vi[0] * LEAF_DIM + vi[1]) * LEAF_DIM + vi[2]];
 
         if (prev > 0.0f && cur <= 0.0f) {
           float alpha = prev / (prev - cur);
@@ -164,6 +171,8 @@ inline bool d_cast_ray(const float* origin, const float* dir,
         }
         prev   = cur;
         prev_t = cur_t;
+
+        if (left_leaf || cur_t > t_next) break;
       }
     }
 
