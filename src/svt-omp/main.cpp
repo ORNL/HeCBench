@@ -277,12 +277,12 @@ int main(int argc, char** argv)
     // warmup
     for (int r = 0; r < reps; r++) {
       #pragma omp target teams distribute parallel for collapse(2) \
-              num_teams(num_teams) thread_limit(thread_limit) nowait
+              num_teams(num_teams) thread_limit(thread_limit) //nowait
       for (int py = 0; py < height; py++)
         for (int px = 0; px < width; px++)
           d_render_pixel(cam, px, py, h_block, h_leaf, h_image);
     }
-    #pragma omp taskwait
+    //#pragma omp taskwait
 
     // verify
     #pragma omp target update from(h_image[0:4 * npix])
@@ -305,12 +305,12 @@ int main(int argc, char** argv)
     auto t0 = std::chrono::high_resolution_clock::now();
     for (int r = 0; r < reps; r++) {
       #pragma omp target teams distribute parallel for collapse(2) \
-              num_teams(num_teams) thread_limit(thread_limit) nowait
+              num_teams(num_teams) thread_limit(thread_limit) //nowait
       for (int py = 0; py < height; py++)
         for (int px = 0; px < width; px++)
           d_render_pixel(cam, px, py, h_block, h_leaf, h_image);
     }
-    #pragma omp taskwait
+    //#pragma omp taskwait
     auto t1 = std::chrono::high_resolution_clock::now();
 
     float ms = std::chrono::duration<float, std::milli>(t1 - t0).count();
