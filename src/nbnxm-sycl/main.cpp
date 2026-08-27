@@ -1,5 +1,6 @@
 #include <iostream>
 #include <chrono>
+#include <random>
 #include <sycl/sycl.hpp>
 #include "vectypes.h"
 
@@ -8,6 +9,7 @@ typedef gmx::BasicVector<float> Float3;
 typedef sycl::float4 Float4;
 
 #include "constants.h"
+#include "reference.h"
 
 template<typename T>
 static inline void atomicAdd(T& val, const T delta)
@@ -207,7 +209,7 @@ auto nbnxmKernelTest(
     const float ewaldBeta,
     const float epsFac,
     const bool calcShift) {
-  return [=](sycl::nd_item<3> itemIdx) [[intel::reqd_sub_group_size(32)]] {
+  return [=](sycl::nd_item<3> itemIdx) {
 
     constexpr int prunedClusterPairSize = c_clSize * c_splitClSize;
 
@@ -223,9 +225,10 @@ auto nbnxmKernelTest(
       c_nbnxnGpuNumClusterPerSupercluster * c_clSize * sizeof(Float4) + // sm_xq
       c_clSize * c_clSize * DIM * sizeof(float) +                       // sm_reductionBuffer
       c_nbnxnGpuNumClusterPerSupercluster * c_clSize * sizeof(int);     // sm_atomTypeI
-    sycl::multi_ptr<uint8_t[local_mem_size], sycl::access::address_space::local_space> localPtr =
-      sycl::ext::oneapi::group_local_memory_for_overwrite<uint8_t[local_mem_size]>(itemIdx.get_group());
-    uint8_t* ptr = *localPtr;
+
+    auto group = itemIdx.get_group();
+    uint8_t *ptr =
+      *sycl::ext::oneapi::group_local_memory_for_overwrite<uint8_t[local_mem_size]>(group);
 
     Float4* sm_xq = reinterpret_cast<Float4*>(ptr);
     ptr += c_nbnxnGpuNumClusterPerSupercluster * c_clSize * sizeof(Float4);
@@ -416,57 +419,96 @@ int main(int argc, char* argv[]) {
   const sycl::range<3>    globalSize{ grid_z, block_y, block_x };
   const sycl::nd_range<3> range{ globalSize, blockSize };
 
-  Float4* a_xq = sycl::malloc_shared<Float4>(NUM_ATOMS, q);
-  Float3* a_f = sycl::malloc_shared<Float3>(NUM_ATOMS, q);
-  Float3* shiftVec = sycl::malloc_shared<Float3>(45, q);
-  Float3* fShift = sycl::malloc_shared<Float3>(45, q);
-  nbnxn_cj4_t* cj4 = sycl::malloc_shared<nbnxn_cj4_t>(56881, q);
-  nbnxn_sci_t* sci = sycl::malloc_shared<nbnxn_sci_t>(4806, q);
-  nbnxn_excl_t* excl = sycl::malloc_shared<nbnxn_excl_t>(19205, q);
-  int* atomTypes = sycl::malloc_shared<int>(NUM_ATOMS, q);
-  Float2* nbfp = sycl::malloc_shared<Float2>(1024, q);
+  Float4*        h_xq        = new Float4[NUM_ATOMS];
+  Float3*        h_f         = new Float3[NUM_ATOMS];
+  Float3*        h_shiftVec  = new Float3[45];
+  Float3*        h_fShift    = new Float3[45];
+  nbnxn_cj4_t*   h_cj4       = new nbnxn_cj4_t[56881];
+  nbnxn_sci_t*   h_sci       = new nbnxn_sci_t[4806];
+  nbnxn_excl_t*  h_excl      = new nbnxn_excl_t[19205];
+  int*           h_atomTypes = new int[NUM_ATOMS];
+  Float2*        h_nbfp      = new Float2[1024];
+
+  Float4*        d_xq;
+  Float3*        d_f;
+  Float3*        d_shiftVec;
+  Float3*        d_fShift;
+  nbnxn_cj4_t*   d_cj4;
+  nbnxn_sci_t*   d_sci;
+  nbnxn_excl_t*  d_excl;
+  int*           d_atomTypes;
+  Float2*        d_nbfp;
+
+  d_xq        = sycl::malloc_device<Float4>(NUM_ATOMS, q);
+  d_f         = sycl::malloc_device<Float3>(NUM_ATOMS, q);
+  d_shiftVec  = sycl::malloc_device<Float3>(45, q);
+  d_fShift    = sycl::malloc_device<Float3>(45, q);
+  d_cj4       = sycl::malloc_device<nbnxn_cj4_t>(56881, q);
+  d_sci       = sycl::malloc_device<nbnxn_sci_t>(4806, q);
+  d_excl      = sycl::malloc_device<nbnxn_excl_t>(19205, q);
+  d_atomTypes = sycl::malloc_device<int>(NUM_ATOMS, q);
+  d_nbfp      = sycl::malloc_device<Float2>(1024, q);
+
+  std::mt19937 rng(1337);
+  std::uniform_real_distribution<float> posDist(-20.f, 20.f);
+  std::uniform_real_distribution<float> qDist(-1.f, 1.f);
 
   for (int i = 0; i < NUM_ATOMS; ++i) {
-    a_xq[i] = Float4(1.0f, 0.5f, 0.25f, 0.125f);
+    h_xq[i] = Float4(posDist(rng), posDist(rng), posDist(rng), qDist(rng));
   }
   for (int i = 0; i < NUM_ATOMS; ++i) {
-    a_f[i] = Float3(1.0f, 0.5f, 0.25f);
+    h_f[i] = Float3(1.0f, 0.5f, 0.25f);
   }
   for (int i = 0; i < 45; ++i) {
-    shiftVec[i] = Float3(1.0f, 0.5f, 0.25f);
+    h_shiftVec[i] = Float3(posDist(rng)*0.1f, posDist(rng)*0.1f, posDist(rng)*0.1f);
   }
   for (int i = 0; i < 45; ++i) {
-    fShift[i] = Float3(1.0f, 0.5f, 0.25f);
+    h_fShift[i] = Float3(1.0f, 0.5f, 0.25f);
   }
   for (int i = 0; i < 56881; ++i) {
-    cj4[i] = get_cj4(i);
+    h_cj4[i] = get_cj4(i % 200);
   }
   for (int i = 0; i < 4806; ++i) {
-    sci[i] = get_sci(i);
+    h_sci[i] = {i % 400, i % c_numIvecs, (2*i) % 200, (2*i) % 200 + 1};
   }
   for (int i = 0; i < 19205; ++i) {
-    excl[i] = get_excl(i);
+    h_excl[i] = get_excl(i);
   }
   for (int i = 0; i < NUM_ATOMS; ++i) {
-    atomTypes[i] = (i % 2);
+    h_atomTypes[i] = (i % 32);
   }
   for (int i = 0; i < 1024; ++i) {
-    nbfp[i] = Float2(0.5f, 0.25f);
+    h_nbfp[i] = Float2(0.5f, 0.25f);
   }
+
+  q.memcpy(d_xq,        h_xq,        sizeof(Float4)       * NUM_ATOMS);
+  q.memcpy(d_f,         h_f,         sizeof(Float3)       * NUM_ATOMS);
+  q.memcpy(d_shiftVec,  h_shiftVec,  sizeof(Float3)       * 45);
+  q.memcpy(d_fShift,    h_fShift,    sizeof(Float3)       * 45);
+  q.memcpy(d_cj4,       h_cj4,       sizeof(nbnxn_cj4_t)  * 56881);
+  q.memcpy(d_sci,       h_sci,       sizeof(nbnxn_sci_t)  * 4806);
+  q.memcpy(d_excl,      h_excl,      sizeof(nbnxn_excl_t) * 19205);
+  q.memcpy(d_atomTypes, h_atomTypes, sizeof(int)          * NUM_ATOMS);
+  q.memcpy(d_nbfp,      h_nbfp,      sizeof(Float2)       * 1024);
+
+  // NbnxmReference reads its inputs directly from host memory -- pass the
+  // h_* buffers, not the d_* ones (it cannot dereference device pointers).
+  NbnxmReference ref(h_xq, h_shiftVec, h_cj4, h_sci, h_excl, h_atomTypes, h_nbfp,
+                     32, 1, 3.12341f, 138.935f);
 
   // Warming-up
   q.submit([&](sycl::handler& cgh) {
       auto kernel = nbnxmKernelTest(
           cgh,
-          a_xq,
-          a_f,
-          shiftVec,
-          fShift,
-          cj4,
-          sci,
-          excl,
-          atomTypes,
-          nbfp,
+          d_xq,
+          d_f,
+          d_shiftVec,
+          d_fShift,
+          d_cj4,
+          d_sci,
+          d_excl,
+          d_atomTypes,
+          d_nbfp,
           32,
           1,
           3.12341,
@@ -481,15 +523,15 @@ int main(int argc, char* argv[]) {
     q.submit([&](sycl::handler& cgh) {
         auto kernel = nbnxmKernelTest(
             cgh,
-            a_xq,
-            a_f,
-            shiftVec,
-            fShift,
-            cj4,
-            sci,
-            excl,
-            atomTypes,
-            nbfp,
+            d_xq,
+            d_f,
+            d_shiftVec,
+            d_fShift,
+            d_cj4,
+            d_sci,
+            d_excl,
+            d_atomTypes,
+            d_nbfp,
             32,
             1,
             3.12341,
@@ -504,51 +546,29 @@ int main(int argc, char* argv[]) {
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average kernel execution time (w/o shift): %f (us)\n", (time * 1e-3f) / repeat);
 
-#ifdef DEBUG
-  float f0 = 0, f1 = 0, f2 = 0;
-  for (int i = 0; i < NUM_ATOMS; ++i) {
-    f0 += a_f[i][0];
-    f1 += a_f[i][1];
-    f2 += a_f[i][2];
-  }
-  printf("Checksum (a_f): %f %f %f\n", f0, f1, f2);
+  // Pull the accumulated forces back to host for validation against the
+  // CPU reference (d_f / d_fShift are device-only USM, not host-readable).
+  q.memcpy(h_f,      d_f,      sizeof(Float3) * NUM_ATOMS);
+  q.memcpy(h_fShift, d_fShift, sizeof(Float3) * 45);
+  q.wait();
 
-  f0 = 0, f1 = 0, f2 = 0;
-  for (int i = 0; i < 45; ++i) {
-    f0 += fShift[i][0];
-    f1 += fShift[i][1];
-    f2 += fShift[i][2];
-  }
-  printf("Checksum (fShift): %f %f %f\n", f0, f1, f2);
-#endif
+  ref.computeDelta(/*calcShift=*/false);
+  ref.validate(h_f, h_fShift, /*launchCount=*/repeat + 1,
+               1.0f, 0.5f, 0.25f, 1.0f, 0.5f, 0.25f,
+               /*absTol=*/1e-3f, "w/o shift");
 
+  // Reset the force accumulators (host copies), then push the reset back
+  // to device before the second (w/ shift) timed block, exactly mirroring
+  // what the original sycl::malloc_shared version did in-place.
   for (int i = 0; i < NUM_ATOMS; ++i) {
-    a_xq[i] = Float4(1.0f, 0.5f, 0.25f, 0.125f);
-  }
-  for (int i = 0; i < NUM_ATOMS; ++i) {
-    a_f[i] = Float3(1.0f, 0.5f, 0.25f);
+    h_f[i] = Float3(1.0f, 0.5f, 0.25f);
   }
   for (int i = 0; i < 45; ++i) {
-    shiftVec[i] = Float3(1.0f, 0.5f, 0.25f);
+    h_fShift[i] = Float3(1.0f, 0.5f, 0.25f);
   }
-  for (int i = 0; i < 45; ++i) {
-    fShift[i] = Float3(1.0f, 0.5f, 0.25f);
-  }
-  for (int i = 0; i < 56881; ++i) {
-    cj4[i] = get_cj4(i);
-  }
-  for (int i = 0; i < 4806; ++i) {
-    sci[i] = get_sci(i);
-  }
-  for (int i = 0; i < 19205; ++i) {
-    excl[i] = get_excl(i);
-  }
-  for (int i = 0; i < NUM_ATOMS; ++i) {
-    atomTypes[i] = (i % 2);
-  }
-  for (int i = 0; i < 1024; ++i) {
-    nbfp[i] = Float2(0.5f, 0.25f);
-  }
+  q.memcpy(d_f,      h_f,      sizeof(Float3) * NUM_ATOMS);
+  q.memcpy(d_fShift, h_fShift, sizeof(Float3) * 45);
+  q.wait();
 
   start = std::chrono::steady_clock::now();
 
@@ -556,15 +576,15 @@ int main(int argc, char* argv[]) {
     q.submit([&](sycl::handler& cgh) {
         auto kernel = nbnxmKernelTest(
             cgh,
-            a_xq,
-            a_f,
-            shiftVec,
-            fShift,
-            cj4,
-            sci,
-            excl,
-            atomTypes,
-            nbfp,
+            d_xq,
+            d_f,
+            d_shiftVec,
+            d_fShift,
+            d_cj4,
+            d_sci,
+            d_excl,
+            d_atomTypes,
+            d_nbfp,
             32,
             1,
             3.12341,
@@ -579,33 +599,36 @@ int main(int argc, char* argv[]) {
   time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average kernel execution time (w/ shift): %f (us)\n", (time * 1e-3f) / repeat);
 
-#ifdef DEBUG
-  f0 = 0, f1 = 0, f2 = 0;
-  for (int i = 0; i < NUM_ATOMS; ++i) {
-    f0 += a_f[i][0];
-    f1 += a_f[i][1];
-    f2 += a_f[i][2];
-  }
-  printf("Checksum (a_f): %f %f %f\n", f0, f1, f2);
+  q.memcpy(h_f,      d_f,      sizeof(Float3) * NUM_ATOMS);
+  q.memcpy(h_fShift, d_fShift, sizeof(Float3) * 45);
+  q.wait();
 
-  f0 = 0, f1 = 0, f2 = 0;
-  for (int i = 0; i < 45; ++i) {
-    f0 += fShift[i][0];
-    f1 += fShift[i][1];
-    f2 += fShift[i][2];
-  }
-  printf("Checksum (fShift): %f %f %f\n", f0, f1, f2);
-#endif
+  ref.computeDelta(/*calcShift=*/true);
+  // Second block's `repeat` launches all pass calcShift=1; there is
+  // no extra warm-up launch before this block.
+  ref.validate(h_f, h_fShift, /*launchCount=*/repeat,
+               1.0f, 0.5f, 0.25f, 1.0f, 0.5f, 0.25f,
+               /*absTol=*/1e-3f, "w/ shift");
 
-  sycl::free(nbfp, q);
-  sycl::free(atomTypes, q);
-  sycl::free(excl, q);
-  sycl::free(sci, q);
-  sycl::free(cj4, q);
-  sycl::free(fShift, q);
-  sycl::free(shiftVec, q);
-  sycl::free(a_f, q);
-  sycl::free(a_xq, q);
+  sycl::free(d_nbfp, q);
+  sycl::free(d_atomTypes, q);
+  sycl::free(d_excl, q);
+  sycl::free(d_sci, q);
+  sycl::free(d_cj4, q);
+  sycl::free(d_fShift, q);
+  sycl::free(d_shiftVec, q);
+  sycl::free(d_f, q);
+  sycl::free(d_xq, q);
+
+  delete[] h_nbfp;
+  delete[] h_atomTypes;
+  delete[] h_excl;
+  delete[] h_sci;
+  delete[] h_cj4;
+  delete[] h_fShift;
+  delete[] h_shiftVec;
+  delete[] h_f;
+  delete[] h_xq;
 
   return 0;
 }
