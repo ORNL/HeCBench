@@ -1,6 +1,7 @@
 #include <chrono>
 #include <iostream>
 #include <hip/hip_runtime.h>
+#include <cstring>
 #include "vectypes.h"
 
 typedef float2 Float2;
@@ -399,60 +400,82 @@ int main(int argc, char* argv[]) {
   const dim3 blocks ( block_x, block_y, 1 );
   const dim3 grids ( 1, 1, grid_z );
 
+  // Host buffers
+  Float4* h_xq = new Float4[NUM_ATOMS];
+  Float3* h_f = new Float3[NUM_ATOMS];
+  Float3* h_shiftVec = new Float3[45];
+  Float3* h_fShift = new Float3[45];
+  nbnxn_cj4_t* h_cj4 = new nbnxn_cj4_t[56881];
+  nbnxn_sci_t* h_sci = new nbnxn_sci_t[4806];
+  nbnxn_excl_t* h_excl = new nbnxn_excl_t[19205];
+  int* h_atomTypes = new int[NUM_ATOMS];
+  Float2* h_nbfp = new Float2[1024];
+
+  // Device buffers
   Float4* a_xq;
-  hipMallocManaged(&a_xq, sizeof(Float4) * NUM_ATOMS);
+  hipMalloc(&a_xq, sizeof(Float4) * NUM_ATOMS);
 
   Float3* a_f;
-  hipMallocManaged(&a_f, sizeof(Float3) * NUM_ATOMS);
+  hipMalloc(&a_f, sizeof(Float3) * NUM_ATOMS);
 
   Float3* shiftVec;
-  hipMallocManaged(&shiftVec, sizeof(Float3) * 45);
+  hipMalloc(&shiftVec, sizeof(Float3) * 45);
 
   Float3* fShift;
-  hipMallocManaged(&fShift, sizeof(Float3) * 45);
+  hipMalloc(&fShift, sizeof(Float3) * 45);
 
   nbnxn_cj4_t* cj4;
-  hipMallocManaged(&cj4, sizeof(nbnxn_cj4_t) * 56881);
+  hipMalloc(&cj4, sizeof(nbnxn_cj4_t) * 56881);
 
   nbnxn_sci_t* sci;
-  hipMallocManaged(&sci, sizeof(nbnxn_sci_t) * 4806);
+  hipMalloc(&sci, sizeof(nbnxn_sci_t) * 4806);
 
   nbnxn_excl_t* excl;
-  hipMallocManaged(&excl, sizeof(nbnxn_excl_t) * 19205);
+  hipMalloc(&excl, sizeof(nbnxn_excl_t) * 19205);
 
   int* atomTypes;
-  hipMallocManaged(&atomTypes, sizeof(int) * NUM_ATOMS);
+  hipMalloc(&atomTypes, sizeof(int) * NUM_ATOMS);
 
   Float2* nbfp;
-  hipMallocManaged(&nbfp, sizeof(Float2) * 1024);
+  hipMalloc(&nbfp, sizeof(Float2) * 1024);
 
   for (int i = 0; i < NUM_ATOMS; ++i) {
-    a_xq[i] = make_float4(1.0f, 0.5f, 0.25f, 0.125f);
+    h_xq[i] = make_float4(1.0f, 0.5f, 0.25f, 0.125f);
   }
   for (int i = 0; i < NUM_ATOMS; ++i) {
-    a_f[i] = Float3(1.0f, 0.5f, 0.25f);
+    h_f[i] = Float3(1.0f, 0.5f, 0.25f);
   }
   for (int i = 0; i < 45; ++i) {
-    shiftVec[i] = Float3(1.0f, 0.5f, 0.25f);
+    h_shiftVec[i] = Float3(1.0f, 0.5f, 0.25f);
   }
   for (int i = 0; i < 45; ++i) {
-    fShift[i] = Float3(1.0f, 0.5f, 0.25f);
+    h_fShift[i] = Float3(1.0f, 0.5f, 0.25f);
   }
   for (int i = 0; i < 56881; ++i) {
-    cj4[i] = get_cj4(i);
+    h_cj4[i] = get_cj4(i);
   }
   for (int i = 0; i < 4806; ++i) {
-    sci[i] = get_sci(i);
+    h_sci[i] = get_sci(i);
   }
   for (int i = 0; i < 19205; ++i) {
-    excl[i] = get_excl(i);
+    h_excl[i] = get_excl(i);
   }
   for (int i = 0; i < NUM_ATOMS; ++i) {
-    atomTypes[i] = (i % 2);
+    h_atomTypes[i] = (i % 2);
   }
   for (int i = 0; i < 1024; ++i) {
-    nbfp[i] = make_float2(0.5f, 0.25f);
+    h_nbfp[i] = make_float2(0.5f, 0.25f);
   }
+
+  hipMemcpy(a_xq, h_xq, sizeof(Float4) * NUM_ATOMS, hipMemcpyHostToDevice);
+  hipMemcpy(a_f, h_f, sizeof(Float3) * NUM_ATOMS, hipMemcpyHostToDevice);
+  hipMemcpy(shiftVec, h_shiftVec, sizeof(Float3) * 45, hipMemcpyHostToDevice);
+  hipMemcpy(fShift, h_fShift, sizeof(Float3) * 45, hipMemcpyHostToDevice);
+  hipMemcpy(cj4, h_cj4, sizeof(nbnxn_cj4_t) * 56881, hipMemcpyHostToDevice);
+  hipMemcpy(sci, h_sci, sizeof(nbnxn_sci_t) * 4806, hipMemcpyHostToDevice);
+  hipMemcpy(excl, h_excl, sizeof(nbnxn_excl_t) * 19205, hipMemcpyHostToDevice);
+  hipMemcpy(atomTypes, h_atomTypes, sizeof(int) * NUM_ATOMS, hipMemcpyHostToDevice);
+  hipMemcpy(nbfp, h_nbfp, sizeof(Float2) * 1024, hipMemcpyHostToDevice);
 
   // Warming-up
   hipLaunchKernelGGL(nbnxmKernelTest, grids, blocks, 0, 0, 
@@ -498,50 +521,62 @@ int main(int argc, char* argv[]) {
   printf("Average kernel execution time (w/o shift): %f (us)\n", (time * 1e-3f) / repeat);
 
 #ifdef DEBUG
+  hipMemcpy(h_f, a_f, sizeof(Float3) * NUM_ATOMS, hipMemcpyDeviceToHost);
+  hipMemcpy(h_fShift, fShift, sizeof(Float3) * 45, hipMemcpyDeviceToHost);
   float f0 = 0, f1 = 0, f2 = 0; 
   for (int i = 0; i < NUM_ATOMS; ++i) {
-    f0 += a_f[i][0];
-    f1 += a_f[i][1];
-    f2 += a_f[i][2];
+    f0 += h_f[i][0];
+    f1 += h_f[i][1];
+    f2 += h_f[i][2];
   }
   printf("Checksum (a_f): %f %f %f\n", f0, f1, f2);
 
   f0 = 0, f1 = 0, f2 = 0; 
   for (int i = 0; i < 45; ++i) {
-    f0 += fShift[i][0];
-    f1 += fShift[i][1];
-    f2 += fShift[i][2];
+    f0 += h_fShift[i][0];
+    f1 += h_fShift[i][1];
+    f2 += h_fShift[i][2];
   }
   printf("Checksum (fShift): %f %f %f\n", f0, f1, f2);
 #endif
 
   for (int i = 0; i < NUM_ATOMS; ++i) {
-    a_xq[i] = make_float4(1.0f, 0.5f, 0.25f, 0.125f);
+    h_xq[i] = make_float4(1.0f, 0.5f, 0.25f, 0.125f);
   }
   for (int i = 0; i < NUM_ATOMS; ++i) {
-    a_f[i] = Float3(1.0f, 0.5f, 0.25f);
+    h_f[i] = Float3(1.0f, 0.5f, 0.25f);
   }
   for (int i = 0; i < 45; ++i) {
-    shiftVec[i] = Float3(1.0f, 0.5f, 0.25f);
+    h_shiftVec[i] = Float3(1.0f, 0.5f, 0.25f);
   }
   for (int i = 0; i < 45; ++i) {
-    fShift[i] = Float3(1.0f, 0.5f, 0.25f);
+    h_fShift[i] = Float3(1.0f, 0.5f, 0.25f);
   }
   for (int i = 0; i < 56881; ++i) {
-    cj4[i] = get_cj4(i);
+    h_cj4[i] = get_cj4(i);
   }
   for (int i = 0; i < 4806; ++i) {
-    sci[i] = get_sci(i);
+    h_sci[i] = get_sci(i);
   }
   for (int i = 0; i < 19205; ++i) {
-    excl[i] = get_excl(i);
+    h_excl[i] = get_excl(i);
   }
   for (int i = 0; i < NUM_ATOMS; ++i) {
-    atomTypes[i] = (i % 2);
+    h_atomTypes[i] = (i % 2);
   }
   for (int i = 0; i < 1024; ++i) {
-    nbfp[i] = make_float2(0.5f, 0.25f);
+    h_nbfp[i] = make_float2(0.5f, 0.25f);
   }
+
+  hipMemcpy(a_xq, h_xq, sizeof(Float4) * NUM_ATOMS, hipMemcpyHostToDevice);
+  hipMemcpy(a_f, h_f, sizeof(Float3) * NUM_ATOMS, hipMemcpyHostToDevice);
+  hipMemcpy(shiftVec, h_shiftVec, sizeof(Float3) * 45, hipMemcpyHostToDevice);
+  hipMemcpy(fShift, h_fShift, sizeof(Float3) * 45, hipMemcpyHostToDevice);
+  hipMemcpy(cj4, h_cj4, sizeof(nbnxn_cj4_t) * 56881, hipMemcpyHostToDevice);
+  hipMemcpy(sci, h_sci, sizeof(nbnxn_sci_t) * 4806, hipMemcpyHostToDevice);
+  hipMemcpy(excl, h_excl, sizeof(nbnxn_excl_t) * 19205, hipMemcpyHostToDevice);
+  hipMemcpy(atomTypes, h_atomTypes, sizeof(int) * NUM_ATOMS, hipMemcpyHostToDevice);
+  hipMemcpy(nbfp, h_nbfp, sizeof(Float2) * 1024, hipMemcpyHostToDevice);
 
   start = std::chrono::steady_clock::now();
 
@@ -569,19 +604,21 @@ int main(int argc, char* argv[]) {
   printf("Average kernel execution time (w/ shift): %f (us)\n", (time * 1e-3f) / repeat);
 
 #ifdef DEBUG
+  hipMemcpy(h_f, a_f, sizeof(Float3) * NUM_ATOMS, hipMemcpyDeviceToHost);
+  hipMemcpy(h_fShift, fShift, sizeof(Float3) * 45, hipMemcpyDeviceToHost);
   f0 = 0, f1 = 0, f2 = 0; 
   for (int i = 0; i < NUM_ATOMS; ++i) {
-    f0 += a_f[i][0];
-    f1 += a_f[i][1];
-    f2 += a_f[i][2];
+    f0 += h_f[i][0];
+    f1 += h_f[i][1];
+    f2 += h_f[i][2];
   }
   printf("Checksum (a_f): %f %f %f\n", f0, f1, f2);
 
   f0 = 0, f1 = 0, f2 = 0; 
   for (int i = 0; i < 45; ++i) {
-    f0 += fShift[i][0];
-    f1 += fShift[i][1];
-    f2 += fShift[i][2];
+    f0 += h_fShift[i][0];
+    f1 += h_fShift[i][1];
+    f2 += h_fShift[i][2];
   }
   printf("Checksum (fShift): %f %f %f\n", f0, f1, f2);
 #endif
@@ -595,6 +632,16 @@ int main(int argc, char* argv[]) {
   hipFree(shiftVec);
   hipFree(a_f);
   hipFree(a_xq);
+
+  delete[] h_nbfp;
+  delete[] h_atomTypes;
+  delete[] h_excl;
+  delete[] h_sci;
+  delete[] h_cj4;
+  delete[] h_fShift;
+  delete[] h_shiftVec;
+  delete[] h_f;
+  delete[] h_xq;
 
   return 0;
 }
