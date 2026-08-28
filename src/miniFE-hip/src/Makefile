@@ -13,7 +13,7 @@ MINIFE_MATRIX_TYPE = -DMINIFE_CSR_MATRIX
 
 #-----------------------------------------------------------------------
 
-CFLAGS = -v -O3 
+CFLAGS = $(EXTRA_CFLAGS) -v -O3 
 #	-S -emit-llvm
 #\
 #	-S -emit-llvm

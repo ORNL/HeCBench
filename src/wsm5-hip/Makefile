@@ -23,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := -DMKX=4 -std=c++17 -Wall -I../wsm5-cuda
+CFLAGS := $(EXTRA_CFLAGS) -DMKX=4 -std=c++17 -Wall -I../wsm5-cuda
 
 # Linker Flags
 LDFLAGS = 
