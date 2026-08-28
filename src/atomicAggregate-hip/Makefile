@@ -23,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := -std=c++17 -Wall -DHIP_ENABLE_WARP_SYNC_BUILTINS=1
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -DHIP_ENABLE_WARP_SYNC_BUILTINS=1
 
 # Linker Flags
 LDFLAGS = 

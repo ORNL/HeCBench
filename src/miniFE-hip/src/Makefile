@@ -13,14 +13,14 @@ MINIFE_MATRIX_TYPE = -DMINIFE_CSR_MATRIX
 
 #-----------------------------------------------------------------------
 
-CFLAGS = -v -O3 
+CFLAGS = $(EXTRA_CFLAGS) -v -O3 
 #	-S -emit-llvm
 #\
 #	-S -emit-llvm
 #-mllvm -regalloc=pbqp
 #CFLAGS = -qreport -O3 -fopenmp -mcpu=power8 -mtune=power8
 
-CXXFLAGS = -I. -I../utils -I../fem $(MINIFE_TYPES) -O3 -x hip \
+CXXFLAGS = $(EXTRA_CFLAGS) -I. -I../utils -I../fem $(MINIFE_TYPES) -O3 -x hip \
 	$(MINIFE_MATRIX_TYPE) \
 #            -DMINIFE_DEBUG \
 #	-DHAVE_MPI -DMPICH_IGNORE_CXX_SEEK \
