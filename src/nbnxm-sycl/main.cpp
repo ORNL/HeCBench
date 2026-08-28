@@ -388,21 +388,16 @@ nbnxn_cj4_t get_cj4(int id) {
     value.cj[i] = i + id;
   }
   for (int i = 0; i < c_nbnxnGpuClusterpairSplit; ++i) {
-    value.imei[i].imask = 0U;
-    value.imei[i].excl_ind = 0;
+    value.imei[i].imask = 0xFFFFFFFFu;
+    value.imei[i].excl_ind = id % 19205;
   }
   return value;
 }
 
-nbnxn_sci_t get_sci(int id) {
-  return {id, 0, 8 * id, 8 * id + 7};
-}
-
 nbnxn_excl_t get_excl(int id) {
   nbnxn_excl_t value;
-  for (int i = 0; i < c_nbnxnGpuExclSize; ++i) {
-    value.pair[i] = 7;
-  }
+  std::mt19937 rng(id);
+  for (int i = 0; i < c_nbnxnGpuExclSize; ++i) value.pair[i] = rng();
   return value;
 }
 
