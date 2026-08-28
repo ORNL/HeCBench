@@ -224,7 +224,6 @@ unsigned int checkDuplicateMask(const vector<int>& v) {
   checkDuplicateMask<<<1, 32>>>(v.size(), devSet);
 
   unsigned int mask = 0;
-  cudaDeviceSynchronize();
 
   cudaMemcpyFromSymbol(&mask,
                        duplicateMask, sizeof(unsigned int), 0,
