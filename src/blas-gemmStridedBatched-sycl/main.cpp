@@ -5,7 +5,13 @@
 #include <cmath>
 #include <iostream>
 #include <sycl/sycl.hpp>
+#ifdef USE_ONEMATH
+#include <oneapi/math.hpp>
+namespace math_ns = oneapi::math;
+#else
 #include <oneapi/mkl.hpp>
+namespace math_ns = oneapi::mkl;
+#endif
 #include "reference.h"
 
 using namespace std;
@@ -16,7 +22,7 @@ void gemmBatched(
   int upper,
   int num,
   int reps,
-  int verbose) try 
+  int verbose) try
 {
   if(verbose) cout << "initializing inputs" << endl;
   size_t matrices_size = upper * upper * num * sizeof(T);
@@ -71,11 +77,11 @@ void gemmBatched(
 
   const T alpha = 1.0f, beta = 0.0f;
 
-  /* perform <num> <size x size> x <size x 1> multiplications 
+  /* perform <num> <size x size> x <size x 1> multiplications
      with distinct matrices
    */
   struct param_t {
-    oneapi::mkl::transpose transpose_info[2];
+    math_ns::transpose transpose_info[2];
     T value_info[2];
     std::int64_t size_info[3];
     std::int64_t ld_info[3];
@@ -83,8 +89,8 @@ void gemmBatched(
   };
 
   param_t *p = (param_t *)std::malloc(sizeof(param_t));
-  p->transpose_info[0] = oneapi::mkl::transpose::nontrans;
-  p->transpose_info[1] = oneapi::mkl::transpose::nontrans;
+  p->transpose_info[0] = math_ns::transpose::nontrans;
+  p->transpose_info[1] = math_ns::transpose::nontrans;
   p->value_info[0] = alpha;
   p->value_info[1] = beta;
   p->ld_info[0] = lda;
@@ -104,7 +110,7 @@ void gemmBatched(
     for(int rep = 0; rep <= reps; rep++){
       auto start = std::chrono::steady_clock::now();
 
-      oneapi::mkl::blas::column_major::gemm_batch(
+      math_ns::blas::column_major::gemm_batch(
         q, p->transpose_info[0], p->transpose_info[1],
         p->size_info[0], p->size_info[1], p->size_info[2],
         p->value_info[0],
@@ -119,30 +125,35 @@ void gemmBatched(
       auto elapsed = time * 1e-3;
 
       if (rep != 0) sum += elapsed;
-      
+
       if(verbose)
-	cout << "size " << size << ": " << elapsed << " us; " 
-	     << elapsed / num << " us per operation" << endl;
+        cout << "size " << size << ": " << elapsed << " us; "
+             << elapsed / num << " us per operation" << endl;
     }
     cout << "size " << size << " average execution time: " << sum/reps << " us; "
-	 << sum / reps / num << " us per operation; "
+         << sum / reps / num << " us per operation; "
          << "floating-point operations per second: ";
     performance(m, n, k, 1e3 * (sum / reps / num));
 
-    // verify double precision operations 
+    // verify double precision operations
     if constexpr (std::is_same_v<T, double>) {
       q.memcpy(result, devResult, vectors_size).wait();
       gemmBatched_ref (num, upper, upper, 1, m, k, n, alpha, beta,
                        matrices, lda, vectors, ldb, result_ref, ldc);
 
+
+      int ok = 1;
       for (int i = 0; i < num; i++) {
       for (int j = 0; j < m; j++) {
         if (abs(result[i*upper+j] - result_ref[i*upper+j]) > 1e-6) {
           cout << "Mismatch at batch index " << i << ": " << result[i*upper+j] << "!="
                << result_ref[i*upper+j] << endl;
+          ok = 0;
           break;
         }
       }}
+
+      printf("%s\n", ok ? "PASS" : "FAIL");
     }
   }
 
@@ -170,7 +181,7 @@ int main(int argc, char **argv) {
   int num = 25000;  // batch size
   int reps = 10;
   int verbose = 0;
-  
+
   while((status = getopt(argc, argv, "l:u:n:r:v")) != -1){
     switch(status){
     case 'l':
@@ -203,6 +214,6 @@ int main(int argc, char **argv) {
   gemmBatched<float>(lower, upper, num, reps, verbose);
   cout << ">>>>>>>>>>>>>>> Double precision gemmBatched >>>>>>>>>>>>>>> " << endl;
   gemmBatched<double>(lower, upper, num, reps, verbose);
-      
+
   return 0;
 }

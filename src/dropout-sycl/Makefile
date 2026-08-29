@@ -13,7 +13,13 @@ CUDA      = no
 CUDA_ARCH ?= sm_70
 HIP       = no
 HIP_ARCH  ?= gfx908
+ONEMKL    = no
+ONEMATH      = no
+ONEMATH_PATH ?= /path/to/oneMath
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+
+# path to the install of the oneMKL interface
+ONEMKL_PATH   = /path/to/oneMKL
 
 #===============================================================================
 # Program name & source code list
@@ -38,7 +44,7 @@ ifeq ($(VENDOR), AdaptiveCpp)
 endif
 
 # Linker Flags
-LDFLAGS = 
+LDFLAGS =
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
@@ -47,7 +53,15 @@ endif
 
 ifeq ($(HIP), yes)
   CFLAGS += -fsycl-targets=amdgcn-amd-amdhsa \
-	    -Xsycl-target-backend --offload-arch=$(HIP_ARCH) 
+            -Xsycl-target-backend --offload-arch=$(HIP_ARCH)
+endif
+
+ifeq ($(ONEMKL), yes)
+  CFLAGS += -I$(ONEMKL_PATH)/include -I$(ONEMKL_PATH)/include/oneapi
+else ifeq ($(ONEMATH), yes)
+  CFLAGS += -DUSE_ONEMATH -I$(ONEMATH_PATH)/include -I$(ONEMATH_PATH)/include/oneapi
+else
+  CFLAGS += -qmkl=parallel
 endif
 
 # Debug Flags

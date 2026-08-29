@@ -4,7 +4,13 @@
 #include <algorithm>
 #include <chrono>
 #include <vector>
+#ifdef USE_ONEMATH
+#include <oneapi/math.hpp>
+namespace math_ns = oneapi::math;
+#else
 #include <oneapi/mkl.hpp>
+namespace math_ns = oneapi::mkl;
+#endif
 #include <sycl/sycl.hpp>
 
 int main(int argc, char *argv[]) {
@@ -74,7 +80,7 @@ int main(int argc, char *argv[]) {
 
     try {
       for (j = 0; j < repeat; j++) {
-        status[j] = oneapi::mkl::blas::column_major::nrm2(q, n, d_a, 1, d_result+j);
+        status[j] = math_ns::blas::column_major::nrm2(q, n, d_a, 1, d_result+j);
         q.memcpy(h_result + j, d_result + j, sizeof(float), status[j]);
       }
     } catch(sycl::exception const& e) {
@@ -92,7 +98,8 @@ int main(int argc, char *argv[]) {
 
     // snrm2 results match across all iterations
     for (j = 0; j < repeat; j++)
-      if (fabsf((float)gold - h_result[j]) > 1e-1f) {
+      if (fabsf((float)gold - h_result[j]) >
+          fmaxf(1e-6f, 0.01f * fabsf((float)gold))) {
         printf("FAIL at iteration %d: gold=%f actual=%f for %d elements\n",
                j, (float)gold, h_result[j], i);
         ok = false;

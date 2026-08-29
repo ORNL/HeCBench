@@ -14,7 +14,13 @@
 #include <string.h>
 #include <chrono>
 #include <sycl/sycl.hpp>
+#ifdef USE_ONEMATH
+#include <oneapi/math.hpp>
+namespace math_ns = oneapi::math;
+#else
 #include <oneapi/mkl.hpp>
+namespace math_ns = oneapi::mkl;
+#endif
 
 // Parameters.  These may change from run-to-run
 #define M         (500)         // vertical dimension of the temperature array
@@ -158,19 +164,19 @@ float NusseltCompute(sycl::queue &q, float *T, float *nutop, float *ztop,
   // with all 0s along the bottom.
 
   // Copy the last three rows of T into the first three rows of nutop
-  oneapi::mkl::blas::column_major::copy(q, N, (T + (M - 5) * N), 1, (nutop), 1);
-  oneapi::mkl::blas::column_major::copy(q, N, (T + (M - 4) * N), 1, (nutop + (N)), 1);
-  oneapi::mkl::blas::column_major::copy(q, N, (T + (M - 3) * N), 1, (nutop + (2 * N)), 1);
+  math_ns::blas::column_major::copy(q, N, (T + (M - 5) * N), 1, (nutop), 1);
+  math_ns::blas::column_major::copy(q, N, (T + (M - 4) * N), 1, (nutop + (N)), 1);
+  math_ns::blas::column_major::copy(q, N, (T + (M - 3) * N), 1, (nutop + (2 * N)), 1);
 
   float alpha = 0.f;
 
   // Set the last row of nutop = 0.
-  oneapi::mkl::blas::column_major::scal(q, N, alpha, (nutop + (3 * N)), 1);
+  math_ns::blas::column_major::scal(q, N, alpha, (nutop + (3 * N)), 1);
 
   // nutop += -( 1 - ztop)
   // => nutop += ztop; nutop -= 1
   alpha = 1.f;
-  oneapi::mkl::blas::column_major::axpy(q, 4 * N, alpha, ztop, 1, nutop, 1);
+  math_ns::blas::column_major::axpy(q, 4 * N, alpha, ztop, 1, nutop, 1);
 
   sycl::range<2> gws (1, (floorf(N / 256.f) + 1) * 256);
   sycl::range<2> lws (1, 256);
@@ -197,19 +203,19 @@ float NusseltCompute(sycl::queue &q, float *T, float *nutop, float *ztop,
   // accumulate in the 0th row
   // scale the 0th row by -(2/3)
   alpha = -(2.f/3.f);
-  oneapi::mkl::blas::column_major::scal(q, N, alpha, nutop, 1);
+  math_ns::blas::column_major::scal(q, N, alpha, nutop, 1);
   // Add 3*row1
   alpha = 3.f;
-  oneapi::mkl::blas::column_major::axpy(q, N, alpha, (nutop + N), 1, nutop, 1);
+  math_ns::blas::column_major::axpy(q, N, alpha, (nutop + N), 1, nutop, 1);
   // Add - 6*row2
   alpha = -6.f;
-  oneapi::mkl::blas::column_major::axpy(q, N, alpha, (nutop + (2 * N)), 1, nutop, 1);
+  math_ns::blas::column_major::axpy(q, N, alpha, (nutop + (2 * N)), 1, nutop, 1);
   // Add (11/3)*row3
   alpha = (11.f/3.f);
-  oneapi::mkl::blas::column_major::axpy(q, N, alpha, (nutop + (3 * N)), 1, nutop, 1);
+  math_ns::blas::column_major::axpy(q, N, alpha, (nutop + (3 * N)), 1, nutop, 1);
   // Divide the array by 2*DX
   alpha = 1.f/(2.f*DX);
-  oneapi::mkl::blas::column_major::scal(q, 4 * N, alpha, nutop, 1);
+  math_ns::blas::column_major::scal(q, 4 * N, alpha, nutop, 1);
   // Elementwise multiplication with trnu
   q.parallel_for(
     sycl::nd_range<2>(gws, lws), [=](sycl::nd_item<2> item) {
@@ -219,7 +225,7 @@ float NusseltCompute(sycl::queue &q, float *T, float *nutop, float *ztop,
   // a row that has been altered to be all 1s.
   // Empty row1, then add 1 to all its elements
   alpha = 0.f;
-  oneapi::mkl::blas::column_major::scal(q, N, alpha, (nutop + N), 1);
+  math_ns::blas::column_major::scal(q, N, alpha, (nutop + N), 1);
   q.parallel_for(
     sycl::nd_range<2>(gws, lws), [=](sycl::nd_item<2> item) {
       AddOne(nutop + N, item);
@@ -227,25 +233,25 @@ float NusseltCompute(sycl::queue &q, float *T, float *nutop, float *ztop,
 
   float *result;
   result = sycl::malloc_shared<float>(1, q);
-  oneapi::mkl::blas::column_major::dot(q, N, nutop, 1, (nutop + N), 1, result).wait();
+  math_ns::blas::column_major::dot(q, N, nutop, 1, (nutop + N), 1, result).wait();
   topsum = *result /(-XF);
 
   // Calculate the Nusselt number along the bottom of the array.
   // d_nubot's first row is all 1, and ith row is the i-1th row of d_T
   // Put the first row of T in nubot, then subtract to get 0, then AddOne
-  oneapi::mkl::blas::column_major::scal(q, N, alpha, nubot, 1);
+  math_ns::blas::column_major::scal(q, N, alpha, nubot, 1);
   q.parallel_for(
     sycl::nd_range<2>(gws, lws), [=](sycl::nd_item<2> item) {
       AddOne(nubot, item);
   });
-  oneapi::mkl::blas::column_major::copy(q, N, T, 1, (nubot + N), 1);
-  oneapi::mkl::blas::column_major::copy(q, N, (T + N), 1, (nubot + 2 * N), 1);
-  oneapi::mkl::blas::column_major::copy(q, N, (T + 2 * N), 1, (nubot + 3 * N), 1);
+  math_ns::blas::column_major::copy(q, N, T, 1, (nubot + N), 1);
+  math_ns::blas::column_major::copy(q, N, (T + N), 1, (nubot + 2 * N), 1);
+  math_ns::blas::column_major::copy(q, N, (T + 2 * N), 1, (nubot + 3 * N), 1);
 
   // nubot += -( 1 - zbot)
   // => nubot += zbot; nubot -= 1
   alpha = 1.f;
-  oneapi::mkl::blas::column_major::axpy(q, 4 * N, alpha, zbot, 1, nubot, 1);
+  math_ns::blas::column_major::axpy(q, 4 * N, alpha, zbot, 1, nubot, 1);
   // Subtract 1 from every element in the array.  SubOne works on rows.
   q.parallel_for(
     sycl::nd_range<2>(gws, lws), [=](sycl::nd_item<2> item) {
@@ -268,19 +274,19 @@ float NusseltCompute(sycl::queue &q, float *T, float *nutop, float *ztop,
   // accumulate in the 0th row
   // scale the 0th row by -(11/3)
   alpha = -(11.f/3.f);
-  oneapi::mkl::blas::column_major::scal(q, N, alpha, nubot, 1);
+  math_ns::blas::column_major::scal(q, N, alpha, nubot, 1);
   // Add 6*row1
   alpha = 6.f;
-  oneapi::mkl::blas::column_major::axpy(q, N, alpha, (nubot + N), 1, nubot, 1);
+  math_ns::blas::column_major::axpy(q, N, alpha, (nubot + N), 1, nubot, 1);
   // Add -3*row2
   alpha = -3.f;
-  oneapi::mkl::blas::column_major::axpy(q, N, alpha, (nubot + (2 * N)), 1, nubot, 1);
+  math_ns::blas::column_major::axpy(q, N, alpha, (nubot + (2 * N)), 1, nubot, 1);
   // Add (2/3)*row3
   alpha = 2.f/3.f;
-  oneapi::mkl::blas::column_major::axpy(q, N, alpha, (nubot + (3 * N)), 1, nubot, 1);
+  math_ns::blas::column_major::axpy(q, N, alpha, (nubot + (3 * N)), 1, nubot, 1);
   // Divide the array by 2*DX
   alpha = 1.f/(2.f*DX);
-  oneapi::mkl::blas::column_major::scal(q, 4 * N, alpha, nubot, 1);
+  math_ns::blas::column_major::scal(q, 4 * N, alpha, nubot, 1);
   // Elementwise multiplication with trnu
   q.parallel_for(
     sycl::nd_range<2>(gws, lws), [=](sycl::nd_item<2> item) {
@@ -289,7 +295,7 @@ float NusseltCompute(sycl::queue &q, float *T, float *nutop, float *ztop,
   // Sum up the elements of row0, by performing a dot product with
   // a row that has been altered to be all 1s.
   // The second row of nutop has already been set up for this.
-  oneapi::mkl::blas::column_major::dot(q, N, nubot, 1, (nutop + N), 1, result).wait();
+  math_ns::blas::column_major::dot(q, N, nubot, 1, (nutop + N), 1, result).wait();
   botsum = *result /(-XF);
 
   sycl::free(result, q);
@@ -312,22 +318,22 @@ void Dz(sycl::queue &q, float *f, int is_it_psi, float *y) {
   // Move all but the first two rows of f into the interior rows of y.
   // The end of one row is one element away from the beginning of the next,
   // so adjacent rows are laid out in memory identically to a vector.
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 4), (f + (2 * N)), 1,
+  math_ns::blas::column_major::copy(q, N * (M - 4), (f + (2 * N)), 1,
                                         (y + N), 1);
   // Subtract all but the last two rows of f.
   const float alpha = -1.f;
   const float alpha2 = 1.f/(2.f*DX);
-  oneapi::mkl::blas::column_major::axpy(q, N * (M - 4), alpha, f, 1, (y + N), 1);
+  math_ns::blas::column_major::axpy(q, N * (M - 4), alpha, f, 1, (y + N), 1);
 
   if(is_it_psi == 1) {
     // yrows[0] = frows[1]
     // Move the second row of f into the first row of y
-    oneapi::mkl::blas::column_major::copy(q, N, (f + N), 1, y, 1);
+    math_ns::blas::column_major::copy(q, N, (f + N), 1, y, 1);
   }
   else {
     // yrows[0] = frows[1] - 1
     // Move the second row of f into the first row of y
-    oneapi::mkl::blas::column_major::copy(q, N, (f + N), 1, y, 1);
+    math_ns::blas::column_major::copy(q, N, (f + N), 1, y, 1);
     // Subtract 1 from every element in the first row of y.
    sycl::range<2> gws (1, (floorf(N / 256.f) + 1) * 256);
    sycl::range<2> lws (1, 256);
@@ -339,12 +345,12 @@ void Dz(sycl::queue &q, float *f, int is_it_psi, float *y) {
 
   // yrows[M-3] = -frows[M-4]
   // Copy the second-to-last row of f into the last row of y
-  oneapi::mkl::blas::column_major::copy(q, N, (f + ((M - 4) * N)), 1,
+  math_ns::blas::column_major::copy(q, N, (f + ((M - 4) * N)), 1,
                                         (y + (M - 3) * N), 1);
   // Scale by -1.f
-  oneapi::mkl::blas::column_major::scal(q, N, alpha, (y + (M - 3) * N), 1);
+  math_ns::blas::column_major::scal(q, N, alpha, (y + (M - 3) * N), 1);
   // Scale y by 1/(2*DX)
-  oneapi::mkl::blas::column_major::scal(q, N * (M - 2), alpha2, y, 1);
+  math_ns::blas::column_major::scal(q, N * (M - 2), alpha2, y, 1);
 }
 
 //=============================================================================
@@ -360,29 +366,29 @@ void Dz(sycl::queue &q, float *f, int is_it_psi, float *y) {
 void Dzz(sycl::queue &q, float *f, float *y) {
   // yrows[i] = frows[i - 1] - 2*frows[i] + frows[i + 1]
   // Move all but the last two rows of f into the interior rows of y.
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 4), f, 1, (y + N), 1);
+  math_ns::blas::column_major::copy(q, N * (M - 4), f, 1, (y + N), 1);
 
   const float alpha = -2.f;
   const float alpha2 = 1.f;
   const float alpha3 = 1.f/DX2;
 
   // Subtract 2* the interior rows of f
-  oneapi::mkl::blas::column_major::axpy(q, N * (M - 4), alpha, (f + N), 1,
+  math_ns::blas::column_major::axpy(q, N * (M - 4), alpha, (f + N), 1,
                                         (y + N), 1);
 
   // Add all but the first two rows of f.
-  oneapi::mkl::blas::column_major::axpy(q, N * (M - 4), alpha2, (f + (2 * N)),
+  math_ns::blas::column_major::axpy(q, N * (M - 4), alpha2, (f + (2 * N)),
                                         1, (y + N), 1);
 
   // yrows[0] = 1 - 2*frows[0] + frows[1]
   // Copy the first row of f into the first row of y
-  oneapi::mkl::blas::column_major::copy(q, N, f, 1, y, 1);
+  math_ns::blas::column_major::copy(q, N, f, 1, y, 1);
 
   // scale by -2
-  oneapi::mkl::blas::column_major::scal(q, N, alpha, y, 1);
+  math_ns::blas::column_major::scal(q, N, alpha, y, 1);
 
   // add the second row of f
-  oneapi::mkl::blas::column_major::axpy(q, N, alpha2, (f + N), 1, y, 1);
+  math_ns::blas::column_major::axpy(q, N, alpha2, (f + N), 1, y, 1);
 
   // Add 1 to every element in the first row of y.
   sycl::range<2> gws (1, (floorf(N / 256.f) + 1) * 256);
@@ -394,13 +400,13 @@ void Dzz(sycl::queue &q, float *f, float *y) {
 
   // yrows[M-3] = frows[M-4] - 2*frows[M-3]
   // move the second-to-last row of f into the last row of y
-  oneapi::mkl::blas::column_major::copy(q, N, (f + (M - 4) * N), 1,
+  math_ns::blas::column_major::copy(q, N, (f + (M - 4) * N), 1,
                                         (y + (M - 3) * N), 1);
   // subtract -2* the last row of f
-  oneapi::mkl::blas::column_major::axpy(q, N, alpha, (f + (M - 3) * N), 1,
+  math_ns::blas::column_major::axpy(q, N, alpha, (f + (M - 3) * N), 1,
                                         (y + (M - 3) * N), 1);
   // Scale y by 1/DX2
-  oneapi::mkl::blas::column_major::scal(q, (M - 2) * N, alpha3, y, 1);
+  math_ns::blas::column_major::scal(q, (M - 2) * N, alpha3, y, 1);
 }
 
 //=============================================================================
@@ -421,13 +427,13 @@ void Dx(sycl::queue &q, float *f, int is_it_psi, float *y) {
   // for longer vectors.
 
   for(int i = 0; i < M - 2; i++) {
-    oneapi::mkl::blas::column_major::copy(q, (N - 2), (f + i * N) + 2, 1,
+    math_ns::blas::column_major::copy(q, (N - 2), (f + i * N) + 2, 1,
                                           (y + i * N) + 1, 1);
   }
   // Subtract the block corresponding to all but the last two columns of f.
   float alpha = -1.f;
   for(int i = 0; i < M - 2; i++) {
-    oneapi::mkl::blas::column_major::axpy(q, (N - 2), alpha, (f + i * N), 1,
+    math_ns::blas::column_major::axpy(q, (N - 2), alpha, (f + i * N), 1,
                                           (y + i * N) + 1, 1);
   }
 
@@ -437,40 +443,40 @@ void Dx(sycl::queue &q, float *f, int is_it_psi, float *y) {
     float alpha3 = 2.f/3.f;
     // ycols[0] = 6*fcols[1] - 3*fcols[2] + (2/3)*fcols[3]
     // Begin by copying the second column of f into the first column of y
-    oneapi::mkl::blas::column_major::copy(q, (M - 2), (f + 1), N, y, N);
+    math_ns::blas::column_major::copy(q, (M - 2), (f + 1), N, y, N);
     // Scale it by a factor of 6
-    oneapi::mkl::blas::column_major::scal(q, (M - 2), alpha, y, N);
+    math_ns::blas::column_major::scal(q, (M - 2), alpha, y, N);
     // Subtract the third column of 3*f
-    oneapi::mkl::blas::column_major::axpy(q, (M - 2), alpha2, (f + 2), N, y, N);
+    math_ns::blas::column_major::axpy(q, (M - 2), alpha2, (f + 2), N, y, N);
     // Add the fourth column of (2/3)*f
-    oneapi::mkl::blas::column_major::axpy(q, (M - 2), alpha3, (f + 3), N, y, N);
+    math_ns::blas::column_major::axpy(q, (M - 2), alpha3, (f + 3), N, y, N);
 
     alpha = -alpha;
     alpha2 = -alpha2;
     alpha3 = -alpha3;
     //ycols[N-1] = -6*fcols[N-2] + 3*fcols[N-3] - (2/3)*fcols[N-4]
     // Copy the second-to-last column of f into the last column of y
-    oneapi::mkl::blas::column_major::copy(q, (M - 2), (f + (N - 2)), N,
+    math_ns::blas::column_major::copy(q, (M - 2), (f + (N - 2)), N,
                                           (y + (N - 1)), N);
     // Scale it by a factor of -6
-    oneapi::mkl::blas::column_major::scal(q, (M - 2), alpha, (y + (N - 1)), N);
+    math_ns::blas::column_major::scal(q, (M - 2), alpha, (y + (N - 1)), N);
     // Add the third-to-last column of 3*fcols[N-3]
-    oneapi::mkl::blas::column_major::axpy(q, (M - 2), alpha2, (f + (N - 3)), N,
+    math_ns::blas::column_major::axpy(q, (M - 2), alpha2, (f + (N - 3)), N,
                                           (y + (N - 1)), N);
     // Subtract the fourth-to-last column of (2/3)*f[N-4]
-    oneapi::mkl::blas::column_major::axpy(q, (M - 2), alpha3, (f + (N - 4)), N,
+    math_ns::blas::column_major::axpy(q, (M - 2), alpha3, (f + (N - 4)), N,
                                           (y + (N - 1)), N);
   }
   else {
     // outside columns = 0
     const float alpha = 0.f;
-    oneapi::mkl::blas::column_major::scal(q, (M - 2), alpha, y, N);
-    oneapi::mkl::blas::column_major::scal(q, (M - 2), alpha, (y + (N - 1)), N);
+    math_ns::blas::column_major::scal(q, (M - 2), alpha, y, N);
+    math_ns::blas::column_major::scal(q, (M - 2), alpha, (y + (N - 1)), N);
   }
 
   // Scale y by (1/(2*DX))
   alpha = (1.f/(2.f*DX));
-  oneapi::mkl::blas::column_major::scal(q, N * (M - 2), alpha, y, 1);
+  math_ns::blas::column_major::scal(q, N * (M - 2), alpha, y, 1);
 }
 
 //=============================================================================
@@ -492,40 +498,40 @@ void Dxx(sycl::queue &q, float *f, float *y) {
 
   // ycols[i] = fcols[i-1] - 2*fcols[i] + fcols[i+1], interior columns
   // copy f into y
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), f, 1, y, 1);
+  math_ns::blas::column_major::copy(q, N * (M - 2), f, 1, y, 1);
   // scale by -2
-  oneapi::mkl::blas::column_major::scal(q, N * (M - 2), alpha, y, 1);
+  math_ns::blas::column_major::scal(q, N * (M - 2), alpha, y, 1);
   // Add the block corresponding to all but the last two columns of f.
   for(int i = 0; i < M-2; i++) {
-    oneapi::mkl::blas::column_major::axpy(q, (N - 2), alpha3, (f + i * N), 1,
+    math_ns::blas::column_major::axpy(q, (N - 2), alpha3, (f + i * N), 1,
                                           (y + i * N) + 1, 1);
   }
   // Add the block corresponding to all but the first two columns of f.
   for(int i = 0; i < M-2; i++) {
-    oneapi::mkl::blas::column_major::axpy(q, (N - 2), alpha3, (f + i * N) + 2,
+    math_ns::blas::column_major::axpy(q, (N - 2), alpha3, (f + i * N) + 2,
                                           1, (y + i * N) + 1, 1);
   }
 
   // ycols[0] = -2*fcols[0] + 2*fcols[1]
   // Copy the first column of f into the first column of y.
-  oneapi::mkl::blas::column_major::copy(q, (M - 2), f, N, y, N);
+  math_ns::blas::column_major::copy(q, (M - 2), f, N, y, N);
   // Scale the first column of y by -2.f
-  oneapi::mkl::blas::column_major::scal(q, (M - 2), alpha, y, N);
+  math_ns::blas::column_major::scal(q, (M - 2), alpha, y, N);
   // Add 2* the second column of f.
-  oneapi::mkl::blas::column_major::axpy(q, (M - 2), alpha2, (f + 1), N, y, N);
+  math_ns::blas::column_major::axpy(q, (M - 2), alpha2, (f + 1), N, y, N);
 
   // ycols[N-1] = -2*fcols[N-1] + 2*fcols[N-2]
   // Move the last column of f into the last column of y
-  oneapi::mkl::blas::column_major::copy(q, (M - 2), (f + (N - 1)), N,
+  math_ns::blas::column_major::copy(q, (M - 2), (f + (N - 1)), N,
                                         (y + (N - 1)), N);
   // Scale by -2.f
-  oneapi::mkl::blas::column_major::scal(q, (M - 2), alpha, (y + (N - 1)), N);
+  math_ns::blas::column_major::scal(q, (M - 2), alpha, (y + (N - 1)), N);
   // add 2* the second-to-last column of f.
-  oneapi::mkl::blas::column_major::axpy(q, (M - 2), alpha2, (f + (N - 2)), N,
+  math_ns::blas::column_major::axpy(q, (M - 2), alpha2, (f + (N - 2)), N,
                                         (y + (N - 1)), N);
 
   // Scale y by 1/(DX^2)
-  oneapi::mkl::blas::column_major::scal(q, N * (M - 2), alpha4, y, 1);
+  math_ns::blas::column_major::scal(q, N * (M - 2), alpha4, y, 1);
 }
 
 //=============================================================================
@@ -544,13 +550,13 @@ void G(sycl::queue &q, float *f, float *Tbuff, float *DxT, float *y,
 
   // Define omega to be the interior columns of Dxf
   // Save Dx of f in DxT for later
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), f, 1, DxT, 1);
+  math_ns::blas::column_major::copy(q, N * (M - 2), f, 1, DxT, 1);
 
   Dx(q, f, 0, DxT);
 
   // Copy the interior columns of DxT to omega
   for(int i = 0; i < M-2; i ++) {
-    oneapi::mkl::blas::column_major::copy(q, (N - 2), (DxT + i * N) + 1, 1,
+    math_ns::blas::column_major::copy(q, (N - 2), (DxT + i * N) + 1, 1,
                                           (omega + i * (N - 2)), 1);
   }
 
@@ -574,19 +580,19 @@ void G(sycl::queue &q, float *f, float *Tbuff, float *DxT, float *y,
   const float alpha2 = -1.f;
   const float beta = 0.f;
 
-  oneapi::mkl::blas::column_major::gemm(
-      q, oneapi::mkl::transpose::nontrans, oneapi::mkl::transpose::nontrans,
+  math_ns::blas::column_major::gemm(
+      q, math_ns::transpose::nontrans, math_ns::transpose::nontrans,
       N - 2, M - 2, M - 2, alpha, omega, N - 2, dsc,
       M - 2, beta, Tbuff, N - 2);
-  oneapi::mkl::blas::column_major::copy(q, (N - 2) * (M - 2), Tbuff, 1, omega, 1);
+  math_ns::blas::column_major::copy(q, (N - 2) * (M - 2), Tbuff, 1, omega, 1);
 
   // Perform Tranpose(dsr)*Transpose(omega), store in omega.
   // since A is square, M = k = N-2, so n must be M-2.
-  oneapi::mkl::blas::column_major::gemm(
-      q, oneapi::mkl::transpose::nontrans, oneapi::mkl::transpose::nontrans,
+  math_ns::blas::column_major::gemm(
+      q, math_ns::transpose::nontrans, math_ns::transpose::nontrans,
       N - 2, M - 2, N - 2, alpha, dsr, N - 2, omega,
       N - 2, beta, Tbuff, N - 2);
-  oneapi::mkl::blas::column_major::copy(q, (N - 2) * (M - 2), Tbuff, 1, omega, 1);
+  math_ns::blas::column_major::copy(q, (N - 2) * (M - 2), Tbuff, 1, omega, 1);
 
   // elementwise matrix multiplication, storing the result in omega
   //DEBUG
@@ -595,44 +601,44 @@ void G(sycl::queue &q, float *f, float *Tbuff, float *DxT, float *y,
   });
 
   // same Transpose(omega)*Transpose(dsc) operation as before
-  oneapi::mkl::blas::column_major::gemm(
-      q, oneapi::mkl::transpose::nontrans, oneapi::mkl::transpose::nontrans,
+  math_ns::blas::column_major::gemm(
+      q, math_ns::transpose::nontrans, math_ns::transpose::nontrans,
       N - 2, M - 2, M - 2, alpha, omega, N - 2, dsc,
       M - 2, beta, Tbuff, N - 2);
-  oneapi::mkl::blas::column_major::copy(q, (N - 2) * (M - 2), Tbuff, 1, omega,
+  math_ns::blas::column_major::copy(q, (N - 2) * (M - 2), Tbuff, 1, omega,
                                         1);
 
   // same Transpose(dsr)*Transpose(omega) operation as before
-  oneapi::mkl::blas::column_major::gemm(
-      q, oneapi::mkl::transpose::nontrans, oneapi::mkl::transpose::nontrans,
+  math_ns::blas::column_major::gemm(
+      q, math_ns::transpose::nontrans, math_ns::transpose::nontrans,
       N - 2, M - 2, N - 2, alpha, dsr, N - 2, omega,
       N - 2, beta, Tbuff, N - 2);
-  oneapi::mkl::blas::column_major::copy(q, (N - 2) * (M - 2), Tbuff, 1, omega, 1);
+  math_ns::blas::column_major::copy(q, (N - 2) * (M - 2), Tbuff, 1, omega, 1);
 
   // Scale omega by -(DX^4)*(RA) = OMEGACOEFF
   const float omegacoeff = OMEGACOEFF;
-  oneapi::mkl::blas::column_major::scal(q, (N - 2) * (M - 2), omegacoeff, omega, 1);
+  math_ns::blas::column_major::scal(q, (N - 2) * (M - 2), omegacoeff, omega, 1);
 
   // interior columns of psi = (RA*DX^4)*omega
   // copy omega into the interior columns of psi
   // omega has rows of length N-2 instead of N
 
   for(int i = 0; i < M-2; i ++) {
-    oneapi::mkl::blas::column_major::copy(q, (N - 2), (omega + i * (N - 2)), 1,
+    math_ns::blas::column_major::copy(q, (N - 2), (omega + i * (N - 2)), 1,
                                           (psi + i * N) + 1, 1);
   }
 
   // Velocity in the x-direction
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), f, 1, u, 1);
+  math_ns::blas::column_major::copy(q, N * (M - 2), f, 1, u, 1);
   Dz(q, psi, 1, u);
 
   // v is -Dxpsi, velocity in the z direction.
   // Place Dxpsi into v
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), f, 1, v, 1);
+  math_ns::blas::column_major::copy(q, N * (M - 2), f, 1, v, 1);
   Dx(q, psi, 1, v);
 
   // Change the sign of v.
-  oneapi::mkl::blas::column_major::scal(q, (M - 2) * N, alpha2, v, 1);
+  math_ns::blas::column_major::scal(q, (M - 2) * N, alpha2, v, 1);
   // Store v in the z velocity file
 
   // If compute_velocity = 1, we need to update dt
@@ -640,14 +646,14 @@ void G(sycl::queue &q, float *f, float *Tbuff, float *DxT, float *y,
     // CublasIdamax returns 1-indexed pointers into the max element of a
     // float-precision vector
     int64_t *iu = sycl::malloc_shared<int64_t>(1, q);
-    auto e_iu = oneapi::mkl::blas::column_major::iamax(
-        q, N * (M - 2), u, 1, iu, oneapi::mkl::index_base::one);
+    auto e_iu = math_ns::blas::column_major::iamax(
+        q, N * (M - 2), u, 1, iu, math_ns::index_base::one);
     int64_t *iv = sycl::malloc_shared<int64_t>(1, q);
-    auto e_iv = oneapi::mkl::blas::column_major::iamax(
-        q, N * (M - 2), v, 1, iv, oneapi::mkl::index_base::one);
+    auto e_iv = math_ns::blas::column_major::iamax(
+        q, N * (M - 2), v, 1, iv, math_ns::index_base::one);
     q.submit([&] (sycl::handler& cgh) {
       cgh.depends_on({e_iu, e_iv});
-      cgh.single_task<class update_dt>([=] () { 
+      cgh.single_task<class update_dt>([=] () {
         Updatedt(iu[0], u, iv[0], v, dt);
       });
     }).wait();
@@ -656,16 +662,16 @@ void G(sycl::queue &q, float *f, float *Tbuff, float *DxT, float *y,
   }
 
   // Place Dxxf into y
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), f, 1, y, 1);
+  math_ns::blas::column_major::copy(q, N * (M - 2), f, 1, y, 1);
   Dxx(q, f, y);
 
   // y = y + Dzzf
   // place Dzzf into Tbuff
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), f, 1, Tbuff, 1);
+  math_ns::blas::column_major::copy(q, N * (M - 2), f, 1, Tbuff, 1);
   Dzz(q, f, Tbuff);
 
   // Add the elements of y and Tbuff, storing in y.
-  oneapi::mkl::blas::column_major::axpy(q, N * (M - 2), alpha, Tbuff, 1, y, 1);
+  math_ns::blas::column_major::axpy(q, N * (M - 2), alpha, Tbuff, 1, y, 1);
 
   // u = u.*DxT, where .* denotes elementwise multiplication
   // Perform the elentwise multiplication, storing in u
@@ -675,10 +681,10 @@ void G(sycl::queue &q, float *f, float *Tbuff, float *DxT, float *y,
 
   // y = y + u
   // Add y and u, storing the result in y
-  oneapi::mkl::blas::column_major::axpy(q, N * (M - 2), alpha, u, 1, y, 1);
+  math_ns::blas::column_major::axpy(q, N * (M - 2), alpha, u, 1, y, 1);
 
   // u = DzT
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), f, 1, u, 1);
+  math_ns::blas::column_major::copy(q, N * (M - 2), f, 1, u, 1);
 
   Dz(q, f, 0, u);
 
@@ -688,10 +694,10 @@ void G(sycl::queue &q, float *f, float *Tbuff, float *DxT, float *y,
   });
 
   // y = y + u
-  oneapi::mkl::blas::column_major::axpy(q, N * (M - 2), alpha, u, 1, y, 1);
+  math_ns::blas::column_major::axpy(q, N * (M - 2), alpha, u, 1, y, 1);
 
   // copy into output
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), y, 1, output, 1);
+  math_ns::blas::column_major::copy(q, N * (M - 2), y, 1, output, 1);
 }
 
 
@@ -912,25 +918,25 @@ int main(int argc, char *argv[]) {
 
   // use d_T to define d_psi, d_u, d_v, and d_y = 0.
   float alpha = -1.f;
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_psi, 1);
-  oneapi::mkl::blas::column_major::axpy(q, N * (M - 2), alpha, d_psi, 1, d_psi,
+  math_ns::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_psi, 1);
+  math_ns::blas::column_major::axpy(q, N * (M - 2), alpha, d_psi, 1, d_psi,
                                         1);
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), d_psi, 1, d_u, 1);
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), d_psi, 1, d_v, 1);
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), d_psi, 1, d_y, 1);
+  math_ns::blas::column_major::copy(q, N * (M - 2), d_psi, 1, d_u, 1);
+  math_ns::blas::column_major::copy(q, N * (M - 2), d_psi, 1, d_v, 1);
+  math_ns::blas::column_major::copy(q, N * (M - 2), d_psi, 1, d_y, 1);
 
   //initialize all intermediate matrices to T;
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_xrk3, 1);
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_yrk3, 1);
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_zrk3, 1);
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_Tbuff, 1);
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_DxT, 1);
+  math_ns::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_xrk3, 1);
+  math_ns::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_yrk3, 1);
+  math_ns::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_zrk3, 1);
+  math_ns::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_Tbuff, 1);
+  math_ns::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_DxT, 1);
 
   // DEBUG
   // temporary buffer for use in d_*rk3 stuff
   float* d_temp;
   d_temp = sycl::malloc_device<float>(N * (M - 2), q);
-  oneapi::mkl::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_temp, 1);
+  math_ns::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_temp, 1);
 
   printf("Begin computation: \n");
 
@@ -957,9 +963,9 @@ int main(int argc, char *argv[]) {
     // add (dt/3)*d_xrk3 to T, store the result in T temporarily.
     //    cublasSaxpy(h, N*(M-2), (dt/3.f), d_xrk3, 1, d_T, 1);
     //DEBUG
-    oneapi::mkl::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_temp, 1);
+    math_ns::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_temp, 1);
     alpha = dt/3.f;
-    oneapi::mkl::blas::column_major::axpy(q, N * (M - 2), alpha, d_xrk3, 1,
+    math_ns::blas::column_major::axpy(q, N * (M - 2), alpha, d_xrk3, 1,
                                           d_temp, 1);
     // Compute d_yrk3 = g(T + (dt/3)*d_xrk3, 0) by using the updated T.
     //    SHORTG(d_T, 0, d_yrk3);
@@ -972,9 +978,9 @@ int main(int argc, char *argv[]) {
     // Add (2*dt/3)*d_yrk3 to T, store the result in T temporarily.
     //    cublasSaxpy(h, N*(M-2), (2.f*(dt/3)), d_yrk3, 1, d_T, 1);
     //DEBUG
-    oneapi::mkl::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_temp, 1);
+    math_ns::blas::column_major::copy(q, N * (M - 2), d_T, 1, d_temp, 1);
     alpha = 2.f*(dt/3.f);
-    oneapi::mkl::blas::column_major::axpy(q, N * (M - 2), alpha, d_yrk3, 1,
+    math_ns::blas::column_major::axpy(q, N * (M - 2), alpha, d_yrk3, 1,
                                           d_temp, 1);
     // Compute d_zrk3 = g(T + (2*dt/3)*d_yrk3) by using the updated T.
     //    SHORTG(d_T, 1, d_zrk3);
@@ -991,10 +997,10 @@ int main(int argc, char *argv[]) {
     //    cublasSaxpy(h, N*(M-2), (3.f*(dt/4.f)), d_zrk3, 1, d_T, 1);
     //DEBUG
     alpha = dt/4.f;
-    oneapi::mkl::blas::column_major::axpy(q, N * (M - 2), alpha, d_xrk3, 1,
+    math_ns::blas::column_major::axpy(q, N * (M - 2), alpha, d_xrk3, 1,
                                           d_T, 1);
     alpha = 3.f * alpha;
-    oneapi::mkl::blas::column_major::axpy(q, N * (M - 2), alpha, d_zrk3, 1,
+    math_ns::blas::column_major::axpy(q, N * (M - 2), alpha, d_zrk3, 1,
                                           d_T, 1);
 
     // update the value of dt (in host) from d_dt (in device)

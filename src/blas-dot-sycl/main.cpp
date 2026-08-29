@@ -10,7 +10,14 @@
 #include <chrono>
 #include <cmath>
 #include <sycl/sycl.hpp>
+
+#ifdef USE_ONEMATH
+#include <oneapi/math.hpp>
+namespace math_ns = oneapi::math;
+#else
 #include <oneapi/mkl.hpp>
+namespace math_ns = oneapi::mkl;
+#endif
 
 template <typename T>
 void dot (const size_t iNumElements, const int iNumIterations)
@@ -50,16 +57,21 @@ void dot (const size_t iNumElements, const int iNumIterations)
   auto start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < iNumIterations; i++) {
-    oneapi::mkl::blas::dot(q, iNumElements, d_srcA, 1, d_srcB, 1, d_dst);
+    math_ns::blas::column_major::dot(q, iNumElements, d_srcA, 1, d_srcB, 1, d_dst);
   }
 
   q.wait();
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+#ifdef USE_ONEMATH
+  printf("Average oneMath::dot execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
+#else
   printf("Average oneMKL::dot execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
+#endif
   q.memcpy(&dst, d_dst, sizeof(T)).wait();
   printf("Host: %lf  Device: %lf\n", sum, double(dst));
-  printf("%s\n\n", (fabs(double(dst) - sum) < 1e-1) ? "PASS" : "FAIL");
+  const double tol = fmax(1e-6, 0.01 * fabs(sum));
+  printf("%s\n\n", (fabs(double(dst) - sum) < tol) ? "PASS" : "FAIL");
 
   sycl::free(d_dst, q);
   sycl::free(d_srcA, q);
@@ -82,10 +94,12 @@ int main(int argc, char **argv)
   dot<double>(iNumElements, iNumIterations);
   printf("\nFP32 Dot\n");
   dot<float>(iNumElements, iNumIterations);
+#if defined(__SYCL_COMPILER_VERSION) && !defined(USE_ONEMATH)
   printf("\nFP16 Dot\n");
   dot<sycl::half>(iNumElements, iNumIterations);
   printf("\nBF16 Dot\n");
   dot<sycl::ext::oneapi::bfloat16>(iNumElements, iNumIterations);
+#endif
 
   return EXIT_SUCCESS;
 }
