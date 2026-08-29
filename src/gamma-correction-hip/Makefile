@@ -23,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../gamma-correction-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -47,7 +47,8 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu Makefile
+%.o: %.cu ../gamma-correction-cuda/utils/* \
+          ../gamma-correction-cuda/utils.hpp Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
