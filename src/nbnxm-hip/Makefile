@@ -45,7 +45,8 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu ../nbnxm-cuda/constants.h ../nbnxm-cuda/vectypes.h Makefile
+%.o: %.cu ../nbnxm-cuda/constants.h ../nbnxm-cuda/vectypes.h \
+          ../nbnxm-cuda/reference.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

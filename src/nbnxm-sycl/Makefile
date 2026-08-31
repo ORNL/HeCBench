@@ -72,7 +72,7 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp ../nbnxm-cuda/constants.h
+%.o: %.cpp ../nbnxm-cuda/constants.h reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
