@@ -2,8 +2,9 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 //
 
-#include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <iterator>
 #include <vector>
 #include <chrono>
@@ -224,7 +225,6 @@ unsigned int checkDuplicateMask(const vector<int>& v) {
   checkDuplicateMask<<<1, 32>>>(v.size(), devSet);
 
   unsigned int mask = 0;
-  cudaDeviceSynchronize();
 
   cudaMemcpyFromSymbol(&mask,
                        duplicateMask, sizeof(unsigned int), 0,
