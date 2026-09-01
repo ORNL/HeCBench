@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <chrono>
-#include <cassert>
+#include <cmath>
 #include <hip/hip_runtime.h>
 #include <hip/hip_fp16.h>
 
@@ -180,11 +180,35 @@ __global__ void tv_elementwise_add_kernel(
   }
 }
 
+bool tv_layout_supported(int M, int N)
+{
+  if (M <= 0 || N <= 0) {
+    fprintf(stderr, "tv_layout: M and N must be positive (got %d x %d)\n", M, N);
+    return false;
+  }
+  if (M % TILE_M != 0) {
+    fprintf(stderr, "tv_layout: M=%d must be divisible by TILE_M=%d "
+                    "(%d warps x %d rows per thread)\n", M, TILE_M, WARPS, VALS_M);
+    return false;
+  }
+
+  int warp_size;
+  GPU_CHECK(hipDeviceGetAttribute(&warp_size, hipDeviceAttributeWarpSize, 0));
+  int TILE_N = warp_size * VALS_N;
+
+  if (N % TILE_N != 0) {
+    fprintf(stderr, "tv_layout: N=%d must be divisible by TILE_N=%d "
+                    "(%d lanes x %d values per thread)\n", N, TILE_N, warp_size, VALS_N);
+    return false;
+  }
+  return true;
+}
+
 template <int WARP_SIZE, int TILE_N>
 void run_tv_layout(const __half* dA, const __half* dB, __half* dC, int M, int N)
 {
-  assert(M % TILE_M == 0 && "M must be divisible by TILE_M=16");  // 4 warps
-  assert(N % TILE_N == 0 && "N must be divisible by TILE_N (warpSize * VALS_N)"); // 1 warp
+  //assert(M % TILE_M == 0 && "M must be divisible by TILE_M=16");  // 4 warps
+  //assert(N % TILE_N == 0 && "N must be divisible by TILE_N (warpSize * VALS_N)"); // 1 warp
   dim3 grid(N / TILE_N, M / TILE_M);
   dim3 block(WARPS * WARP_SIZE);
   tv_elementwise_add_kernel<TILE_N><<<grid, block>>>(dA, dB, dC, M, N);
@@ -193,7 +217,7 @@ void run_tv_layout(const __half* dA, const __half* dB, __half* dC, int M, int N)
 // helpers
 struct BenchResult {
   float avg_ms;   // mean over all timed iterations (ms)
-  float gbps;     // effective memory bandwidth (GB/s) based on best time
+  float gbps;     // effective memory bandwidth (GB/s) based on average time
 };
 
 static void print_result(const char* label, bool pass, BenchResult r, int repeats)
@@ -213,6 +237,12 @@ int main(int argc, char* argv[])
   const int M = atoi(argv[1]);
   const int N = atoi(argv[2]);
   const int repeat = atoi(argv[3]);
+
+  if (M <= 0 || N <= 0 || repeat <= 0) {
+    fprintf(stderr, "rows, columns and repeat must all be positive\n");
+    return 1;
+  }
+  if (!tv_layout_supported(M, N)) return 1;
 
   const size_t total   = (size_t)M * N;
   const size_t bytes = (size_t)total * sizeof(__half);
