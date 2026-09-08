@@ -96,7 +96,7 @@ int main(int argc, char* argv[])
 
   if (!valid_problem_size(m, nnz_row, repeat)) {
     printf("Invalid arguments: <rows>, <nnz per row> and <repeat> must be "
-           "positive, and the number of nonzeros must fit in a 32-bit int\n");
+           "positive, and all derived sizes must fit their integer types\n");
     return 1;
   }
 
