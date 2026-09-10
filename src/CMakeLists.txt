@@ -548,6 +548,7 @@ set(HECBENCH_POC_BENCHMARKS
     silu
     softmax-fused
     softmax-online
+    swiglu-oai
     sundials
     ssm
     storeKVCache
