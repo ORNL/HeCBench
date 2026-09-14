@@ -8,9 +8,6 @@ LAUNCHER  ?=
 
 OPTIMIZE  = yes
 DEBUG     = no
-CHECK     = yes
-DUMP      = yes
-TIMING    = yes
 
 GPU       = yes
 CUDA      = no
@@ -63,23 +60,15 @@ ifeq ($(GPU),yes)
   CFLAGS +=-DUSE_GPU
 endif
 
-ifeq ($(CHECK),yes)
-  VERIFY =-DVERIFY
-endif
-
-ifeq ($(DUMP),yes)
-  OUTPUT =-DOUTPUT
-endif
-
-ifeq ($(TIMING),yes)
-  TIMER =-DTIMER
+ifdef OUTPUT
+  CFLAGS += -DOUTPUT
 endif
 #===============================================================================
 # Targets to Build
 #===============================================================================
 
 main: hybridsort.o bucketsort.o mergesort.o
-	$(CC) $(CFLAGS) -o main $(VERIFY) $(OUTPUT) $(TIMER) \
+	$(CC) $(CFLAGS) -o main \
 		hybridsort.o bucketsort.o mergesort.o $(LDFLAGS)
 
 hybridsort.o : hybridsort.c mergesort.h bucketsort.h
