@@ -98,9 +98,9 @@ void computeKernel(const int taskperthr,
                    float* lsinblock,
                    sycl::nd_item<1> &item)
 {
-  const unsigned int tid = item.get_local_id(0);
-  const unsigned int bid = item.get_group(0);
-  const unsigned int id = bid * 256 + tid;
+  const int tid = item.get_local_id(0);
+  const int bid = item.get_group(0);
+  const int id = bid * 256 + tid;
 
   int posN=1,i,index,t,tmp;
   int pre[NODE_N]={0};

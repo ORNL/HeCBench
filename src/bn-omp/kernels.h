@@ -106,9 +106,9 @@ void computeKernel(const int taskperthr,
     float lsinblock[256];
     #pragma omp parallel 
     {
-      const unsigned int tid = omp_get_thread_num();
-      const unsigned int bid = omp_get_team_num();
-      const unsigned int id = bid * 256 + tid;
+      const int tid = omp_get_thread_num();
+      const int bid = omp_get_team_num();
+      const int id = bid * 256 + tid;
 
       int posN=1,i,index,t,tmp;
       int pre[NODE_N]={0};

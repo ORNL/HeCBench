@@ -99,9 +99,9 @@ __global__ void computeKernel(const int taskperthr,
                               int *D_resP)
 {
   extern __shared__ float lsinblock[];
-  const unsigned int id = blockIdx.x*256 + threadIdx.x;
-  const unsigned int tid = threadIdx.x;
-  const unsigned int bid = blockIdx.x;
+  const int id = blockIdx.x*256 + threadIdx.x;
+  const int tid = threadIdx.x;
+  const int bid = blockIdx.x;
   int posN=1,i,index,t,tmp;
   int pre[NODE_N]={0};
   int parN=0;
