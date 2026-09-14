@@ -30,13 +30,16 @@
 // order.
 //
 // In this implementation, a randomized sequence of size 2**n is given (n is a
-// positive number). At each stage, a part of step, the host redefines the
-// ordered sequenes and sends data to the kernel. The kernel swaps the elements
-// accordingly in parallel.
+// positive number). Compare-exchange partners use the classic XOR mapping.
+// Stages whose partner distance is at least the thread-block size run in
+// global memory. Remaining intra-block stages are fused into a local-memory
+// kernel to cut launch overhead.
 //
-#include <math.h>
-#include <string.h>
+#include <algorithm>
 #include <chrono>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
 #include <iostream>
 #include <limits>
 #include <sycl/sycl.hpp>
@@ -45,74 +48,92 @@
 
 void ParallelBitonicSort(int input[], int n) {
 
-  // Create queue on implementation-chosen default device.
 #ifdef USE_GPU
   sycl::queue q(sycl::gpu_selector_v, sycl::property::queue::in_order());
 #else
   sycl::queue q(sycl::cpu_selector_v, sycl::property::queue::in_order());
 #endif
 
-  // n: the exponent used to set the array size. Array size = power(2, n)
-  int size = pow(2, n);
-  size_t size_bytes = sizeof(int) * size;
+  int64_t size = (int64_t)1 << n;
+  size_t size_bytes = (size_t)size * sizeof(int);
+  int64_t nblocks = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+#ifdef SYCL_EXT_ONEAPI_MAX_WORK_GROUP_QUERY
+  sycl::id<1> groups = q.get_device().get_info<
+      sycl::ext::oneapi::experimental::info::device::max_work_groups<1>>();
+  int64_t max_grid = (int64_t)groups[0];
+#else
+  int64_t max_grid = std::numeric_limits<int>::max();
+#endif
+  int64_t grid = nblocks < max_grid ? nblocks : max_grid;
+  const auto gws = sycl::range<1>((size_t)(grid * BLOCK_SIZE));
+  const auto lws = sycl::range<1>(BLOCK_SIZE);
 
   int *d_input = sycl::malloc_device<int>(size, q);
   q.memcpy(d_input, input, size_bytes).wait();
 
   auto start = std::chrono::steady_clock::now();
 
-  // step from 0, 1, 2, ...., n-1
-  for (int step = 0; step < n; step++) {
-    // for each step s, stage goes s, s-1, ..., 0
-    for (int stage = step; stage >= 0; stage--) {
-      // In each state, construct a number (num_seq) of bitonic sequences of
-      // size seq_len (2, 4, ...) num_seq stores the number of bitonic sequences
-      // at each stage. seq_len stores the length of the bitonic sequence at
-      // each stage.
-      int seq_len = pow(2, stage + 1);
-      // Constant used in the kernel: 2**(step-stage).
-      int two_power = 1 << (step - stage);
+  for (int64_t k = 2; k <= size; k <<= 1) {
+    for (int64_t j = k >> 1; j > 0; j >>= 1) {
+      if (j >= BLOCK_SIZE) {
+        q.submit([&](sycl::handler &h) {
+          h.parallel_for(sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
+            int64_t stride = (int64_t)item.get_global_range(0);
+            for (int64_t i = (int64_t)item.get_global_id(0); i < size;
+                 i += stride) {
+              int64_t ixj = i ^ j;
+              if (ixj >= size || ixj <= i)
+                continue;
 
-      // Offload the work to kernel.
-      q.submit([&](sycl::handler &h) {
-        h.parallel_for(sycl::nd_range<1>(
-          sycl::range<1>(size), sycl::range<1>(BLOCK_SIZE)), [=](sycl::nd_item<1> item) {
-          int i = item.get_global_id(0);
- 
-          // Assign the bitonic sequence number.
-          int seq_num = i / seq_len;
-
-          // Variable used to identified the swapped element.
-          int swapped_ele = -1;
-
-          // Because the elements in the first half in the bitonic
-          // sequence may swap with elements in the second half,
-          // only the first half of elements in each sequence is
-          // required (seq_len/2).
-          int h_len = seq_len / 2;
-
-          if (i < (seq_len * seq_num) + h_len) swapped_ele = i + h_len;
-
-          // Check whether increasing or decreasing order.
-          int odd = seq_num / two_power;
-
-          // Boolean variable used to determine "increasing" or
-          // "decreasing" order.
-          bool increasing = ((odd % 2) == 0);
-
-          // Swap the elements in the bitonic sequence if needed
-          if (swapped_ele != -1) {
-            if (((d_input[i] > d_input[swapped_ele]) && increasing) ||
-                ((d_input[i] < d_input[swapped_ele]) && !increasing)) {
-              int temp = d_input[i];
-              d_input[i] = d_input[swapped_ele];
-              d_input[swapped_ele] = temp;
+              bool increasing = ((i & k) == 0);
+              int ai = d_input[i];
+              int aj = d_input[ixj];
+              if (increasing ? (ai > aj) : (ai < aj)) {
+                d_input[i] = aj;
+                d_input[ixj] = ai;
+              }
             }
-          }
+          });
         });
-      });
-    }  // end stage
-  }    // end step
+      } else {
+        q.submit([&](sycl::handler &h) {
+          sycl::local_accessor<int, 1> s(lws, h);
+          h.parallel_for(sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
+            int64_t tx = item.get_local_id(0);
+            auto grp = item.get_group();
+            int64_t stride =
+                (int64_t)item.get_group_range(0) * BLOCK_SIZE;
+
+            for (int64_t tile = (int64_t)item.get_group(0) * BLOCK_SIZE;
+                 tile < size; tile += stride) {
+              int64_t i = tile + tx;
+              s[tx] = (i < size) ? d_input[i] : 0;
+              sycl::group_barrier(grp);
+
+              for (int64_t jj = j; jj > 0; jj >>= 1) {
+                int64_t ixj = tx ^ jj;
+                if (i < size && ixj > tx) {
+                  bool increasing = ((i & k) == 0);
+                  int ai = s[tx];
+                  int aj = s[ixj];
+                  if (increasing ? (ai > aj) : (ai < aj)) {
+                    s[tx] = aj;
+                    s[ixj] = ai;
+                  }
+                }
+                sycl::group_barrier(grp);
+              }
+
+              if (i < size)
+                d_input[i] = s[tx];
+              sycl::group_barrier(grp);
+            }
+          });
+        });
+        break;
+      }
+    }
+  }
 
   q.wait();
   auto end = std::chrono::steady_clock::now();
@@ -121,54 +142,6 @@ void ParallelBitonicSort(int input[], int n) {
 
   q.memcpy(input, d_input, size_bytes).wait();
   sycl::free(d_input, q);
-}
-
-// Loop over the bitonic sequences at each stage in serial.
-void SwapElements(int step, int stage, int num_sequence, int seq_len,
-                  int *array) {
-  for (int seq_num = 0; seq_num < num_sequence; seq_num++) {
-    int odd = seq_num / (pow(2, (step - stage)));
-    bool increasing = ((odd % 2) == 0);
-
-    int h_len = seq_len / 2;
-
-    // For all elements in a bitonic sequence, swap them if needed
-    for (int i = seq_num * seq_len; i < seq_num * seq_len + h_len; i++) {
-      int swapped_ele = i + h_len;
-
-      if (((array[i] > array[swapped_ele]) && increasing) ||
-          ((array[i] < array[swapped_ele]) && !increasing)) {
-        int temp = array[i];
-        array[i] = array[swapped_ele];
-        array[swapped_ele] = temp;
-      }
-    }  // end for all elements in a sequence
-  }    // end all sequences
-}
-
-// Function sorts an array in serial using bitonic sort algorithm. The size of
-// the array is indicated by the exponent n: the array size is 2 ** n.
-inline void BitonicSort(int a[], int n) {
-  // n: the exponent indicating the array size = 2 ** n.
-
-  // step from 0, 1, 2, ...., n-1
-  for (int step = 0; step < n; step++) {
-    // for each step s, stage goes s, s-1,..., 0
-    for (int stage = step; stage >= 0; stage--) {
-      // Sequences (same size) are formed at each stage.
-      int num_sequence = pow(2, (n - stage - 1));
-      // The length of the sequences (2, 4, ...).
-      int sequence_len = pow(2, stage + 1);
-
-      SwapElements(step, stage, num_sequence, sequence_len, a);
-    }
-  }
-}
-
-// Function showing the array.
-void DisplayArray(int a[], int array_size) {
-  for (int i = 0; i < array_size; ++i) std::cout << a[i] << " ";
-  std::cout << "\n";
 }
 
 void Usage(std::string prog_name, int exponent) {
@@ -183,8 +156,12 @@ void Usage(std::string prog_name, int exponent) {
 }
 
 int main(int argc, char *argv[]) {
-  int n, seed, size;
-  int exp_max = log2(std::numeric_limits<int>::max());
+  int n, seed;
+  int64_t size;
+  // n must keep 2^n in int64_t and 2^n * sizeof(int) in size_t.
+  int exp_max = (int)sizeof(size_t) * 8 - 2;
+  if (exp_max > std::numeric_limits<int64_t>::digits)
+    exp_max = std::numeric_limits<int64_t>::digits;
 
   // Read parameters.
   try {
@@ -197,7 +174,7 @@ int main(int argc, char *argv[]) {
     }
 
     seed = std::stoi(argv[2]);
-    size = pow(2, n);
+    size = (int64_t)1 << n;
   } catch (...) {
     Usage(argv[0], exp_max);
     return -1;
@@ -205,7 +182,7 @@ int main(int argc, char *argv[]) {
 
   std::cout << "\nArray size: " << size << ", seed: " << seed << "\n";
 
-  size_t size_bytes = size * sizeof(int);
+  size_t size_bytes = (size_t)size * sizeof(int);
 
   // Memory allocated for host access only.
   int *data_cpu = (int *)malloc(size_bytes);
@@ -216,15 +193,15 @@ int main(int argc, char *argv[]) {
   // Initialize the array randomly using a seed.
   srand(seed);
 
-  for (int i = 0; i < size; i++) {
+  for (int64_t i = 0; i < size; i++) {
     data_gpu[i] = data_cpu[i] = rand() % 1000;
   }
 
   std::cout << "Bitonic sort (parallel)..\n";
   ParallelBitonicSort(data_gpu, n);
 
-  std::cout << "Bitonic sort (serial)..\n";
-  BitonicSort(data_cpu, n);
+  std::cout << "Reference sort (std::sort)..\n";
+  std::sort(data_cpu, data_cpu + size);
 
   // Verify
   int unequal = memcmp(data_gpu, data_cpu, size_bytes);
