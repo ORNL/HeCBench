@@ -74,11 +74,17 @@ __global__ void benchmark_shmem(float4 *g_data){
 void shmembenchGPU(double *c, const long size, const int n) {
   const int TOTAL_BLOCKS = size/(BLOCK_SIZE);
 
-  double *cd;
-  hipMalloc((void**)&cd, size*sizeof(double));
-
   dim3 dimBlock(BLOCK_SIZE, 1, 1);
   dim3 dimGrid_f4(TOTAL_BLOCKS/4, 1, 1);
+
+  // Every thread stores exactly one float4, so this is the whole extent the
+  // kernel touches. Sizing the buffer to it keeps the allocation, the copy back
+  // and the checksum in agreement; otherwise the tail is never written and the
+  // checksum depends on whatever the allocator happens to return.
+  const size_t buffer_bytes = (size_t)dimGrid_f4.x * BLOCK_SIZE * sizeof(float4);
+
+  double *cd;
+  hipMalloc((void**)&cd, buffer_bytes);
 
   auto start = high_resolution_clock::now();
 
@@ -91,12 +97,12 @@ void shmembenchGPU(double *c, const long size, const int n) {
   printf("Average kernel execution time : %f (ms)\n", time_shmem_128b * 1e-6);
 
   // Copy results back to host memory
-  hipMemcpy(c, cd, size*sizeof(double), hipMemcpyDeviceToHost);
+  hipMemcpy(c, cd, buffer_bytes, hipMemcpyDeviceToHost);
   hipFree(cd);
 
   // simple checksum
   double sum = 0;
-  for (long i = 0; i < size; i++) sum += c[i];
+  for (size_t i = 0; i < buffer_bytes/sizeof(double); i++) sum += c[i];
   if (sum != 21256458760384741137729978368.00)
     printf("checksum failed\n");
   
