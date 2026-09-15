@@ -26,6 +26,18 @@ void ANSEncoder::encode_memory(UNIT_TYPE* out, size_t size_out,
     size_t final_bit = 0;
     size_t final_size = 0;
     
+    // The decoder stops when the bitstream is exhausted, so the first symbol
+    // encoded (the last one decoded) must contribute at least one bit. For
+    // skewed distributions table[in[0]][0] holds a zero-length code, in which
+    // case that symbol leaves no trace in the stream and is lost. The encoder's
+    // initial state is never transmitted, so any state is admissible: pick one
+    // that gives the first symbol a non-empty codeword.
+    if(size_in > 0 && encoder_table->table[in[0]][state].code_length == 0) {
+        for(size_t s = 0; s < num_states; ++s) {
+            if(encoder_table->table[in[0]][s].code_length > 0) { state = s; break; }
+        }
+    }
+
     size_t at = 0;
     size_t in_unit = 0;
 
