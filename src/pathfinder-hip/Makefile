@@ -6,7 +6,6 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-OUTPUT    = no
 LAUNCHER  ?=
 
 #===============================================================================
@@ -29,10 +28,6 @@ CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 # Linker Flags
 LDFLAGS = 
 
-ifeq ($(OUTPUT),yes)
-  CFLAGS += -DBENCH_PRINT
-endif
-
 # Debug Flags
 ifeq ($(DEBUG),yes)
   CFLAGS += -g
@@ -51,7 +46,7 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu Makefile
+%.o: %.cu ../pathfinder-cuda/reference.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
