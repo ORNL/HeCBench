@@ -376,6 +376,7 @@ set(HECBENCH_POC_BENCHMARKS
     seam-carving
     secp256k1
     segment-reduce
+    segment-reduce2
     segsort
     sheath
     shmembench
