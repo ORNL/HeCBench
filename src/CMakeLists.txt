@@ -289,6 +289,7 @@ set(HECBENCH_POC_BENCHMARKS
     murmurhash3
     mxfp4
     myocyte
+    svt
     nbnxm
     nbody
     ne
