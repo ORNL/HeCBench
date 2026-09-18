@@ -613,6 +613,14 @@
             "100"
         ]
     ],
+    "kda": [
+        "(?:Average kernel execution time: )([0-9.+-e]+)(?: ms)",
+        [
+            "8",
+            "1024",
+            "100"
+        ]
+    ],
     "knn": [
         "(?:100 iterations \\()([0-9.+-e]+)(?: s by iteration\\))",
         [
