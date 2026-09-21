@@ -9,3 +9,4 @@ add_hecbench_benchmark(
     CATEGORIES algorithms
     LINK_LIBRARIES m
 )
+set_source_files_properties(main.c util/graphics/graphics.c util/graphics/resize.c PROPERTIES LANGUAGE CXX)

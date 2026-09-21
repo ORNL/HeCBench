@@ -12,3 +12,4 @@ add_hecbench_benchmark(
     CATEGORIES algorithms
     LINK_LIBRARIES m
 )
+set_source_files_properties(main.c kernel/kernel_wrapper.c kernel/kernel2_wrapper.c PROPERTIES LANGUAGE CXX)
