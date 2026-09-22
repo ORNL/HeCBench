@@ -117,7 +117,7 @@ void update(signed char *lattice_b,
 
 static void usage(const char *pname) {
 
-  const char *bname = rindex(pname, '/');
+  const char *bname = std::strrchr(pname, '/');
   if (!bname) {bname = pname;}
   else        {bname++;}
 
