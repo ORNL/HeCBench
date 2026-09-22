@@ -5,4 +5,5 @@ add_hecbench_benchmark(
     MODEL sycl
     SOURCES main-mpi.cpp
     CATEGORIES algorithms
+    LINK_LIBRARIES pthread
 )

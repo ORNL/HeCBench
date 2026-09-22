@@ -12,7 +12,8 @@ Z. Jin and J. S. Vetter, "A Benchmark Suite for Improving Performance Portabilit
 # Dependencies
 Certain benchmarks require [Boost](https://www.boost.org/releases/latest/), [Eigen](https://eigen.tuxfamily.org), [GDAL](https://github.com/OSGeo/gdal), GPU-aware Message Passing Interface(MPI) or vendors' collective communication libraries (e.g. NCCL).<br>
 Boost: hbc, ge-spmm, mmcsf, warpsort, gerbil<br>
-MPI:   miniDGS, miniWeather, pingpong, sparkler, allreduce, ccl, halo-finder<br>
+MPI:   miniDGS, miniWeather, sparkler, allreduce, ccl, halo-finder<br>
+GPU-aware MPI: pingpong (`main-mpi`; how to test with and without GPU-aware MPI: [pingpong-cuda](src/pingpong-cuda/README.md), [pingpong-hip](src/pingpong-hip/README.md), [pingpong-sycl](src/pingpong-sycl/README.md))<br>
 CCL:   ccl<br>
 Eigen: xlqc<br>
 GDAL:  stsg<br>
