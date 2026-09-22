@@ -7,3 +7,4 @@ add_hecbench_benchmark(
     CATEGORIES algorithms
     LINK_LIBRARIES m
 )
+set_source_files_properties(init.c io.c main.c material.c simulation.c utils.c PROPERTIES LANGUAGE CXX)
