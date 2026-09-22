@@ -85,7 +85,7 @@ Each benchmark falls into a single category. While such classification is not ac
     adjacent, aligned-types, asta, asyncAllocation, awbarrier, blockAccess, blockexchange, blockScan, collision, concurrentKernels, conversion, dispatch, dp4a, graphExecution, ert, interleave, intrinsics-cast, kernelLaunch, layout, mallocFree, maxFlops, mixbench, nosync, openmp, overlap, pad, pitch, popcount, pointerchase, prefetch, reverse, ring, saxpy-ompt, shuffle, simpleMultiDevice, streamCreateCopyDestroy, streamOrderedAllocation, streamPriority, streamUM, tensorAccessor, threadfence, warpexchange, vote, wmma, wordcount, zerocopy 
 
 ### Machine learning  
-    accuracy, adam, adamw, addBiasQKV, addBiasResidualLayerNorm, attention, attention-paged, attentionMergeState, attentionMultiHead, attentionMultiHeadKVCache, backprop, bincount, bn, channelShuffle, channelSum, clink, concat, crossEntropy, dense-embedding, dropout, dwconv, dwconv1d, expdist, flip, gd, gelu, ge-spmm, geglu, glu, gmm, gru, gru2, kalman, kmc, kmeans, knn, layernorm, lda, lif, logprob, lr, lrn, mask, matern, maxpool3d, mcpr, meanshift, megablocks, mergeVS, mf-sgd, mlaDecode, mlp, mmcsf, mnist, moe, moe-align, moe-sum, mrc, multinomial, muon, nlll, nonzero, overlay, p4, page-rank, permute, perplexity, pointwise, pool, qkv, qtclustering, remap, relu, resnet-kernels, rmsnorm, rowwiseMoments, rotary, sampling, scel, silu, snicit, softmax, softmax-fused, softmax-online, ssm, stddev, streamcluster, tsne, twell, unfold, vol2col, wedford, winograd, word2vec
+    accuracy, adam, adamw, addBiasQKV, addBiasResidualLayerNorm, attention, attention-paged, attentionMergeState, attentionMultiHead, attentionMultiHeadKVCache, backprop, bincount, bn, channelShuffle, channelSum, clink, concat, crossEntropy, dense-embedding, dropout, dwconv, dwconv1d, expdist, flip, gd, gelu, ge-spmm, geglu, glu, gmm, gru, gru2, kalman, kmc, kmeans, knn, layernorm, lda, lif, logprob, lr, lrn, mask, matern, maxpool3d, mcpr, meanshift, megablocks, mergeVS, mf-sgd, mlaDecode, mlp, mmcsf, mnist, moe, moe-align, moe-sum, mrc, multinomial, muon, nlll, nonzero, overlay, p4, page-rank, permute, perplexity, pointwise, pool, qkv, qtclustering, remap, relu, resnet-kernels, rmsnorm, rmsnorm-quant, rowwiseMoments, rotary, sampling, scel, silu, snicit, softmax, softmax-fused, softmax-online, ssm, stddev, streamcluster, tsne, twell, unfold, vol2col, wedford, winograd, word2vec
 
 ### Math
     atan2, axpby, bgmv, blas-dot, blas-fp4gemm, blas-fp8gemm, blas-gemm, blas-gemmBatched, blas-gemmStridedBatched, blas-gemmEx, blas-gemmEx2, blas-groupgemm, blas-mxfp6gemm, blas-mxfp8gemm, braycurtis, complex, cross, determinant, divergence, dp, eigenvalue, f16max, f16sp, f8cast, fresnel, fwt, gaussian, geam, gels, gemv, hadamard, hellinger, hmm, idivide, interval, jaccard, jacobi, jacobian, kurtosis, lanczos, langford, lci, lebesgue, leukocyte, lfib4, log2, lud, ludb, lut-gemm, michalewicz, matrix-rotate, matrixT, minkowski, mr, mrg32k3a, norm2, nqueen, ntt, oziMMU, phmm, pnpoly, quant3MatMul, reverse2D, rfs, romberg, rsc, schur-complement, sddmm-batch, secp256k1, simpleSpmv, slu, spd2s, spgeam, spgemm, spmm, spmv, spnnz, sps2d, spsort, sptrsv, thomas, wyllie, zeropoint
@@ -1458,6 +1458,9 @@ Early results are shown [here](results/README.md)
 
 ### rmsnorm (cuda)
   Apply root mean square layer normalization over a batch of inputs (https://github.com/AMD-AGI/Primus-Turbo)
+
+### rmsnorm-quant (cuda)
+  Fused RMSNorm and static per-tensor FP8 (E4M3) quantization (https://github.com/vllm-project/vllm)
 
 ### rng-wallace (cuda)
   Random number generation using the Wallace algorithm (https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-37-efficient-random-number-generation-and-application)
