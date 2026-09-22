@@ -8,5 +8,5 @@ add_hecbench_benchmark(
 	    util/file/file.c
 	    util/num/num.c
     CATEGORIES algorithms
+    C_AS_CXX
 )
-set_source_files_properties(main.c kernel/kernel_wrapper.c util/file/file.c  util/num/num.c PROPERTIES LANGUAGE CXX)

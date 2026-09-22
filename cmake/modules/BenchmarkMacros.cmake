@@ -44,6 +44,9 @@ set(HECBENCH_TEST_RUNNER "${CMAKE_SOURCE_DIR}/cmake/scripts/run_benchmark_test.p
 #   COMPILE_OPTIONS - Additional compile options (optional)
 #   LINK_LIBRARIES  - Additional libraries to link (optional)
 #   INCLUDE_DIRS  - Additional include path required by the benchmark (optional)
+#   C_AS_CXX    - Compile listed .c sources as C++ (optional). Needed when a
+#                 .c file is C++ (e.g. std::chrono) or is linked from C++
+#                 without extern "C". Applied only if this model is enabled.
 #   TEST_REGEX  - Regex pattern to match output for test verification (optional)
 #   TEST_ARGS   - Arguments to pass when running tests (optional)
 #   TEST_TIMEOUT - Timeout in seconds for test execution (optional, default 300)
@@ -58,7 +61,7 @@ set(HECBENCH_TEST_RUNNER "${CMAKE_SOURCE_DIR}/cmake/scripts/run_benchmark_test.p
 #
 function(add_hecbench_benchmark)
     # Parse arguments
-    set(options "")
+    set(options C_AS_CXX)
     set(oneValueArgs NAME MODEL TEST_REGEX TEST_TIMEOUT ENABLE_FASTMATH)
     set(multiValueArgs SOURCES CATEGORIES COMPILE_OPTIONS LINK_LIBRARIES INCLUDE_DIRS TEST_ARGS)
     cmake_parse_arguments(BENCH "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
@@ -156,6 +159,16 @@ function(add_hecbench_benchmark)
         set_source_files_properties(${BENCH_SOURCES} PROPERTIES LANGUAGE HIP)
     endif()
 
+    # Compile .c sources as C++ when requested (after the model-enabled
+    # early-return, so this is a no-op when the variant is skipped)
+    if(BENCH_C_AS_CXX)
+        foreach(_hecbench_src ${BENCH_SOURCES})
+            if(_hecbench_src MATCHES "\\.c$")
+                set_source_files_properties("${_hecbench_src}" PROPERTIES LANGUAGE CXX)
+            endif()
+        endforeach()
+    endif()
+
     # Add executable
     add_executable(${TARGET_NAME} ${BENCH_SOURCES})
 
@@ -210,15 +223,18 @@ function(add_hecbench_benchmark)
         )
 
     elseif(BENCH_MODEL_LOWER STREQUAL "sycl")
-        # SYCL configuration
-        target_compile_options(${TARGET_NAME} PRIVATE
-            -fsycl
-            ${SYCL_FLAGS}
-        )
-        target_link_options(${TARGET_NAME} PRIVATE
-            -fsycl
-            ${SYCL_FLAGS}
-        )
+        # SYCL configuration. Restrict SYCL_FLAGS (which already includes
+        # -fsycl for DPC++/clang) to C++ so genuine .c files are not passed
+        # to gcc with a flag it does not understand. Link uses SYCL_LINK_FLAGS
+        # so preprocessor -DUSE_GPU is not forwarded to the linker.
+        foreach(_sycl_flag ${SYCL_FLAGS})
+            target_compile_options(${TARGET_NAME} PRIVATE
+                $<$<COMPILE_LANGUAGE:CXX>:${_sycl_flag}>
+            )
+        endforeach()
+        if(SYCL_LINK_FLAGS)
+            target_link_options(${TARGET_NAME} PRIVATE ${SYCL_LINK_FLAGS})
+        endif()
         # Override the default CXX standard
         if(${TARGET_NAME} IN_LIST DEPEND_ON_CXX20)
             set_target_properties(${TARGET_NAME} PROPERTIES

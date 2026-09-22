@@ -42,6 +42,5 @@ add_hecbench_benchmark(
     INCLUDE_DIRS meschach_lib
     CATEGORIES algorithms
     LINK_LIBRARIES meschach_omp 
+    C_AS_CXX
 )
-
-set_source_files_properties(avilib.c misc_math.c detect_main.c find_ellipse.c track_ellipse.c track_ellipse_gpu.c PROPERTIES LANGUAGE CXX)

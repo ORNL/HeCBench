@@ -5,4 +5,5 @@ add_hecbench_benchmark(
     MODEL sycl
     SOURCES bucketsort.c hybridsort.c mergesort.c
     CATEGORIES algorithms
+    C_AS_CXX
 )

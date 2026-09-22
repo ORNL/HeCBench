@@ -11,4 +11,5 @@ add_hecbench_benchmark(
                  ${CMAKE_CURRENT_SOURCE_DIR}/kernel
     CATEGORIES algorithms
     LINK_LIBRARIES m
+    C_AS_CXX
 )

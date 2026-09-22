@@ -10,4 +10,5 @@ add_hecbench_benchmark(
     INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/util/num
                  ${CMAKE_CURRENT_SOURCE_DIR}/kernel
     CATEGORIES algorithms
+    C_AS_CXX
 )
