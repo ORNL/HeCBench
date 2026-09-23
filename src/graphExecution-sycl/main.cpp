@@ -10,12 +10,20 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <chrono>
 #include <cmath>
 #include <sycl/sycl.hpp>
 
 #define THREADS_PER_BLOCK 256
-#define LAUNCH_ITERATIONS  3
+#define INNER_ITERS 100
+#define DEFAULT_LAUNCH_ITERATIONS 32
+
+static double elapsed_us(std::chrono::steady_clock::time_point start,
+                         std::chrono::steady_clock::time_point end)
+{
+  return std::chrono::duration<double, std::micro>(end - start).count();
+}
 
 namespace sycl_ext = sycl::ext::oneapi::experimental;
 
@@ -132,22 +140,13 @@ void init_input(float*a, size_t size)
     a[i] = (rand() & 0xFF) / (float)RAND_MAX;
 }
 
-void usingGraph(sycl::queue &q, float* inputVec_h, float *inputVec_d,
-    double *outputVec_d, double *result_d,
-    size_t inputSize, size_t numOfBlocks)
+static void usingStream(sycl::queue &q, float *inputVec_h, float *inputVec_d,
+                     double *outputVec_d, double *result_d, double *result_h,
+                     size_t inputSize, size_t numOfBlocks)
 {
-  // compute the reference sum
-  double result_r = 0.0;
-  for (size_t i = 0; i < inputSize; i++)
-    result_r += inputVec_h[i];
-
-  sycl_ext::command_graph Graph{q.get_context(), q.get_device()};
-
-  Graph.begin_recording(q);
-
   q.memcpy(inputVec_d, inputVec_h, sizeof(float) * inputSize);
 
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < INNER_ITERS; i++) {
     q.memset(outputVec_d, 0, sizeof(double) * numOfBlocks);
 
     q.submit([&](sycl::handler &cgh) {
@@ -156,7 +155,7 @@ void usingGraph(sycl::queue &q, float* inputVec_h, float *inputVec_d,
 
       cgh.parallel_for(
           sycl::nd_range<1>(sycl::range<1>(numOfBlocks) *
-                            sycl::range<1>(THREADS_PER_BLOCK),
+                                sycl::range<1>(THREADS_PER_BLOCK),
                             sycl::range<1>(THREADS_PER_BLOCK)),
           [=](sycl::nd_item<1> item) {
             reduce(inputVec_d, outputVec_d, inputSize, numOfBlocks, item,
@@ -178,83 +177,75 @@ void usingGraph(sycl::queue &q, float* inputVec_h, float *inputVec_d,
     });
   }
 
-  double result_h = 0.0;
-  q.memcpy(&result_h, result_d, sizeof(double));
-
-  Graph.end_recording();
-
-  auto ExecGraph = Graph.finalize();
-
-  for (int i=0; i < LAUNCH_ITERATIONS; i++)
-  {
-    auto start = std::chrono::steady_clock::now();
-    q.submit([&](sycl::handler &cgh) {
-      cgh.ext_oneapi_graph(ExecGraph);
-    }).wait();
-    auto end = std::chrono::steady_clock::now();
-    auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    printf("%s\n", (std::fabs(result_h - result_r) < 1e-6) ? "PASS" : "FAIL");
-    printf("Execution time of using Graph: %f (us)\n\n", (time * 1e-3f));
-  }
+  q.memcpy(result_h, result_d, sizeof(double));
 }
 
-void usingStream(sycl::queue &q, float* inputVec_h, float *inputVec_d,
-    double *outputVec_d, double *result_d,
-    size_t inputSize, size_t numOfBlocks)
+static void benchmark(sycl::queue &q, float *inputVec_h, float *inputVec_d,
+                      double *outputVec_d, double *result_d, size_t inputSize,
+                      size_t numOfBlocks, int repeat)
 {
-  // compute the reference sum
   double result_r = 0.0;
   for (size_t i = 0; i < inputSize; i++)
     result_r += inputVec_h[i];
 
-  for (int i=0; i < LAUNCH_ITERATIONS; i++) {
+  double result_h = 0.0;
 
-    auto start = std::chrono::steady_clock::now();
+  // 1. Eager warmup (do not print)
+  usingStream(q, inputVec_h, inputVec_d, outputVec_d, result_d, &result_h, inputSize,
+           numOfBlocks);
+  q.wait();
 
-    q.memcpy(inputVec_d, inputVec_h, sizeof(float) * inputSize);
+  // 2. Capture + instantiate (reported separately from replay)
+  sycl_ext::command_graph Graph{q.get_context(), q.get_device()};
+  auto t_cap0 = std::chrono::steady_clock::now();
+  Graph.begin_recording(q);
+  usingStream(q, inputVec_h, inputVec_d, outputVec_d, result_d, &result_h, inputSize,
+           numOfBlocks);
+  Graph.end_recording();
+  auto ExecGraph = Graph.finalize();
+  auto t_cap1 = std::chrono::steady_clock::now();
+  printf("Capture+instantiate time: %f (us)\n", elapsed_us(t_cap0, t_cap1));
 
-    for (int i = 0; i < 100; i++) {
-      q.memset(outputVec_d, 0, sizeof(double) * numOfBlocks);
+  // 3. One graph replay (do not print)
+  q.submit([&](sycl::handler &cgh) { cgh.ext_oneapi_graph(ExecGraph); }).wait();
 
-      q.submit([&](sycl::handler &cgh) {
-        sycl::local_accessor<double, 1> tmp_acc(
-            sycl::range<1>(THREADS_PER_BLOCK), cgh);
-
-        cgh.parallel_for(
-            sycl::nd_range<1>(sycl::range<1>(numOfBlocks) *
-                              sycl::range<1>(THREADS_PER_BLOCK),
-                              sycl::range<1>(THREADS_PER_BLOCK)),
-            [=](sycl::nd_item<1> item) {
-                  reduce(inputVec_d, outputVec_d, inputSize, numOfBlocks,
-                         item, tmp_acc.get_multi_ptr<sycl::access::decorated::no>().get());
-                });
-      });
-      q.submit([&](sycl::handler &cgh) {
-        sycl::local_accessor<double, 1> tmp_acc(
-            sycl::range<1>(THREADS_PER_BLOCK), cgh);
-
-        cgh.parallel_for(
-            sycl::nd_range<1>(sycl::range<1>(THREADS_PER_BLOCK),
-                              sycl::range<1>(THREADS_PER_BLOCK)),
-            [=](sycl::nd_item<1> item) {
-                  reduceFinal(outputVec_d, result_d, numOfBlocks, item,
-                              tmp_acc.get_multi_ptr<sycl::access::decorated::no>().get());
-                });
-      });
-    }
-
-    double result_h = 0.0;
-    q.memcpy(&result_h, result_d, sizeof(double)).wait();
-
-    auto end = std::chrono::steady_clock::now();
-    auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    printf("%s\n", (std::fabs(result_h - result_r) < 1e-6) ? "PASS" : "FAIL");
-    printf("Execution time of using Stream: %f (us)\n\n", (time * 1e-3f));
+  // 4. Timed graph replays
+  auto t_g0 = std::chrono::steady_clock::now();
+  for (int i = 0; i < repeat; i++) {
+    q.submit([&](sycl::handler &cgh) { cgh.ext_oneapi_graph(ExecGraph); }).wait();
   }
+  auto t_g1 = std::chrono::steady_clock::now();
+  printf("%s\n", (std::fabs(result_h - result_r) < 1e-6) ? "PASS" : "FAIL");
+  printf("Average execution time of using Graph: %f (us)\n\n",
+         elapsed_us(t_g0, t_g1) / repeat);
+
+  // 5. Timed eager (kernels already hot)
+  auto t_s0 = std::chrono::steady_clock::now();
+  for (int i = 0; i < repeat; i++) {
+    usingStream(q, inputVec_h, inputVec_d, outputVec_d, result_d, &result_h,
+             inputSize, numOfBlocks);
+    q.wait();
+  }
+  auto t_s1 = std::chrono::steady_clock::now();
+  printf("%s\n", (std::fabs(result_h - result_r) < 1e-6) ? "PASS" : "FAIL");
+  printf("Average execution time of using Stream: %f (us)\n\n",
+         elapsed_us(t_s0, t_s1) / repeat);
 }
 
 int main(int argc, char **argv)
 {
+  int repeat = DEFAULT_LAUNCH_ITERATIONS;
+  if (argc == 2) {
+    repeat = atoi(argv[1]);
+  } else if (argc > 2) {
+    printf("Usage: %s [repeat]\n", argv[0]);
+    return 1;
+  }
+  if (repeat < 1) {
+    printf("repeat must be >= 1\n");
+    return 1;
+  }
+
   sycl::property_list Properties{
       sycl::property::queue::in_order{},
       sycl::ext::intel::property::queue::no_immediate_command_list{}};
@@ -267,29 +258,30 @@ int main(int argc, char **argv)
 
   size_t maxBlocks = 512;
 
-  for (size_t size = 512; size <= 1<<27; size = size * 512) {
+  for (size_t size = 512; size <= 1 << 27; size = size * 512) {
 
     printf("\n-----------------------------\n");
     printf("%zu elements\n", size);
     printf("threads per block  = %d\n", THREADS_PER_BLOCK);
-    printf("Launch iterations = %d\n", LAUNCH_ITERATIONS);
+    printf("Launch iterations = %d\n", repeat);
 
     float *inputVec_d = NULL, *inputVec_h = NULL;
     double *outputVec_d = NULL, *result_d;
 
-    inputVec_h = (float*) malloc(sizeof(float)*size);
+    inputVec_h = (float *)malloc(sizeof(float) * size);
     inputVec_d = sycl::malloc_device<float>(size, q);
     outputVec_d = sycl::malloc_device<double>(maxBlocks, q);
     result_d = sycl::malloc_device<double>(1, q);
 
     init_input(inputVec_h, size);
 
-    usingGraph(q, inputVec_h, inputVec_d, outputVec_d, result_d, size, maxBlocks);
-    usingStream(q, inputVec_h, inputVec_d, outputVec_d, result_d, size, maxBlocks);
+    benchmark(q, inputVec_h, inputVec_d, outputVec_d, result_d, size, maxBlocks,
+              repeat);
 
     sycl::free(inputVec_d, q);
     sycl::free(outputVec_d, q);
     sycl::free(result_d, q);
+    free(inputVec_h);
   }
   return EXIT_SUCCESS;
 }

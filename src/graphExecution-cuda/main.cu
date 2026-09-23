@@ -10,6 +10,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <chrono>
 #include <cmath>
 #include <cuda_runtime.h>
@@ -18,8 +19,14 @@
 namespace cg = cooperative_groups;
 
 #define THREADS_PER_BLOCK 256
-#define LAUNCH_ITERATIONS  3
+#define INNER_ITERS 100
+#define DEFAULT_LAUNCH_ITERATIONS 32
 
+static double elapsed_us(std::chrono::steady_clock::time_point start,
+                         std::chrono::steady_clock::time_point end)
+{
+  return std::chrono::duration<double, std::micro>(end - start).count();
+}
 
 __global__ void reduce(const float *inputVec,
                        double *outputVec,
@@ -126,119 +133,126 @@ void init_input(float*a, size_t size)
     a[i] = (rand() & 0xFF) / (float)RAND_MAX;
 }
 
-void usingGraph(float* inputVec_h, float *inputVec_d,
-    double *outputVec_d, double *result_d,
-    size_t inputSize, size_t numOfBlocks)
+static void usingStream(float *inputVec_h, float *inputVec_d, double *outputVec_d,
+                        double *result_d, double *result_h, size_t inputSize,
+                        size_t numOfBlocks, cudaStream_t stream)
 {
-  // compute the reference sum
+  cudaMemcpyAsync(inputVec_d, inputVec_h, sizeof(float) * inputSize,
+                  cudaMemcpyHostToDevice, stream);
+
+  for (int i = 0; i < INNER_ITERS; i++) {
+    cudaMemsetAsync(outputVec_d, 0, sizeof(double) * numOfBlocks, stream);
+    reduce<<<numOfBlocks, THREADS_PER_BLOCK, 0, stream>>>(
+        inputVec_d, outputVec_d, inputSize, numOfBlocks);
+    reduceFinal<<<1, THREADS_PER_BLOCK, 0, stream>>>(outputVec_d, result_d,
+                                                     numOfBlocks);
+  }
+
+  cudaMemcpyAsync(result_h, result_d, sizeof(double), cudaMemcpyDeviceToHost,
+                  stream);
+}
+
+static void benchmark(float *inputVec_h, float *inputVec_d, double *outputVec_d,
+                      double *result_d, size_t inputSize, size_t numOfBlocks,
+                      int repeat)
+{
   double result_r = 0.0;
   for (size_t i = 0; i < inputSize; i++)
     result_r += inputVec_h[i];
 
+  double result_h = 0.0;
   cudaStream_t stream;
-  cudaGraph_t graph;
-
   cudaStreamCreate(&stream);
 
+  // 1. Eager warmup (do not print)
+  usingStream(inputVec_h, inputVec_d, outputVec_d, result_d, &result_h, inputSize,
+           numOfBlocks, stream);
+  cudaStreamSynchronize(stream);
+
+  // 2. Capture + instantiate (reported separately from replay)
+  cudaGraph_t graph;
+  auto t_cap0 = std::chrono::steady_clock::now();
   cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
-
-  cudaMemcpyAsync(inputVec_d, inputVec_h, sizeof(float)*inputSize, cudaMemcpyHostToDevice, stream);
-
-  for (int i = 0; i < 100; i++) {
-    cudaMemsetAsync(outputVec_d, 0, sizeof(double)*numOfBlocks, stream);
-    reduce<<<numOfBlocks, THREADS_PER_BLOCK, 0, stream>>>(inputVec_d, outputVec_d, inputSize, numOfBlocks);
-    reduceFinal<<<1, THREADS_PER_BLOCK, 0, stream>>>(outputVec_d, result_d, numOfBlocks);
-  }
-  double result_h = 0.0;
-  cudaMemcpyAsync(&result_h, result_d, sizeof(double), cudaMemcpyDeviceToHost, stream);
-
+  usingStream(inputVec_h, inputVec_d, outputVec_d, result_d, &result_h, inputSize,
+           numOfBlocks, stream);
   cudaStreamEndCapture(stream, &graph);
-
   cudaGraphExec_t graphExec;
   cudaGraphInstantiate(&graphExec, graph, NULL, NULL, 0);
+  auto t_cap1 = std::chrono::steady_clock::now();
+  printf("Capture+instantiate time: %f (us)\n", elapsed_us(t_cap0, t_cap1));
 
-  for (int i=0; i < LAUNCH_ITERATIONS; i++)
-  {
-    auto start = std::chrono::steady_clock::now();
+  // 3. One graph replay (do not print)
+  cudaGraphLaunch(graphExec, stream);
+  cudaStreamSynchronize(stream);
+
+  // 4. Timed graph replays
+  auto t_g0 = std::chrono::steady_clock::now();
+  for (int i = 0; i < repeat; i++) {
     cudaGraphLaunch(graphExec, stream);
     cudaStreamSynchronize(stream);
-    auto end = std::chrono::steady_clock::now();
-    auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    printf("%s\n", (std::fabs(result_h - result_r) < 1e-6) ? "PASS" : "FAIL");
-    printf("Execution time of using Graph: %f (us)\n\n", (time * 1e-3f));
   }
+  auto t_g1 = std::chrono::steady_clock::now();
+  printf("%s\n", (std::fabs(result_h - result_r) < 1e-6) ? "PASS" : "FAIL");
+  printf("Average execution time of using Graph: %f (us)\n\n",
+         elapsed_us(t_g0, t_g1) / repeat);
+
+  // 5. Timed eager (kernels already hot)
+  auto t_s0 = std::chrono::steady_clock::now();
+  for (int i = 0; i < repeat; i++) {
+    usingStream(inputVec_h, inputVec_d, outputVec_d, result_d, &result_h, inputSize,
+             numOfBlocks, stream);
+    cudaStreamSynchronize(stream);
+  }
+  auto t_s1 = std::chrono::steady_clock::now();
+  printf("%s\n", (std::fabs(result_h - result_r) < 1e-6) ? "PASS" : "FAIL");
+  printf("Average execution time of using Stream: %f (us)\n\n",
+         elapsed_us(t_s0, t_s1) / repeat);
 
   cudaGraphExecDestroy(graphExec);
   cudaGraphDestroy(graph);
   cudaStreamDestroy(stream);
 }
 
-void usingStream(float* inputVec_h, float *inputVec_d,
-    double *outputVec_d, double *result_d,
-    size_t inputSize, size_t numOfBlocks)
-{
-  // compute the reference sum
-  double result_r = 0.0;
-  for (size_t i = 0; i < inputSize; i++)
-    result_r += inputVec_h[i];
-
-  cudaStream_t stream;
-
-  cudaStreamCreate(&stream);
-
-  for (int i=0; i < LAUNCH_ITERATIONS; i++) {
-
-    auto start = std::chrono::steady_clock::now();
-
-    cudaMemcpyAsync(inputVec_d, inputVec_h, sizeof(float)*inputSize, cudaMemcpyHostToDevice, stream);
-
-    for (int i = 0; i < 100; i++) {
-      cudaMemsetAsync(outputVec_d, 0, sizeof(double)*numOfBlocks, stream);
-      reduce<<<numOfBlocks, THREADS_PER_BLOCK, 0, stream>>>(inputVec_d, outputVec_d, inputSize, numOfBlocks);
-      reduceFinal<<<1, THREADS_PER_BLOCK, 0, stream>>>(outputVec_d, result_d, numOfBlocks);
-    }
-
-    double result_h = 0.0;
-    cudaMemcpyAsync(&result_h, result_d, sizeof(double), cudaMemcpyDeviceToHost, stream);
-
-    cudaStreamSynchronize(stream);
-
-    auto end = std::chrono::steady_clock::now();
-    auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    printf("%s\n", (std::fabs(result_h - result_r) < 1e-6) ? "PASS" : "FAIL");
-    printf("Execution time of using Stream: %f (us)\n\n", (time * 1e-3f));
-  }
-
-  cudaStreamDestroy(stream);
-}
-
 int main(int argc, char **argv)
 {
+  int repeat = DEFAULT_LAUNCH_ITERATIONS;
+  if (argc == 2) {
+    repeat = atoi(argv[1]);
+  } else if (argc > 2) {
+    printf("Usage: %s [repeat]\n", argv[0]);
+    return 1;
+  }
+  if (repeat < 1) {
+    printf("repeat must be >= 1\n");
+    return 1;
+  }
+
   size_t maxBlocks = 512;
 
-  for (size_t size = 512; size <= 1<<27; size = size * 512) {
+  for (size_t size = 512; size <= 1 << 27; size = size * 512) {
 
     printf("\n-----------------------------\n");
     printf("%zu elements\n", size);
     printf("Threads per block  = %d\n", THREADS_PER_BLOCK);
-    printf("Launch iterations = %d\n", LAUNCH_ITERATIONS);
+    printf("Launch iterations = %d\n", repeat);
 
     float *inputVec_d = NULL, *inputVec_h = NULL;
     double *outputVec_d = NULL, *result_d;
 
-    inputVec_h = (float*) malloc(sizeof(float)*size);
-    cudaMalloc(&inputVec_d, sizeof(float)*size);
-    cudaMalloc(&outputVec_d, sizeof(double)*maxBlocks);
+    inputVec_h = (float *)malloc(sizeof(float) * size);
+    cudaMalloc(&inputVec_d, sizeof(float) * size);
+    cudaMalloc(&outputVec_d, sizeof(double) * maxBlocks);
     cudaMalloc(&result_d, sizeof(double));
 
     init_input(inputVec_h, size);
 
-    usingGraph(inputVec_h, inputVec_d, outputVec_d, result_d, size, maxBlocks);
-    usingStream(inputVec_h, inputVec_d, outputVec_d, result_d, size, maxBlocks);
+    benchmark(inputVec_h, inputVec_d, outputVec_d, result_d, size, maxBlocks,
+              repeat);
 
     cudaFree(inputVec_d);
     cudaFree(outputVec_d);
     cudaFree(result_d);
+    free(inputVec_h);
   }
   return EXIT_SUCCESS;
 }
