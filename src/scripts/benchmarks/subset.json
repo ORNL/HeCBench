@@ -749,6 +749,17 @@
             "0"
         ]
     ],
+    "mace": [
+        "(?:Average total time: )([0-9.+-e]+)(?: ms)",
+        [
+            "--fixture",
+            "../data/hydragnn-sc26/mace_pipeline_capture.macepipe",
+            "--warmup",
+            "100",
+            "--repeat",
+            "100"
+        ]
+    ],
     "mandelbrot": [
         "(?:Average kernel execution time: )([0-9.+-e]+)(?: ms)",
         [

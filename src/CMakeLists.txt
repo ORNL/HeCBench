@@ -245,6 +245,7 @@ set(HECBENCH_POC_BENCHMARKS
     lut-gemm
     lzss
     # Batch 10: M-N benchmarks (50 benchmarks)
+    mace
     mallocFree
     mandelbrot
     marchingCubes

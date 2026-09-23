@@ -1,0 +1,37 @@
+{
+  "source_repo": "https://github.com/ORNL/HydraGNN",
+  "source_commit": "d251f81627e6677c8636babe52ec0b020b2d27b7",
+  "config": "examples/multidataset_hpo_sc26/gfm_mlip.json",
+  "datasets": [
+    "colabfit/ANI-1x",
+    "nimashoghi/mptrj"
+  ],
+  "sample_rows": {
+    "ani1x": [
+      0,
+      1
+    ],
+    "mptrj": [
+      0,
+      1
+    ]
+  },
+  "precision": "fp64",
+  "graphs": 4,
+  "nodes": 77,
+  "edges": 1286,
+  "average_degree": 16.7012987012987,
+  "benchmark": "mace",
+  "fixture_format": "MACEPIPE1",
+  "fixture_version": 2,
+  "layers": 4,
+  "hidden_channels": 128,
+  "species": 118,
+  "cutoff_angstrom": 5.0,
+  "max_neighbors": 20,
+  "checkpoint_count": 56,
+  "final_node_shape": [
+    77,
+    128
+  ]
+}
