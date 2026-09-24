@@ -47,6 +47,10 @@ ifeq ($(OPTIMIZE),yes)
   CFLAGS += -O3
 endif
 
+# Shared DVC archive lives in axhelm-cuda
+BLAS_TGZ := ../axhelm-cuda/BlasLapack.tar.gz
+BLAS_MK  := BlasLapack/Makefile
+
 #===============================================================================
 # Targets to Build
 #===============================================================================
@@ -59,8 +63,15 @@ main.o : main.cu axhelmKernel.cpp ../axhelm-cuda/axhelmReference.cpp
 meshBasis.o : meshBasis.cpp meshBasis.hpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
-BlasLapack/libBlasLapack.a: 
-	cd BlasLapack && make -j8 && cd ..
+BlasLapack/libBlasLapack.a: $(BLAS_MK)
+	$(MAKE) -C BlasLapack -j8
+
+$(BLAS_MK): $(wildcard $(BLAS_TGZ))
+	@test -f $(BLAS_TGZ) || { \
+	  echo "Missing $(BLAS_TGZ). From the repository root run: dvc pull src/axhelm-cuda/BlasLapack.tar.gz" >&2; \
+	  exit 1; }
+	tar -xzf $(BLAS_TGZ)
+	touch $(BLAS_MK)
 
 clean:
 	if [ -d BlasLapack ]; then cd BlasLapack && make clean; fi
