@@ -3,10 +3,16 @@
 # enable Fortran for BlasLapack
 enable_language(Fortran)
 
-# specify a directory to unzip the library files 
-set(SRC_DIR "${CMAKE_CURRENT_LIST_DIR}")
-UNZIPFILE("${SRC_DIR}/BlasLapack.tar.gz")
-FILE(GLOB FORTRAN_SOURCES "${SRC_DIR}/BlasLapack/*.f")
+# Shared DVC archive lives in axhelm-cuda
+set(DATA_DIR "${CMAKE_CURRENT_LIST_DIR}/../axhelm-cuda")
+UNZIPFILE("${DATA_DIR}/BlasLapack.tar.gz")
+FILE(GLOB FORTRAN_SOURCES "${DATA_DIR}/BlasLapack/*.f")
+if(NOT FORTRAN_SOURCES)
+    message(WARNING
+        "Skipping axhelm-sycl: BlasLapack sources missing. "
+        "From the repository root run: dvc pull src/axhelm-cuda/BlasLapack.tar.gz")
+    return()
+endif()
 add_library(BlasLapack_sycl STATIC ${FORTRAN_SOURCES})
 
 add_hecbench_benchmark(

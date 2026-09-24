@@ -53,6 +53,10 @@ ifeq ($(DEVICE),gpu)
 else
   CFLAGS +=-qopenmp
 endif
+# Shared DVC archive lives in axhelm-cuda
+BLAS_TGZ := ../axhelm-cuda/BlasLapack.tar.gz
+BLAS_MK  := BlasLapack/Makefile
+
 #===============================================================================
 # Targets to Build
 #===============================================================================
@@ -65,8 +69,16 @@ main.o : main.cpp ../axhelm-cuda/axhelmReference.cpp
 meshBasis.o : meshBasis.cpp meshBasis.hpp meshNodesTet3D.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-BlasLapack/libBlasLapack.a: 
-	cd BlasLapack && make -j8 && cd ..
+BlasLapack/libBlasLapack.a: $(BLAS_MK)
+	$(MAKE) -C BlasLapack -j8
+
+$(BLAS_MK): $(BLAS_TGZ)
+	tar -xzf $(BLAS_TGZ)
+
+$(BLAS_TGZ):
+	@echo "Missing $(BLAS_TGZ)." >&2
+	@echo "Fetch it from the repository root with: dvc pull src/axhelm-cuda/BlasLapack.tar.gz" >&2
+	@exit 1
 
 clean:
 	if [ -d BlasLapack ]; then cd BlasLapack && make clean; fi

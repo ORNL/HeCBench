@@ -66,6 +66,11 @@ endif
 ifeq ($(GPU),yes)
   CFLAGS +=-DUSE_GPU
 endif
+# SNAP reference headers are stored in testSNAP-omp (DVC: refdata.tar.gz)
+REFDATA_DIR := ../testSNAP-omp
+REFDATA_TGZ := $(REFDATA_DIR)/refdata.tar.gz
+REFDATA_HDR := $(REFDATA_DIR)/refdata_2J2_W.h
+
 #===============================================================================
 # Targets to Build
 #===============================================================================
@@ -73,8 +78,16 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp ../testSNAP-omp/snap.h utils.cpp
+%.o: %.cpp ../testSNAP-omp/snap.h utils.cpp $(REFDATA_HDR)
 	$(CC) $(CFLAGS) -c $< -o $@
+
+$(REFDATA_HDR): $(REFDATA_TGZ)
+	tar -xzf $(REFDATA_TGZ) -C $(REFDATA_DIR)
+
+$(REFDATA_TGZ):
+	@echo "Missing $(REFDATA_TGZ)." >&2
+	@echo "Fetch it from the repository root with: dvc pull src/testSNAP-omp/refdata.tar.gz" >&2
+	@exit 1
 
 clean:
 	rm -rf $(program) $(obj)

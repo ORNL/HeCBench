@@ -40,6 +40,10 @@ ifeq ($(OPTIMIZE),yes)
   CFLAGS += -O3
 endif
 
+# SAD images and bitmap_image.hpp come from DVC: data.tar.gz
+DATA_TGZ := data.tar.gz
+DATA_HDR := bitmap_image.hpp
+
 #===============================================================================
 # Targets to Build
 #===============================================================================
@@ -47,8 +51,16 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu bitmap_image.hpp Makefile
+%.o: %.cu $(DATA_HDR) Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
+
+$(DATA_HDR): $(DATA_TGZ)
+	tar -xzf $(DATA_TGZ)
+
+$(DATA_TGZ):
+	@echo "Missing $(DATA_TGZ)." >&2
+	@echo "Fetch it from the repository root with: dvc pull src/sad-cuda/data.tar.gz" >&2
+	@exit 1
 
 clean:
 	rm -rf $(program) $(obj)

@@ -46,6 +46,11 @@ ifeq ($(DEVICE),gpu)
 else
   CFLAGS +=-qopenmp
 endif
+# SAD images and bitmap_image.hpp come from DVC: src/sad-cuda/data.tar.gz
+DATA_DIR := ../sad-cuda
+DATA_TGZ := $(DATA_DIR)/data.tar.gz
+DATA_HDR := $(DATA_DIR)/bitmap_image.hpp
+
 #===============================================================================
 # Targets to Build
 #===============================================================================
@@ -53,8 +58,16 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu ../sad-cuda/bitmap_image.hpp
+%.o: %.cpp $(DATA_HDR)
 	$(CC) $(CFLAGS) -c $< -o $@
+
+$(DATA_HDR): $(DATA_TGZ)
+	tar -xzf $(DATA_TGZ) -C $(DATA_DIR)
+
+$(DATA_TGZ):
+	@echo "Missing $(DATA_TGZ)." >&2
+	@echo "Fetch it from the repository root with: dvc pull src/sad-cuda/data.tar.gz" >&2
+	@exit 1
 
 clean:
 	rm -rf $(program) $(obj)
