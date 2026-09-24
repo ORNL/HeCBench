@@ -1,6 +1,7 @@
 # sad-cuda/CMakeLists.txt
 
-UNZIPFILE("${CMAKE_CURRENT_LIST_DIR}/data.tar.gz")
+set(DATA_DIR "${CMAKE_CURRENT_LIST_DIR}")
+UNZIPFILE("${DATA_DIR}/data.tar.gz")
 
 add_hecbench_benchmark(
     NAME sad
