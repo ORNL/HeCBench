@@ -81,7 +81,7 @@ $(program): $(obj)
 %.o: %.cpp ../testSNAP-omp/snap.h utils.cpp $(REFDATA_HDR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(REFDATA_HDR):
+$(REFDATA_HDR): $(wildcard $(REFDATA_TGZ))
 	@test -f $(REFDATA_TGZ) || { \
 	  echo "Missing $(REFDATA_TGZ). From the repository root run: dvc pull src/testSNAP-omp/refdata.tar.gz" >&2; \
 	  exit 1; }

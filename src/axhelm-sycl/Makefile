@@ -92,7 +92,7 @@ meshBasis.o : meshBasis.cpp meshBasis.hpp meshNodesTet3D.h
 BlasLapack/libBlasLapack.a: $(BLAS_MK)
 	$(MAKE) -C BlasLapack -j8
 
-$(BLAS_MK):
+$(BLAS_MK): $(wildcard $(BLAS_TGZ))
 	@test -f $(BLAS_TGZ) || { \
 	  echo "Missing $(BLAS_TGZ). From the repository root run: dvc pull src/axhelm-cuda/BlasLapack.tar.gz" >&2; \
 	  exit 1; }
