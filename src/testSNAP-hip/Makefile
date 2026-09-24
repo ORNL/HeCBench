@@ -55,13 +55,11 @@ $(program): $(obj)
 %.o: %.cu snap.h utils.cu $(REFDATA_HDR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(REFDATA_HDR): $(REFDATA_TGZ)
+$(REFDATA_HDR):
+	@test -f $(REFDATA_TGZ) || { \
+	  echo "Missing $(REFDATA_TGZ). From the repository root run: dvc pull src/testSNAP-omp/refdata.tar.gz" >&2; \
+	  exit 1; }
 	tar -xzf $(REFDATA_TGZ) -C $(REFDATA_DIR)
-
-$(REFDATA_TGZ):
-	@echo "Missing $(REFDATA_TGZ)." >&2
-	@echo "Fetch it from the repository root with: dvc pull src/testSNAP-omp/refdata.tar.gz" >&2
-	@exit 1
 
 clean:
 	rm -rf $(program) $(obj)

@@ -54,13 +54,11 @@ $(program): $(obj) Makefile
 %.o: %.cu $(DATA_HDR) Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(DATA_HDR): $(DATA_TGZ)
+$(DATA_HDR):
+	@test -f $(DATA_TGZ) || { \
+	  echo "Missing $(DATA_TGZ). From the repository root run: dvc pull src/sad-cuda/data.tar.gz" >&2; \
+	  exit 1; }
 	tar -xzf $(DATA_TGZ)
-
-$(DATA_TGZ):
-	@echo "Missing $(DATA_TGZ)." >&2
-	@echo "Fetch it from the repository root with: dvc pull src/sad-cuda/data.tar.gz" >&2
-	@exit 1
 
 clean:
 	rm -rf $(program) $(obj)
