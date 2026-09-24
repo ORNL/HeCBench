@@ -73,7 +73,7 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp topk_per_row_kernels.h ../blockScan-sycl/utils/*.hpp
+%.o: %.cpp topk_per_row_kernels.h ../topk-cuda/ragged_config.h ../blockScan-sycl/utils/*.hpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
