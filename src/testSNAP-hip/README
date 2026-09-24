@@ -1,2 +1,10 @@
-Please unzip the reference data files (refdata.tar.gz) in testSNAP-omp before building the application
+SNAP reference data is the DVC archive `src/testSNAP-omp/refdata.tar.gz`.
+It contains `refdata_2J2_W.h`, `refdata_2J4_W.h`, `refdata_2J8_W.h`, and
+`refdata_2J14_W.h`.
+
+From the repository root, fetch the archive with:
+
+    dvc pull src/testSNAP-omp/refdata.tar.gz
+
+`make` and CMake extract the headers into `testSNAP-omp` automatically.
 

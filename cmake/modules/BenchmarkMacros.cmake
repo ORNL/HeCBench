@@ -371,32 +371,44 @@ endfunction()
 # Unzip data needed for certain benchmarks
 #
 MACRO(UNZIPFILE zipfile)
-    # get the filetype extension
     GET_FILENAME_COMPONENT(FILEEXT "${zipfile}" EXT)
     GET_FILENAME_COMPONENT(FILEDIR "${zipfile}" DIRECTORY)
 
-    MESSAGE("Going to unzip file ${zipfile}!")
-    MESSAGE("File extension: ${FILEEXT}")
-    MESSAGE("File dir: ${FILEDIR}")
-    IF(FILEEXT MATCHES "\.tar.bz")
-        set(TOEXEC "tar -xjf ${zipfile} -C ${FILEDIR}")
-    ELSEIF(FILEEXT MATCHES "\.bz2")
-        set(TOEXEC "bzip2 -dkf ${zipfile}")
-    ELSEIF(FILEEXT MATCHES "\.tar")
-        set(TOEXEC "tar -xvf ${zipfile} -C ${FILEDIR}")
-    ELSEIF(FILEEXT MATCHES "\.zip")
-        set(TOEXEC "unzip ${zipfile}")
-    ENDIF()
-    MESSAGE("\tAssociated command to unzip: [${TOEXEC}]")
-    execute_process(
-        COMMAND /bin/bash -c "${TOEXEC}"
-        OUTPUT_VARIABLE EXEC_OUTPUT
-        RESULT_VARIABLE RESULT_CODE
-        WORKING_DIRECTORY ${FILEDIR}
-    )
-    # MESSAGE("Execution Result: \n${EXEC_OUTPUT}")
-    # if the result code was not 0
-    IF (NOT(RESULT_CODE EQUAL 0))
-        message("Problem unzipping file ${zipfile}!!") 
-    ENDIF()
+    if(NOT EXISTS "${zipfile}")
+        message(WARNING
+            "Archive ${zipfile} is missing. "
+            "Fetch it from the repository root with `dvc pull` and re-run CMake.")
+    else()
+        MESSAGE("Going to unzip file ${zipfile}!")
+        MESSAGE("File extension: ${FILEEXT}")
+        MESSAGE("File dir: ${FILEDIR}")
+        IF(FILEEXT MATCHES "\\.tar\\.bz2$" OR FILEEXT MATCHES "\\.tar\\.bz$")
+            set(TOEXEC "tar -xjf ${zipfile} -C ${FILEDIR}")
+        ELSEIF(FILEEXT MATCHES "\\.tar\\.gz$" OR FILEEXT MATCHES "\\.tgz$")
+            set(TOEXEC "tar -xzf ${zipfile} -C ${FILEDIR}")
+        ELSEIF(FILEEXT MATCHES "\\.bz2$")
+            set(TOEXEC "bzip2 -dkf ${zipfile}")
+        ELSEIF(FILEEXT MATCHES "\\.tar$")
+            set(TOEXEC "tar -xvf ${zipfile} -C ${FILEDIR}")
+        ELSEIF(FILEEXT MATCHES "\\.zip$")
+            set(TOEXEC "unzip -o ${zipfile} -d ${FILEDIR}")
+        ELSE()
+            message(WARNING "UNZIPFILE: unsupported archive type '${FILEEXT}' for ${zipfile}")
+            set(TOEXEC "")
+        ENDIF()
+        if(TOEXEC)
+            MESSAGE("\tAssociated command to unzip: [${TOEXEC}]")
+            execute_process(
+                COMMAND /bin/bash -c "${TOEXEC}"
+                OUTPUT_VARIABLE EXEC_OUTPUT
+                ERROR_VARIABLE EXEC_ERROR
+                RESULT_VARIABLE RESULT_CODE
+                WORKING_DIRECTORY ${FILEDIR}
+            )
+            IF (NOT(RESULT_CODE EQUAL 0))
+                message(WARNING
+                    "Problem unzipping file ${zipfile} (exit ${RESULT_CODE}): ${EXEC_ERROR}")
+            ENDIF()
+        endif()
+    endif()
 ENDMACRO()
