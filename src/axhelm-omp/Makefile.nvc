@@ -77,6 +77,7 @@ $(BLAS_MK): $(wildcard $(BLAS_TGZ))
 	  echo "Missing $(BLAS_TGZ). From the repository root run: dvc pull src/axhelm-cuda/BlasLapack.tar.gz" >&2; \
 	  exit 1; }
 	tar -xzf $(BLAS_TGZ)
+	touch $(BLAS_MK)
 
 clean:
 	if [ -d BlasLapack ]; then cd BlasLapack && make clean; fi

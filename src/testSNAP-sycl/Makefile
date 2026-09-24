@@ -86,6 +86,7 @@ $(REFDATA_HDR): $(wildcard $(REFDATA_TGZ))
 	  echo "Missing $(REFDATA_TGZ). From the repository root run: dvc pull src/testSNAP-omp/refdata.tar.gz" >&2; \
 	  exit 1; }
 	tar -xzf $(REFDATA_TGZ) -C $(REFDATA_DIR)
+	touch $(REFDATA_HDR)
 
 clean:
 	rm -rf $(program) $(obj)

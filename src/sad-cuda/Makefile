@@ -59,6 +59,7 @@ $(DATA_HDR): $(wildcard $(DATA_TGZ))
 	  echo "Missing $(DATA_TGZ). From the repository root run: dvc pull src/sad-cuda/data.tar.gz" >&2; \
 	  exit 1; }
 	tar -xzf $(DATA_TGZ)
+	touch $(DATA_HDR)
 
 clean:
 	rm -rf $(program) $(obj)
