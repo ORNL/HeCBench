@@ -45,6 +45,8 @@ LDFLAGS =
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
             -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
+  # ptxas runs at link; needed so 1024-thread kernels fit the WG register cap
+  LDFLAGS += -Xcuda-ptxas --maxrregcount=64
 endif
 
 ifeq ($(HIP), yes)
