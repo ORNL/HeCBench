@@ -11,6 +11,9 @@ if(HIP_FOUND)
     return()
 endif()
 
+# hip-lang sets HIP_COMPILER to the compiler ID, which hides a cached hipcc path.
+unset(HIP_COMPILER)
+
 # Find hipcc compiler
 find_program(HIP_COMPILER
     NAMES hipcc

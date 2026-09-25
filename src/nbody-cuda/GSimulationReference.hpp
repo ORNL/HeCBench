@@ -64,7 +64,7 @@ accumulate_energy_ref(RealType *e, const int n)
   for (int i = 1; i < n; i++) e[0] += e[i];
 }
 
-void GSimulation::Verify() {
+bool GSimulation::Verify() {
   RealType dt = get_tstep();
   int n = get_npart();
   std::vector<RealType> energy(n, 0.f);
@@ -99,5 +99,10 @@ void GSimulation::Verify() {
   }  // end of the time step loop
   std::cout << "\n";
   bool ok = fabsf(kenergy_ - ref_kenergy_) < 1e-3f;
-  printf("%s\n", ok ? "PASS" : "FAIL");
+  if (rank_ >= 0) {
+    printf("[rank %d] %s\n", rank_, ok ? "PASS" : "FAIL");
+  } else {
+    printf("%s\n", ok ? "PASS" : "FAIL");
+  }
+  return ok;
 }

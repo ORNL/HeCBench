@@ -557,10 +557,35 @@ set(HECBENCH_POC_BENCHMARKS
     wenofv
 )
 
+if(HECBENCH_BUILD_ALL_BENCHMARKS)
+    set(HECBENCH_BENCHMARKS_TO_BUILD ${HECBENCH_POC_BENCHMARKS})
+else()
+    if(NOT HECBENCH_BENCHMARK)
+        message(FATAL_ERROR
+            "HECBENCH_BENCHMARK must be set when HECBENCH_BUILD_ALL_BENCHMARKS=OFF")
+    endif()
+
+    list(FIND HECBENCH_POC_BENCHMARKS "${HECBENCH_BENCHMARK}" HECBENCH_BENCHMARK_INDEX)
+    if(HECBENCH_BENCHMARK_INDEX EQUAL -1)
+        message(FATAL_ERROR "Unknown HeCBench benchmark: ${HECBENCH_BENCHMARK}")
+    endif()
+
+    set(HECBENCH_BENCHMARKS_TO_BUILD "${HECBENCH_BENCHMARK}")
+endif()
+
 # Include benchmark subdirectories
-foreach(BENCHMARK ${HECBENCH_POC_BENCHMARKS})
+foreach(BENCHMARK ${HECBENCH_BENCHMARKS_TO_BUILD})
     # Check which models exist for this benchmark
     foreach(MODEL cuda hip sycl omp)
+        if(NOT HECBENCH_BUILD_ALL_BENCHMARKS)
+            if((MODEL STREQUAL "cuda" AND NOT HECBENCH_ENABLE_CUDA) OR
+               (MODEL STREQUAL "hip" AND NOT HECBENCH_ENABLE_HIP) OR
+               (MODEL STREQUAL "sycl" AND NOT HECBENCH_ENABLE_SYCL) OR
+               (MODEL STREQUAL "omp" AND NOT HECBENCH_ENABLE_OPENMP))
+                continue()
+            endif()
+        endif()
+
         set(BENCHMARK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/${BENCHMARK}-${MODEL}")
         if(EXISTS "${BENCHMARK_DIR}/CMakeLists.txt")
             add_subdirectory(${BENCHMARK_DIR})

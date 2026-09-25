@@ -5,8 +5,29 @@
 // =============================================================
 
 #include <hip/hip_runtime.h>
+#ifdef HECBENCH_ENABLE_MPI_REPLICAS
+#include <mpi.h>
+#endif
 #include "GSimulation.hpp"
 #include "GSimulationKernels.hpp"
+
+#define CHECK_HIP_ERROR(status)                                               \
+  do {                                                                        \
+    hipError_t error = (status);                                              \
+    if (error != hipSuccess) {                                                \
+      std::cerr << "HIP error: '" << hipGetErrorString(error) << "'("       \
+                << error << ") at " << __FILE__ << ":" << __LINE__ << "\n"; \
+      /* A failed rank must not leave peers in the final reduction. */         \
+      fatal_exit();                                                           \
+    }                                                                         \
+  } while (0)
+
+static void fatal_exit() {
+#ifdef HECBENCH_ENABLE_MPI_REPLICAS
+  MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+#endif
+  exit(EXIT_FAILURE);
+}
 
 /* Default Constructor for the GSimulation class which sets up the default
  * values for number of particles, number of integration steps, time steo and
@@ -102,12 +123,14 @@ void GSimulation::Start() {
   double av = 0.0, dev = 0.0;
 
   Particle *p;
-  hipMalloc((void**)&p, sizeof(Particle) * n);
-  hipMemcpyAsync(p, particles_.data(), sizeof(Particle) * n, hipMemcpyHostToDevice, 0);
+  CHECK_HIP_ERROR(hipMalloc((void**)&p, sizeof(Particle) * n));
+  CHECK_HIP_ERROR(hipMemcpyAsync(p, particles_.data(), sizeof(Particle) * n,
+                                 hipMemcpyHostToDevice, 0));
 
   RealType *e;
-  hipMalloc((void**)&e, sizeof(RealType) * n);
-  hipMemcpyAsync(e, energy.data(), sizeof(RealType) * n, hipMemcpyHostToDevice, 0);
+  CHECK_HIP_ERROR(hipMalloc((void**)&e, sizeof(RealType) * n));
+  CHECK_HIP_ERROR(hipMemcpyAsync(e, energy.data(), sizeof(RealType) * n,
+                                 hipMemcpyHostToDevice, 0));
 
   dim3 grids((n+255)/256);
   dim3 threads(256);
@@ -122,10 +145,11 @@ void GSimulation::Start() {
     update_particles<<<grids, threads>>>(p, e, n, dt);
     accumulate_energy<<<1,1>>>(e, n);
 
-    hipDeviceSynchronize();
+    CHECK_HIP_ERROR(hipDeviceSynchronize());
     double elapsed_seconds = ts0.Elapsed();
 
-    hipMemcpy(energy.data(), e, sizeof(RealType), hipMemcpyDeviceToHost);
+    CHECK_HIP_ERROR(
+        hipMemcpy(energy.data(), e, sizeof(RealType), hipMemcpyDeviceToHost));
 
     kenergy_ = 0.5 * energy[0];
     if ((s % get_sfreq()) == 0) {
@@ -153,13 +177,16 @@ void GSimulation::Start() {
   dev = (nf == 3) ? 0.0 : sqrt(dev / (double)(nf - 2) - av * av);
 
   std::cout << "\n";
+  if (rank_ >= 0) std::cout << "[rank " << rank_ << "] ";
   std::cout << "# Total Energy        : " << kenergy_ << "\n";
+  if (rank_ >= 0) std::cout << "[rank " << rank_ << "] ";
   std::cout << "# Total Time (s)      : " << total_time_ << "\n";
+  if (rank_ >= 0) std::cout << "[rank " << rank_ << "] ";
   std::cout << "# Average Performance : " << av << " +- " << dev << "\n";
   std::cout << "===============================\n";
 
-  hipFree(p);
-  hipFree(e);
+  CHECK_HIP_ERROR(hipFree(p));
+  CHECK_HIP_ERROR(hipFree(e));
 }
 
 #ifdef DEBUG

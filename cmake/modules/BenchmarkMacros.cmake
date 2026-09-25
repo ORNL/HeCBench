@@ -11,6 +11,9 @@ set(DEPEND_ON_BOOST "hbc" "ge-spmm" "mmcsf" "warpsort" "gerbil")
 # Global list for benchmarks that require MPI
 set(DEPEND_ON_MPI "miniDGS" "miniWeather" "pingpong" "sparkler" "allreduce" "ccl" "halo-finder")
 
+# Benchmarks that can optionally run one independent problem per MPI rank.
+set(MPI_REPLICA_BENCHMARKS "softmax" "nbody" "wmma")
+
 # Global list for benchmarks that require Eigen
 set(DEPEND_ON_EIGEN "xlqc")
 
@@ -158,6 +161,13 @@ function(add_hecbench_benchmark)
 
     # Add executable
     add_executable(${TARGET_NAME} ${BENCH_SOURCES})
+
+    if(HECBENCH_ENABLE_MPI_REPLICAS AND
+       ${BENCH_NAME} IN_LIST MPI_REPLICA_BENCHMARKS)
+        target_compile_definitions(${TARGET_NAME} PRIVATE
+                                   HECBENCH_ENABLE_MPI_REPLICAS)
+        target_link_libraries(${TARGET_NAME} PRIVATE MPI::MPI_CXX)
+    endif()
 
     # Set target properties
     set_target_properties(${TARGET_NAME} PROPERTIES

@@ -40,6 +40,9 @@ set(HECBENCH_HIP_ARCH "gfx90a" CACHE STRING "HIP architecture (e.g., gfx908, gfx
 # Build configuration
 option(HECBENCH_ENABLE_TESTING "Enable testing" ON)
 option(HECBENCH_BUILD_ALL_BENCHMARKS "Build all benchmarks (vs selective)" ON)
+set(HECBENCH_BENCHMARK "" CACHE STRING "Benchmark to build in selective mode")
+option(HECBENCH_ENABLE_MPI_REPLICAS
+       "Enable independent MPI replicas for supported benchmarks" OFF)
 
 # Add cmake module path
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
@@ -86,6 +89,10 @@ endif()
 # Include benchmark macros
 include(BenchmarkMacros)
 
+if(HECBENCH_ENABLE_MPI_REPLICAS AND NOT MPI_CXX_FOUND)
+    message(FATAL_ERROR "MPI C++ support is required for MPI replicas")
+endif()
+
 # Enable testing if requested
 if(HECBENCH_ENABLE_TESTING)
     enable_testing()
@@ -111,6 +118,7 @@ if(HECBENCH_ENABLE_HIP)
 endif()
 message(STATUS "SYCL:    ${HECBENCH_ENABLE_SYCL}")
 message(STATUS "OpenMP:  ${HECBENCH_ENABLE_OPENMP}")
+message(STATUS "MPI replicas: ${HECBENCH_ENABLE_MPI_REPLICAS}")
 message(STATUS "Testing: ${HECBENCH_ENABLE_TESTING}")
 message(STATUS "====================================")
 message(STATUS "")

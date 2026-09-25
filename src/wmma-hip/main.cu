@@ -31,6 +31,9 @@
 #include <vector>
 #include <hip/hip_runtime.h>
 #include <rocwmma/rocwmma.hpp>
+#ifdef HECBENCH_ENABLE_MPI_REPLICAS
+#include <mpi.h>
+#endif
 
 typedef half fp16;
 typedef float fp32;
@@ -41,12 +44,25 @@ using namespace rocwmma;
 
 namespace wmma = rocwmma;
 
+enum class VerificationStatus { Unsupported = -1, Failed = 0, Passed = 1,
+                                Disabled = 2 };
+
+static int report_rank = -1;
+static int selected_device = 0;
+
+static void fatal_exit() {
+#ifdef HECBENCH_ENABLE_MPI_REPLICAS
+  MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+#endif
+  exit(EXIT_FAILURE);
+}
+
 #ifndef CHECK_HIP_ERROR
 #define CHECK_HIP_ERROR(status)                                               \
   if (status != hipSuccess) {                                                 \
     fprintf(stderr, "HIP error: '%s'(%d) at %s:%d\n",                         \
             hipGetErrorString(status), status, __FILE__, __LINE__);           \
-    exit(EXIT_FAILURE);                                                        \
+    fatal_exit();                                                              \
   }
 #endif
 
@@ -188,24 +204,28 @@ __global__ void gemm_impl1(const uint32_t m, const uint32_t n, const uint32_t k,
                           wmma::mem_row_major);
 }
 
-__host__ void gemm_wmma(int impl, uint32_t m, uint32_t n, uint32_t k, fp32 alpha,
-                        fp32 beta, int32_t repeat, int32_t verify) {
+__host__ VerificationStatus gemm_wmma(int impl, uint32_t m, uint32_t n,
+                                      uint32_t k, fp32 alpha, fp32 beta,
+                                      int32_t repeat, int32_t verify) {
   int WAVE_SIZE;
 
-  CHECK_HIP_ERROR(hipDeviceGetAttribute(&WAVE_SIZE, hipDeviceAttributeWarpSize, 0));
+  CHECK_HIP_ERROR(hipDeviceGetAttribute(&WAVE_SIZE, hipDeviceAttributeWarpSize,
+                                        selected_device));
 
   // Bounds check
   if (impl == 0) {
     if (m < WMMA_M || n < WMMA_N || k < WMMA_K || m % WMMA_M || n % WMMA_N || k % WMMA_K) {
+      if (report_rank >= 0) std::cout << "[rank " << report_rank << "] ";
       std::cout << "Unsupported size!\n";
-      return;
+      return VerificationStatus::Unsupported;
     }
 
   } else {
     if ((m < TILE_M) || n < TILE_N || k < WMMA_K || m % WMMA_M || n % WMMA_N || k % WMMA_K ||
         TILE_M / WMMA_M * WAVE_SIZE * TILE_N / WMMA_N > 1024) {
+      if (report_rank >= 0) std::cout << "[rank " << report_rank << "] ";
       std::cout << "Unsupported size!\n";
-      return;
+      return VerificationStatus::Unsupported;
     }
   }
 
@@ -284,6 +304,7 @@ __host__ void gemm_wmma(int impl, uint32_t m, uint32_t n, uint32_t k, fp32 alpha
     }
   }
 
+  VerificationStatus verification_status = VerificationStatus::Disabled;
   if (verify) {
     std::cout << "Validating result with reference..." << std::endl;
 
@@ -297,7 +318,14 @@ __host__ void gemm_wmma(int impl, uint32_t m, uint32_t n, uint32_t k, fp32 alpha
     gemm_cpu_h(m, n, k, matrixA.data(), matrixB.data(), matrixC.data(),
                matrixD_ref.data(), lda, ldb, ldc, ldd, alpha, beta);
 
-    compareEqual<fp32>(matrixD.data(), matrixD_ref.data(), m * n);
+    bool passed = compareEqual<fp32>(matrixD.data(), matrixD_ref.data(), m * n);
+    verification_status = passed ? VerificationStatus::Passed
+                                 : VerificationStatus::Failed;
+    if (report_rank >= 0) std::cout << "[rank " << report_rank << "] ";
+    std::cout << (passed ? "PASSED" : "FAILED") << "\n";
+  } else {
+    if (report_rank >= 0) std::cout << "[rank " << report_rank << "] ";
+    std::cout << "Verification disabled\n";
   }
 
   CHECK_HIP_ERROR(hipDeviceSynchronize()); // throughput
@@ -328,6 +356,7 @@ __host__ void gemm_wmma(int impl, uint32_t m, uint32_t n, uint32_t k, fp32 alpha
             << "beta, ldc, ldd, "
             << "elapsedMs, Problem Size(GFlops), TFlops/s" << std::endl;
 
+  if (report_rank >= 0) std::cout << "[rank " << report_rank << "] ";
   std::cout << WMMA_M << ", " << WMMA_N << ", " << WMMA_K << ", " << m << ", "
             << n << ", " << k << ", " << alpha << ", " << lda << ", " << ldb
             << ", " << beta << ", " << ldc << ", " << ldd << ", "
@@ -341,6 +370,7 @@ __host__ void gemm_wmma(int impl, uint32_t m, uint32_t n, uint32_t k, fp32 alpha
   CHECK_HIP_ERROR(hipFree(d_d));
 
   std::cout << "Finished!" << std::endl;
+  return verification_status;
 }
 
 void Usage(std::string program_name) {
@@ -351,10 +381,47 @@ void Usage(std::string program_name) {
   std::cout
       << "Dense matrix-matrix multiplication: D = alpha * (A * B) + beta * C\n";
   std::cout << "A: M * K, B: K * N, C: M * N, D: M * N\n";
-  exit(-1);
+  fatal_exit();
 }
 
 int main(int argc, char *argv[]) {
+#ifdef HECBENCH_ENABLE_MPI_REPLICAS
+  MPI_Init(&argc, &argv);
+  int rank_count, local_rank;
+  MPI_Comm local_comm;
+  MPI_Comm_rank(MPI_COMM_WORLD, &report_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &rank_count);
+  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, report_rank,
+                      MPI_INFO_NULL, &local_comm);
+  MPI_Comm_rank(local_comm, &local_rank);
+
+  int visible_devices = 0;
+  if (hipGetDeviceCount(&visible_devices) != hipSuccess || visible_devices < 1) {
+    std::cerr << "[rank " << report_rank << "] No visible HIP device\n";
+    MPI_Abort(MPI_COMM_WORLD, 2);
+  }
+  selected_device = visible_devices == 1 ? 0 : local_rank;
+  if (selected_device >= visible_devices) {
+    std::cerr << "[rank " << report_rank << "] local rank " << local_rank
+              << " cannot be mapped to " << visible_devices
+              << " visible HIP devices\n";
+    MPI_Abort(MPI_COMM_WORLD, 2);
+  }
+  if (hipSetDevice(selected_device) != hipSuccess) {
+    std::cerr << "[rank " << report_rank << "] Failed to select HIP device "
+              << selected_device << "\n";
+    MPI_Abort(MPI_COMM_WORLD, 2);
+  }
+  char processor[MPI_MAX_PROCESSOR_NAME];
+  int processor_length;
+  MPI_Get_processor_name(processor, &processor_length);
+  std::cout << "[rank " << report_rank << "/" << rank_count
+            << " local_rank " << local_rank << "] host=" << processor
+            << " device=" << selected_device
+            << " visible_devices=" << visible_devices << "\n";
+  MPI_Comm_free(&local_comm);
+#endif
+
   if (argc != 7) {
     Usage(argv[0]);
   }
@@ -365,7 +432,28 @@ int main(int argc, char *argv[]) {
   const uint32_t k = atoi(argv[4]);
   const int32_t repeat = atoi(argv[5]);
   const int32_t verify = atoi(argv[6]);
-  gemm_wmma(impl, m, n, k, 0.5f, 2.0f, repeat, verify);
+  [[maybe_unused]] VerificationStatus status =
+      gemm_wmma(impl, m, n, k, 0.5f, 2.0f, repeat, verify);
+
+#ifdef HECBENCH_ENABLE_MPI_REPLICAS
+  int local_status = static_cast<int>(status);
+  int overall_status = 0;
+  MPI_Allreduce(&local_status, &overall_status, 1, MPI_INT, MPI_MIN,
+                MPI_COMM_WORLD);
+  if (report_rank == 0) {
+    if (overall_status == static_cast<int>(VerificationStatus::Passed)) {
+      std::cout << "OVERALL PASSED (" << rank_count << "/" << rank_count
+                << " replica ranks)\n";
+    } else if (overall_status ==
+               static_cast<int>(VerificationStatus::Disabled)) {
+      std::cout << "OVERALL NOT VERIFIED (verification disabled)\n";
+    } else {
+      std::cout << "OVERALL FAILED\n";
+    }
+  }
+  MPI_Finalize();
+  return overall_status > static_cast<int>(VerificationStatus::Failed) ? 0 : 2;
+#endif
 
   return 0;
 }

@@ -26,8 +26,9 @@ class GSimulation {
   void Init();
   void SetNumberOfParticles(int N);
   void SetNumberOfSteps(int N);
+  void SetRank(int rank) { rank_ = rank; }
   void Start();
-  void Verify();
+  bool Verify();
 
  private:
   //  Particle *particles_;
@@ -43,6 +44,7 @@ class GSimulation {
 
   double total_time_;   // total time of the simulation
   double total_flops_;  // total number of FLOPS
+  int rank_ = -1;       // MPI replica rank, or -1 for a non-MPI build
 
   void InitPos();
   void InitVel();

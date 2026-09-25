@@ -1,6 +1,6 @@
 // Element-wise comparison
 template <typename T>
-void compareEqual(T const *a, T const *b, uint32_t size,
+bool compareEqual(T const *a, T const *b, uint32_t size,
                   double tolerance = 10.0) {
   double max_relative_error = 0.0;
 
@@ -15,14 +15,11 @@ void compareEqual(T const *a, T const *b, uint32_t size,
     }
   }
   auto eps = std::numeric_limits<T>::epsilon();
-  if (max_relative_error != max_relative_error ||
-      max_relative_error > eps * tolerance) {
-    std::cout << "FAILED\n";
-  } else {
-    std::cout << "PASSED\n";
-  }
+  bool passed = max_relative_error == max_relative_error &&
+                max_relative_error <= eps * tolerance;
 
   std::cout << "Max relative error: " << max_relative_error << std::endl;
+  return passed;
 }
 
 // Host GEMM validation

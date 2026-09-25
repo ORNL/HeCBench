@@ -4,8 +4,28 @@
 #include <cuda.h>
 #include <cooperative_groups.h>
 #include <cooperative_groups/reduce.h>
+#ifdef HECBENCH_ENABLE_MPI_REPLICAS
+#include <mpi.h>
+#endif
 
 #define BLOCK_SIZE 256
+
+#define CHECK_CUDA_ERROR(status)                                              \
+  do {                                                                        \
+    cudaError_t error = (status);                                             \
+    if (error != cudaSuccess) {                                               \
+      fprintf(stderr, "CUDA error: '%s'(%d) at %s:%d\n",                     \
+              cudaGetErrorString(error), error, __FILE__, __LINE__);          \
+      fatal_exit();                                                           \
+    }                                                                         \
+  } while (0)
+
+static void fatal_exit() {
+#ifdef HECBENCH_ENABLE_MPI_REPLICAS
+  MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+#endif
+  exit(EXIT_FAILURE);
+}
 
 // A C model derived from the OpenCL kernel
 void softMax_cpu(const int numSlice, const int sliceSize, const float* src, float* dest) {
@@ -71,10 +91,49 @@ void softMax2 (const int numSlice, const int sliceSize,
 
 
 int main(int argc, char* argv[]) {
+#ifdef HECBENCH_ENABLE_MPI_REPLICAS
+  MPI_Init(&argc, &argv);
+  int rank, rank_count, local_rank;
+  MPI_Comm local_comm;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &rank_count);
+  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, rank,
+                      MPI_INFO_NULL, &local_comm);
+  MPI_Comm_rank(local_comm, &local_rank);
+
+  int visible_devices = 0;
+  if (cudaGetDeviceCount(&visible_devices) != cudaSuccess || visible_devices < 1) {
+    fprintf(stderr, "[rank %d] No visible CUDA device\n", rank);
+    MPI_Abort(MPI_COMM_WORLD, 2);
+  }
+  int selected_device = visible_devices == 1 ? 0 : local_rank;
+  if (selected_device >= visible_devices) {
+    fprintf(stderr,
+            "[rank %d] local rank %d cannot be mapped to %d visible CUDA devices\n",
+            rank, local_rank, visible_devices);
+    MPI_Abort(MPI_COMM_WORLD, 2);
+  }
+  if (cudaSetDevice(selected_device) != cudaSuccess) {
+    fprintf(stderr, "[rank %d] Failed to select CUDA device %d\n", rank,
+            selected_device);
+    MPI_Abort(MPI_COMM_WORLD, 2);
+  }
+  char processor[MPI_MAX_PROCESSOR_NAME];
+  int processor_length;
+  MPI_Get_processor_name(processor, &processor_length);
+  printf("[rank %d/%d local_rank %d] host=%s device=%d visible_devices=%d\n",
+         rank, rank_count, local_rank, processor, selected_device,
+         visible_devices);
+  MPI_Comm_free(&local_comm);
+#endif
+
   if (argc != 5) {
     printf("Usage: %s <number of slices> <slice size> <implementations> <repeat>\n", argv[0]);
     printf("implementation 0: naive\n");
     printf("implementation 1: optimized\n");
+#ifdef HECBENCH_ENABLE_MPI_REPLICAS
+    MPI_Finalize();
+#endif
     return 1;
   }
 
@@ -94,44 +153,56 @@ int main(int argc, char* argv[]) {
       input[i*sliceSize+j] = rand() % 13;
 
   float *d_input, *d_output;
-  cudaMalloc((void**)&d_input, sizeof(float) * numElem);
-  cudaMalloc((void**)&d_output, sizeof(float) * numElem);
-  cudaMemcpy(d_input, input, sizeof(float) * numElem, cudaMemcpyHostToDevice);
+  CHECK_CUDA_ERROR(cudaMalloc((void**)&d_input, sizeof(float) * numElem));
+  CHECK_CUDA_ERROR(cudaMalloc((void**)&d_output, sizeof(float) * numElem));
+  CHECK_CUDA_ERROR(cudaMemcpy(d_input, input, sizeof(float) * numElem,
+                              cudaMemcpyHostToDevice));
 
   if (kernel == 1) {
     dim3 grids ((numSlice+BLOCK_SIZE/32-1)/(BLOCK_SIZE/32));
     dim3 blocks (BLOCK_SIZE);
 
-    cudaDeviceSynchronize();
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     auto start = std::chrono::steady_clock::now();
 
     for (int n = 0; n < repeat; n++) {
       softMax2<<<grids, blocks>>>(numSlice, sliceSize, d_input, d_output);
     }
 
-    cudaDeviceSynchronize();
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     auto end = std::chrono::steady_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+#ifdef HECBENCH_ENABLE_MPI_REPLICAS
+    printf("[rank %d] Average kernel execution time: %f (ms)\n", rank,
+           (time * 1e-6f) / repeat);
+#else
     printf("Average kernel execution time: %f (ms)\n", (time * 1e-6f) / repeat);
+#endif
   }
   else {
     dim3 grids ((numSlice+BLOCK_SIZE-1)/BLOCK_SIZE);
     dim3 blocks (BLOCK_SIZE);
 
-    cudaDeviceSynchronize();
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     auto start = std::chrono::steady_clock::now();
 
     for (int n = 0; n < repeat; n++) {
       softMax<<<grids, blocks>>>(numSlice, sliceSize, d_input, d_output);
     }
 
-    cudaDeviceSynchronize();
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     auto end = std::chrono::steady_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+#ifdef HECBENCH_ENABLE_MPI_REPLICAS
+    printf("[rank %d] Average kernel execution time: %f (ms)\n", rank,
+           (time * 1e-6f) / repeat);
+#else
     printf("Average kernel execution time: %f (ms)\n", (time * 1e-6f) / repeat);
+#endif
   }
 
-  cudaMemcpy(output_gpu, d_output, sizeof(float) * numElem, cudaMemcpyDeviceToHost);
+  CHECK_CUDA_ERROR(cudaMemcpy(output_gpu, d_output, sizeof(float) * numElem,
+                              cudaMemcpyDeviceToHost));
 
   // verification
   bool ok = true;
@@ -143,12 +214,29 @@ int main(int argc, char* argv[]) {
       break;
     }
   }
+#ifdef HECBENCH_ENABLE_MPI_REPLICAS
+  printf("[rank %d] %s\n", rank, ok ? "PASS" : "FAIL");
+  int local_pass = ok ? 1 : 0;
+  int passed_count = 0;
+  MPI_Allreduce(&local_pass, &passed_count, 1, MPI_INT, MPI_SUM,
+                MPI_COMM_WORLD);
+  if (rank == 0) {
+    printf("OVERALL %s (%d/%d replica ranks)\n",
+           passed_count == rank_count ? "PASS" : "FAIL", passed_count,
+           rank_count);
+  }
+#else
   printf("%s\n", ok ? "PASS" : "FAIL");
+#endif
 
   free(input);
   free(output_cpu);
   free(output_gpu);
-  cudaFree(d_input);
-  cudaFree(d_output);
+  CHECK_CUDA_ERROR(cudaFree(d_input));
+  CHECK_CUDA_ERROR(cudaFree(d_output));
+#ifdef HECBENCH_ENABLE_MPI_REPLICAS
+  MPI_Finalize();
+  return passed_count == rank_count ? 0 : 2;
+#endif
   return 0;
 }
