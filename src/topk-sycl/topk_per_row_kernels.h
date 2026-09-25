@@ -8,12 +8,14 @@
 #include "block_store.hpp"
 #include "block_scan.hpp"
 
-// Reference /opt/intel/oneapi/dpcpp-ct/latest/include/dpct/atomic.hpp
+// Histogram and Counter live in work-group local memory. Pinning
+// local_space + work_group lets the NVIDIA backend emit atom.shared
+// instead of a generic-space atomic.
 template <typename T,
           sycl::access::address_space addressSpace =
-              sycl::access::address_space::generic_space,
+              sycl::access::address_space::local_space,
           sycl::memory_order memoryOrder = sycl::memory_order::relaxed,
-          sycl::memory_scope memoryScope = sycl::memory_scope::device>
+          sycl::memory_scope memoryScope = sycl::memory_scope::work_group>
 static inline T atomic_fetch_add(T *addr, const T delta)
 {
     sycl::atomic_ref<T, memoryOrder, memoryScope, addressSpace> ref(*addr);
@@ -771,17 +773,11 @@ bool filter_and_histogram_for_one_block(sycl::nd_item<3> &item,
                     out_idx_buf[pos] = i;
 
                     int bucket = calc_bucket<T, BitsPerPass>(value, start_bit, mask, select_min);
-                    //atomicAdd(histogram[bucket], static_cast<IdxT>(1));
-                    atomic_fetch_add<IdxT,
-                        sycl::access::address_space::generic_space>(
-                        histogram + bucket, static_cast<IdxT>(1));
+                    atomic_fetch_add(histogram + bucket, static_cast<IdxT>(1));
                 }
                 else if(previous_bits < kth_value_bits)
                 {
-                    IdxT pos = //atomicAdd(p_out_cnt, static_cast<IdxT>(1));
-                    atomic_fetch_add<IdxT,
-                        sycl::access::address_space::generic_space>(
-                        p_out_cnt, static_cast<IdxT>(1));
+                    IdxT pos = atomic_fetch_add(p_out_cnt, static_cast<IdxT>(1));
                     if(WRITE_TOPK_VALUES)
                     {
                         out[pos] = value;
