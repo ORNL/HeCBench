@@ -7,6 +7,7 @@
 #include <chrono> // timing
 #include <stdio.h>
 #include "hip/hip_runtime.h"
+#include "../shmembench-cuda/reference.h"
 
 using namespace std::chrono;
 
@@ -71,14 +72,20 @@ __global__ void benchmark_shmem(float4 *g_data){
                                     shm_buffer[tid+5*blockDim.x]);
 }
 
-void shmembenchGPU(double *c, const long size, const int n) {
-  const int TOTAL_BLOCKS = size/(BLOCK_SIZE);
-
-  double *cd;
-  hipMalloc((void**)&cd, size*sizeof(double));
+void shmembenchGPU(float *c, const size_t size, const int n) {
+  // size floats, one float4 per thread => size/4 stored values
+  if (size % ((size_t)BLOCK_SIZE * 4) != 0) {
+    printf("size must be a multiple of %zu\n", (size_t)BLOCK_SIZE * 4);
+    printf("FAIL\n");
+    return;
+  }
+  const size_t num_float4 = size / 4;
 
   dim3 dimBlock(BLOCK_SIZE, 1, 1);
-  dim3 dimGrid_f4(TOTAL_BLOCKS/4, 1, 1);
+  dim3 dimGrid_f4(num_float4 / BLOCK_SIZE, 1, 1);
+
+  float *cd;
+  hipMalloc((void**)&cd, num_float4 * sizeof(float4));
 
   auto start = high_resolution_clock::now();
 
@@ -91,18 +98,18 @@ void shmembenchGPU(double *c, const long size, const int n) {
   printf("Average kernel execution time : %f (ms)\n", time_shmem_128b * 1e-6);
 
   // Copy results back to host memory
-  hipMemcpy(c, cd, size*sizeof(double), hipMemcpyDeviceToHost);
+  hipMemcpy(c, cd, num_float4 * sizeof(float4), hipMemcpyDeviceToHost);
   hipFree(cd);
 
-  // simple checksum
-  double sum = 0;
-  for (long i = 0; i < size; i++) sum += c[i];
-  if (sum != 21256458760384741137729978368.00)
-    printf("checksum failed\n");
-  
+  int errors = shmembench_verify(c, num_float4, BLOCK_SIZE, TOTAL_ITERATIONS);
+  printf("%s\n", errors ? "FAIL" : "PASS");
+  if (errors) return;
+
   printf("Memory throughput\n");
-  const long long operations_bytes  = (6LL+4*5*TOTAL_ITERATIONS+6)*size*sizeof(float);
-  const long long operations_128bit = (6LL+4*5*TOTAL_ITERATIONS+6)*size/4;
+  // 6LL keeps the product in 64-bit; 20492*size overflows 32-bit int
+  const long long nops = (6LL + 4 * 5 * TOTAL_ITERATIONS + 6) * size;
+  const long long operations_bytes  = nops * sizeof(float);
+  const long long operations_128bit = nops / 4;
 
   printf("\tusing 128bit operations : %8.2f GB/sec (%6.2f billion accesses/sec)\n", 
     (double)operations_bytes / time_shmem_128b,

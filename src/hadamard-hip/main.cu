@@ -294,10 +294,25 @@ void hadamard_transform(int batch_size, int dim, int repeat) {
 
     reference(h_x, r_out, batch_size, dim, scale);
 
+    // 1 ULP in the target type, expressed as a relative tolerance:
+    //   float:          2^-23 ≈ 1.19e-7
+    //   __half:         2^-10 ≈ 9.77e-4
+    //   __hip_bfloat16: 2^-7  ≈ 7.81e-3
+    constexpr float eps = std::is_same_v<T, float>        ? 1.2e-7f
+                        : std::is_same_v<T, __half>       ? 9.8e-4f
+                        :                                   7.9e-3f;
+    constexpr float rel_tol = 2.0f * eps;
+    constexpr float abs_tol = 1e-5f;
+
     bool ok = true;
     for (int64_t i = 0; i < numel; ++i) {
-      if (std::fabs((float)h_out[i] - (float)r_out[i]) > 1e-3f) {
-        printf("Mismatch at index %ld %f %f\n", i, (float)h_out[i], (float)r_out[i]);
+      float gpu = (float)h_out[i];
+      float ref = (float)r_out[i];
+      float diff = std::fabs(gpu - ref);
+      float bound = rel_tol * std::fabs(ref) + abs_tol;
+      if (diff > bound) {
+        printf("Mismatch at index %ld %f %f (diff=%e, bound=%e)\n",
+               i, gpu, ref, diff, bound);
         ok = false;
         break;
       }

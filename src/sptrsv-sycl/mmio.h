@@ -10,6 +10,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 
 #ifndef MM_IO_H
 #define MM_IO_H
@@ -23,6 +25,7 @@ typedef char MM_typecode[4];
 char *mm_typecode_to_str(MM_typecode matcode);
 
 int mm_read_banner(FILE *f, MM_typecode *matcode);
+int mm_parse_int(char *p, char **endptr, int *value);
 int mm_read_mtx_crd_size(FILE *f, int *M, int *N, int *nz);
 int mm_read_mtx_array_size(FILE *f, int *M, int *N);
 
@@ -336,61 +339,92 @@ int mm_read_banner(FILE *f, MM_typecode *matcode)
     return 0;
 }
 
-int mm_read_mtx_crd_size(FILE *f, int *M, int *N, int *nz)
+/* Read one decimal integer and leave *endptr just past it. The scanf family
+   has undefined behavior when the value does not fit into the destination
+   type, so a token that is out of range for int is rejected here instead. */
+int mm_parse_int(char *p, char **endptr, int *value)
 {
-    char line[MM_MAX_LINE_LENGTH];
-    char extra;
+    long parsed;
+
+    errno = 0;
+    parsed = strtol(p, endptr, 10);
+
+    if (*endptr == p || errno == ERANGE || parsed < INT_MIN || parsed > INT_MAX)
+        return -1;
+
+    *value = (int)parsed;
+    return 0;
+}
+
+/* Return the next line that is neither blank nor a comment, or NULL at
+   end of file. */
+static char *mm_next_data_line(FILE *f, char *line, int size)
+{
     char *p;
 
-    /* set return null parameter values, in case we exit with errors */
-    *M = *N = *nz = 0;
-
-    /* continue scanning past comments and blank lines */
-    while (fgets(line, MM_MAX_LINE_LENGTH, f) != NULL)
+    while (fgets(line, size, f) != NULL)
     {
         p = line;
         while (isspace((unsigned char)*p))
             p++;
 
-        if (*p == '\0' || *p == '%')
-            continue;
-
-        if (sscanf(p, "%d %d %d %c", M, N, nz, &extra) == 3)
-            return 0;
-
-        *M = *N = *nz = 0;
-        return MM_PREMATURE_EOF;
+        if (*p != '\0' && *p != '%')
+            return p;
     }
 
+    return NULL;
+}
+
+/* Fail unless the rest of the line is blank, so that a size line with a
+   trailing token is rejected rather than silently truncated. */
+static int mm_line_is_consumed(const char *p)
+{
+    while (isspace((unsigned char)*p))
+        p++;
+
+    return *p == '\0';
+}
+
+int mm_read_mtx_crd_size(FILE *f, int *M, int *N, int *nz)
+{
+    char line[MM_MAX_LINE_LENGTH];
+    char *p, *endptr;
+
+    /* set return null parameter values, in case we exit with errors */
+    *M = *N = *nz = 0;
+
+    p = mm_next_data_line(f, line, MM_MAX_LINE_LENGTH);
+    if (p == NULL)
+        return MM_PREMATURE_EOF;
+
+    if (mm_parse_int(p, &endptr, M) == 0 &&
+        mm_parse_int(endptr, &endptr, N) == 0 &&
+        mm_parse_int(endptr, &endptr, nz) == 0 &&
+        mm_line_is_consumed(endptr))
+        return 0;
+
+    *M = *N = *nz = 0;
     return MM_PREMATURE_EOF;
 }
 
 int mm_read_mtx_array_size(FILE *f, int *M, int *N)
 {
     char line[MM_MAX_LINE_LENGTH];
-    char extra;
-    char *p;
+    char *p, *endptr;
 
     /* set return null parameter values, in case we exit with errors */
     *M = *N = 0;
 
-    /* continue scanning past comments and blank lines */
-    while (fgets(line, MM_MAX_LINE_LENGTH, f) != NULL)
-    {
-        p = line;
-        while (isspace((unsigned char)*p))
-            p++;
-
-        if (*p == '\0' || *p == '%')
-            continue;
-
-        if (sscanf(p, "%d %d %c", M, N, &extra) == 2)
-            return 0;
-
-        *M = *N = 0;
+    p = mm_next_data_line(f, line, MM_MAX_LINE_LENGTH);
+    if (p == NULL)
         return MM_PREMATURE_EOF;
-    }
 
+    if (mm_parse_int(p, &endptr, M) == 0 &&
+        mm_parse_int(endptr, &endptr, N) == 0 &&
+        mm_line_is_consumed(endptr))
+        return 0;
+
+    *M = *N = 0;
     return MM_PREMATURE_EOF;
 }
 

@@ -2,6 +2,38 @@
 #define READ_MTX_H
 
 #include <limits.h>
+#include <math.h>
+
+#include "mmio.h"
+
+// Parse one entry line: two 1-based indices and, unless the file only stores
+// a sparsity pattern, a numeric value. The tokens are untrusted, so they are
+// converted with strto* rather than the scanf family, which has undefined
+// behavior once a token leaves the range of the destination type.
+static int parse_mtx_entry(char *line, int isPattern, int *idxi, int *idxj,
+                           double *value)
+{
+    char *endptr;
+
+    if (mm_parse_int(line, &endptr, idxi) != 0 ||
+        mm_parse_int(endptr, &endptr, idxj) != 0)
+        return -1;
+
+    if (isPattern)
+    {
+        *value = 1.0;
+    }
+    else
+    {
+        char *start = endptr;
+        *value = strtod(start, &endptr);
+        // an infinity or a NaN does not denote a matrix entry
+        if (endptr == start || !isfinite(*value))
+            return -1;
+    }
+
+    return mm_line_is_consumed(endptr) ? 0 : -1;
+}
 
 int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
              int **csrRowPtrA_add, int **csrColIdxA_add, VALUE_TYPE **csrValA_add)
@@ -43,6 +75,13 @@ int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
     if ( mm_is_real ( matcode) )     { isReal = 1; /*printf("type = real\n");*/ }
     if ( mm_is_integer ( matcode ) ) { isInteger = 1; /*printf("type = integer\n");*/ }
 
+    if (!isPattern && !isReal && !isInteger)
+    {
+        printf("Sorry, only the data types 'REAL', 'INTEGER' and 'PATTERN' are supported.\n");
+        fclose(f);
+        return -3;
+    }
+
     /* find out size of sparse matrix .... */
     ret_code = mm_read_mtx_crd_size(f, &m, &n, &nnzA_mtx_report);
     
@@ -78,8 +117,11 @@ int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
     }
 
     size_t csrRowPtrA_size = ((size_t)m + 1) * sizeof(int);
-    
-    int *csrRowPtrA_counter = (int *)malloc(csrRowPtrA_size);
+
+    // a symmetric file expands to up to twice as many entries as it reports,
+    // which does not necessarily fit into the int the CSR arrays are indexed
+    // with, so the entries per row are counted in size_t
+    size_t *csrRowPtrA_counter = (size_t *)malloc(((size_t)m + 1) * sizeof(size_t));
     
     int *csrRowIdxA_tmp = (int *)malloc((size_t)nnzA_mtx_report * sizeof(int));
     int *csrColIdxA_tmp = (int *)malloc((size_t)nnzA_mtx_report * sizeof(int));
@@ -98,41 +140,18 @@ int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
         return -2;
     }
 
-    memset(csrRowPtrA_counter, 0, csrRowPtrA_size);
-    
-    /* NOTE: when reading in doubles, ANSI C requires the use of the "l"  */
-    /*   specifier as in "%lg", "%lf", "%le", otherwise errors will occur */
-    /*  (ANSI C X3.159-1989, Sec. 4.9.6.2, p. 136 lines 13-15)            */
+    memset(csrRowPtrA_counter, 0, ((size_t)m + 1) * sizeof(size_t));
     
     //printf("222222\n");
+    char line[MM_MAX_LINE_LENGTH];
     int i;
     for (i = 0; i < nnzA_mtx_report; i++)
     {
         int idxi = 0, idxj = 0;
-        int ival = 0;
         double fval = 0.0;
-        int returnvalue = 0;
-        int expected_values = 0;
-        
-        if (isReal)
-        {
-            returnvalue = fscanf(f, "%d %d %lg\n", &idxi, &idxj, &fval);
-            expected_values = 3;
-        }
-        else if (isInteger)
-        {
-            returnvalue = fscanf(f, "%d %d %d\n", &idxi, &idxj, &ival);
-            fval = ival;
-            expected_values = 3;
-        }
-        else if (isPattern)
-        {
-            returnvalue = fscanf(f, "%d %d\n", &idxi, &idxj);
-            fval = 1.0;
-            expected_values = 2;
-        }
+        char *entry = mm_next_data_line(f, line, MM_MAX_LINE_LENGTH);
 
-        if (returnvalue != expected_values)
+        if (entry == NULL || parse_mtx_entry(entry, isPattern, &idxi, &idxj, &fval) != 0)
         {
             fprintf(stderr, "ERROR: malformed entry line in %s\n", filename);
             fclose(f);
@@ -176,7 +195,7 @@ int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
     }
     
     // exclusive scan for csrRowPtrA_counter
-    int old_val, new_val;
+    size_t old_val, new_val;
     
     old_val = csrRowPtrA_counter[0];
     csrRowPtrA_counter[0] = 0;
@@ -187,7 +206,19 @@ int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
         old_val = new_val;
     }
     
-    nnzA = csrRowPtrA_counter[m];
+    // the CSR arrays are indexed with int, so a matrix that ends up with more
+    // entries than that cannot be built
+    if (csrRowPtrA_counter[m] > (size_t)INT_MAX)
+    {
+        fprintf(stderr, "ERROR: too many entries to index with int in %s\n", filename);
+        free(csrRowPtrA_counter);
+        free(csrRowIdxA_tmp);
+        free(csrColIdxA_tmp);
+        free(csrValA_tmp);
+        return -9;
+    }
+
+    nnzA = (int)csrRowPtrA_counter[m];
     csrRowPtrA = (int *)malloc(csrRowPtrA_size);
     csrColIdxA = (int *)malloc((size_t)nnzA * sizeof(int));
     csrValA    = (VALUE_TYPE *)malloc((size_t)nnzA * sizeof(VALUE_TYPE));
@@ -205,8 +236,10 @@ int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
         return -2;
     }
     
-    memcpy(csrRowPtrA, csrRowPtrA_counter, csrRowPtrA_size);
-    memset(csrRowPtrA_counter, 0, csrRowPtrA_size);
+    for (i = 0; i <= m; i++)
+        csrRowPtrA[i] = (int)csrRowPtrA_counter[i];
+
+    memset(csrRowPtrA_counter, 0, ((size_t)m + 1) * sizeof(size_t));
     
     if (isSymmetric)
     {
@@ -214,7 +247,7 @@ int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
         {
             if (csrRowIdxA_tmp[i] != csrColIdxA_tmp[i])
             {
-                int offset = csrRowPtrA[csrRowIdxA_tmp[i]] + csrRowPtrA_counter[csrRowIdxA_tmp[i]];
+                size_t offset = csrRowPtrA[csrRowIdxA_tmp[i]] + csrRowPtrA_counter[csrRowIdxA_tmp[i]];
                 csrColIdxA[offset] = csrColIdxA_tmp[i];
                 csrValA[offset] = csrValA_tmp[i];
                 csrRowPtrA_counter[csrRowIdxA_tmp[i]]++;
@@ -226,7 +259,7 @@ int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
             }
             else
             {
-                int offset = csrRowPtrA[csrRowIdxA_tmp[i]] + csrRowPtrA_counter[csrRowIdxA_tmp[i]];
+                size_t offset = csrRowPtrA[csrRowIdxA_tmp[i]] + csrRowPtrA_counter[csrRowIdxA_tmp[i]];
                 csrColIdxA[offset] = csrColIdxA_tmp[i];
                 csrValA[offset] = csrValA_tmp[i];
                 csrRowPtrA_counter[csrRowIdxA_tmp[i]]++;
@@ -237,7 +270,7 @@ int read_mtx(char  * filename, int* m_add, int *n_add, int *nnzA_add,
     {
         for (i = 0; i < nnzA_mtx_report; i++)
         {
-            int offset = csrRowPtrA[csrRowIdxA_tmp[i]] + csrRowPtrA_counter[csrRowIdxA_tmp[i]];
+            size_t offset = csrRowPtrA[csrRowIdxA_tmp[i]] + csrRowPtrA_counter[csrRowIdxA_tmp[i]];
             csrColIdxA[offset] = csrColIdxA_tmp[i];
             csrValA[offset] = csrValA_tmp[i];
             csrRowPtrA_counter[csrRowIdxA_tmp[i]]++;
@@ -271,6 +304,14 @@ int change2tran(int m, int nnzA,int *csrRowPtrA, int *csrColIdxA,
     // besides the strictly lower entries of A, every row contributes a unit
     // diagonal that A itself does not necessarily store
     size_t max_nnzL = (size_t)nnzA + (size_t)m;
+
+    // the row pointers of L and the entry counter below are int, so refuse a
+    // matrix whose entries cannot be counted with one
+    if (max_nnzL > (size_t)INT_MAX)
+    {
+        fprintf(stderr, "ERROR: too many entries to index with int in matrix L\n");
+        return -1;
+    }
 
     int *csrRowPtrL_tmp = (int *)malloc(((size_t)m + 1) * sizeof(int));
     int *csrColIdxL_tmp = (int *)malloc(max_nnzL * sizeof(int));

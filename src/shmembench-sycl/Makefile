@@ -71,7 +71,7 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp shmem_kernels.h
+%.o: %.cpp shmem_kernels.h ../shmembench-cuda/reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
