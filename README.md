@@ -100,7 +100,7 @@ Each benchmark falls into a single category. While such classification is not ac
     extrema, fft, lombscargle, sosfil, zmddft
 
 ### Simulation
-    ace, adv, amgmk, axhelm, bh, bspline-vgh, burger, cooling, ccsd-trpdrv, che, chemv, chi2, clenergy, cmp, cobahh, d2q9_bgk, d3q19_bgk, damage, ddbp, dslash, easyWave, eikonal, fdtd3d, feynman-kac, fhd, fluidSim, gibbs, goulash, gpp, grrt, haccmk, halo-finder, heartwall, heat, heat2d, henry, hexicton, hotspot, hotspot3D, hpl, hwt1d, hypterm, ising, iso2dfd, laplace, laplace3d, lavaMD, lid-driven-cavity, logic-resim, logic-rewrite, loopback, lsqt, lulesh, mcmd, md, mdh, metropolis, miniFE, minimod, minisweep, miniWeather, multimaterial, mxfp4, myocte, nbody, particle-diffusion, particlefilter, particles, pathfinder, pns, projectile, pso, qem, rainflow, rayleighBenardConvection, reaction, rsbench, rtm8, rushlarsen, s3d, su3, sundials, sheath, simplemoc, slit, sparkler, sph, svt, sw4ck, tensorT, testSNAP, tissue, tpacf, tqs, tridiagonal, tsa, vanGenuchten, vmc, wenofv, wlcpow, wsm5, xlqc, xsbench
+    ace, adv, amgmk, axhelm, bh, bspline-vgh, burger, cooling, ccsd-trpdrv, che, chemv, chi2, clenergy, cmp, cobahh, d2q9_bgk, d3q19_bgk, damage, ddbp, dslash, easyWave, eikonal, fdtd3d, feynman-kac, fhd, fluidSim, gibbs, goulash, gpp, grrt, gsplat4d, haccmk, halo-finder, heartwall, heat, heat2d, henry, hexicton, hotspot, hotspot3D, hpl, hwt1d, hypterm, ising, iso2dfd, laplace, laplace3d, lavaMD, lid-driven-cavity, logic-resim, logic-rewrite, loopback, lsqt, lulesh, mcmd, md, mdh, metropolis, miniFE, minimod, minisweep, miniWeather, multimaterial, mxfp4, myocte, nbody, particle-diffusion, particlefilter, particles, pathfinder, pns, projectile, pso, qem, rainflow, rayleighBenardConvection, reaction, rsbench, rtm8, rushlarsen, s3d, su3, sundials, sheath, simplemoc, slit, sparkler, sph, svt, sw4ck, tensorT, testSNAP, tissue, tpacf, tqs, tridiagonal, tsa, vanGenuchten, vmc, wenofv, wlcpow, wsm5, xlqc, xsbench
 
 ### Sorting
     bitonic-sort, hybridsort, is, merge, quicksort, radixsort, segsort, sort, sortKV, split, topk, warpsort
@@ -208,6 +208,8 @@ Program hang: bh-hip, mpc-sycl
 When double-precision floating-point operations are not supported on certain Intel GPU devices, software emulation may be enabled. [FP64 emulation](https://github.com/intel/compute-runtime/blob/master/opencl/doc/FAQ.md#feature-double-precision-emulation-fp64)
 
 # Feedback from the papers
+
+Hagn, M., 2026. LLM-driven Translation of GPU Code Across Parallel Execution Models (Technische Universität Wien).
 
 Stephenson, M., Damani, S., Tarek Ibn Ziad, M., Ladram, A. and Garland, M., 2026. SuperCollider: Scalable and Effective Data Race Detection for CUDA. Proceedings of the ACM on Programming Languages, 10(PLDI), pp.2303-2327.
 
@@ -847,6 +849,9 @@ Early results are shown [here](results/README.md)
 
 ### gru2 (cuda)
   Forward operations of a multi-layer gated recurrent unit (https://pytorch.org/)
+
+### gsplat4d (cuda)
+  Physics-Aware 4D Dynamic Endoscopic Scene Simulations via MLLM-Guided Gaussian Splatting (https://arxiv.org/abs/2605.16022)
 
 ### haccmk (c)
   The HACC microkernel (https://asc.llnl.gov/CORAL-benchmarks/#haccmk)

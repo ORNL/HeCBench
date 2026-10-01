@@ -1,5 +1,6 @@
 #include <chrono>
 #include <iostream>
+#include <random>
 #include <cuda.h>
 #include "vectypes.h"
 
@@ -8,6 +9,7 @@ typedef gmx::BasicVector<float> Float3;
 typedef float4 Float4;
 
 #include "constants.h"
+#include "reference.h"
 
 #if (CUDART_VERSION >= 9000)
 #define __shfl_up(v, d) __shfl_up_sync(0xffffffff, v, d)
@@ -376,21 +378,16 @@ nbnxn_cj4_t get_cj4(int id) {
     value.cj[i] = i + id;
   }
   for (int i = 0; i < c_nbnxnGpuClusterpairSplit; ++i) {
-    value.imei[i].imask = 0U;
-    value.imei[i].excl_ind = 0;
+    value.imei[i].imask = 0xFFFFFFFFu;
+    value.imei[i].excl_ind = id % 19205;
   }
   return value;
 }
 
-nbnxn_sci_t get_sci(int id) {
-  return {id, 0, 8 * id, 8 * id + 7};
-}
-
 nbnxn_excl_t get_excl(int id) {
   nbnxn_excl_t value;
-  for (int i = 0; i < c_nbnxnGpuExclSize; ++i) {
-    value.pair[i] = 7;
-  }
+  std::mt19937 rng(id);
+  for (int i = 0; i < c_nbnxnGpuExclSize; ++i) value.pair[i] = rng();
   return value;
 }
 
@@ -404,92 +401,144 @@ int main(int argc, char* argv[]) {
   const dim3 blocks ( block_x, block_y, 1 );
   const dim3 grids ( 1, 1, grid_z );
 
-  Float4* a_xq;
-  cudaMallocManaged(&a_xq, sizeof(Float4) * NUM_ATOMS);
+  // -----------------------------------------------------------------
+  // Host buffers (h_ prefix)
+  // -----------------------------------------------------------------
+  // These hold the "source of truth" data on the CPU. They are used to:
+  //   (1) stage initial values into the device buffers via cudaMemcpy, and
+  //   (2) feed NbnxmReference (reference.h), which is host-only code and
+  //       must be able to dereference xq/shiftVec/cj4/sci/excl/atomTypes/
+  //       nbfp directly -- it can no longer read the d_* buffers now that
+  //       they are plain (non-managed) device memory.
+  // a_f / fShift do not need a persistent host mirror for staging (their
+  // initial values are trivial to re-write directly into h_f / h_fShift
+  // each time we reset them), but h_f / h_fShift ARE needed as the landing
+  // buffer for the periodic cudaMemcpyDeviceToHost reads used to validate
+  // against the CPU reference.
+  Float4*        h_xq        = new Float4[NUM_ATOMS];
+  Float3*        h_f         = new Float3[NUM_ATOMS];
+  Float3*        h_shiftVec  = new Float3[45];
+  Float3*        h_fShift    = new Float3[45];
+  nbnxn_cj4_t*   h_cj4       = new nbnxn_cj4_t[56881];
+  nbnxn_sci_t*   h_sci       = new nbnxn_sci_t[4806];
+  nbnxn_excl_t*  h_excl      = new nbnxn_excl_t[19205];
+  int*           h_atomTypes = new int[NUM_ATOMS];
+  Float2*        h_nbfp      = new Float2[1024];
 
-  Float3* a_f;
-  cudaMallocManaged(&a_f, sizeof(Float3) * NUM_ATOMS);
+  // -----------------------------------------------------------------
+  // Device buffers (d_ prefix)
+  // -----------------------------------------------------------------
+  // Plain cudaMalloc (NOT cudaMallocManaged): per PR #326's rationale,
+  // atomics on cudaMallocManaged memory can be pathologically slow on
+  // unified-memory architectures because they require system-scope
+  // (CPU-GPU) coherency, even though the host side is never touched
+  // during the timed kernel loops here. nbnxmKernelTest() only
+  // atomicAdd()s into d_f / d_fShift and only reads the rest, so plain
+  // device memory + explicit H2D/D2H staging is strictly faster with
+  // identical results.
+  Float4*        d_xq;
+  Float3*        d_f;
+  Float3*        d_shiftVec;
+  Float3*        d_fShift;
+  nbnxn_cj4_t*   d_cj4;
+  nbnxn_sci_t*   d_sci;
+  nbnxn_excl_t*  d_excl;
+  int*           d_atomTypes;
+  Float2*        d_nbfp;
 
-  Float3* shiftVec;
-  cudaMallocManaged(&shiftVec, sizeof(Float3) * 45);
+  cudaMalloc(&d_xq,        sizeof(Float4)       * NUM_ATOMS);
+  cudaMalloc(&d_f,         sizeof(Float3)       * NUM_ATOMS);
+  cudaMalloc(&d_shiftVec,  sizeof(Float3)       * 45);
+  cudaMalloc(&d_fShift,    sizeof(Float3)       * 45);
+  cudaMalloc(&d_cj4,       sizeof(nbnxn_cj4_t)  * 56881);
+  cudaMalloc(&d_sci,       sizeof(nbnxn_sci_t)  * 4806);
+  cudaMalloc(&d_excl,      sizeof(nbnxn_excl_t) * 19205);
+  cudaMalloc(&d_atomTypes, sizeof(int)          * NUM_ATOMS);
+  cudaMalloc(&d_nbfp,      sizeof(Float2)       * 1024);
 
-  Float3* fShift;
-  cudaMallocManaged(&fShift, sizeof(Float3) * 45);
-
-  nbnxn_cj4_t* cj4;
-  cudaMallocManaged(&cj4, sizeof(nbnxn_cj4_t) * 56881);
-
-  nbnxn_sci_t* sci;
-  cudaMallocManaged(&sci, sizeof(nbnxn_sci_t) * 4806);
-
-  nbnxn_excl_t* excl;
-  cudaMallocManaged(&excl, sizeof(nbnxn_excl_t) * 19205);
-
-  int* atomTypes;
-  cudaMallocManaged(&atomTypes, sizeof(int) * NUM_ATOMS);
-
-  Float2* nbfp;
-  cudaMallocManaged(&nbfp, sizeof(Float2) * 1024);
+  // -----------------------------------------------------------------
+  // Populate host buffers with the same deterministic/synthetic data as
+  // before, then copy H2D once (these inputs are re-used, unchanged, for
+  // every launch in both the "w/o shift" and "w/ shift" blocks below).
+  // -----------------------------------------------------------------
+  std::mt19937 rng(1337);
+  std::uniform_real_distribution<float> posDist(-20.f, 20.f);
+  std::uniform_real_distribution<float> qDist(-1.f, 1.f);
 
   for (int i = 0; i < NUM_ATOMS; ++i) {
-    a_xq[i] = make_float4(1.0f, 0.5f, 0.25f, 0.125f);
+    h_xq[i] = make_float4(posDist(rng), posDist(rng), posDist(rng), qDist(rng));
   }
   for (int i = 0; i < NUM_ATOMS; ++i) {
-    a_f[i] = Float3(1.0f, 0.5f, 0.25f);
+    h_f[i] = Float3(1.0f, 0.5f, 0.25f);
   }
   for (int i = 0; i < 45; ++i) {
-    shiftVec[i] = Float3(1.0f, 0.5f, 0.25f);
+    h_shiftVec[i] = Float3(posDist(rng)*0.1f, posDist(rng)*0.1f, posDist(rng)*0.1f);
   }
   for (int i = 0; i < 45; ++i) {
-    fShift[i] = Float3(1.0f, 0.5f, 0.25f);
+    h_fShift[i] = Float3(1.0f, 0.5f, 0.25f);
   }
   for (int i = 0; i < 56881; ++i) {
-    cj4[i] = get_cj4(i);
+    h_cj4[i] = get_cj4(i % 200);
   }
   for (int i = 0; i < 4806; ++i) {
-    sci[i] = get_sci(i);
+    h_sci[i] = {i % 400, i % c_numIvecs, (2*i) % 200, (2*i) % 200 + 1};
   }
   for (int i = 0; i < 19205; ++i) {
-    excl[i] = get_excl(i);
+    h_excl[i] = get_excl(i);
   }
   for (int i = 0; i < NUM_ATOMS; ++i) {
-    atomTypes[i] = (i % 2);
+    h_atomTypes[i] = (i % 32);
   }
   for (int i = 0; i < 1024; ++i) {
-    nbfp[i] = make_float2(0.5f, 0.25f);
+    h_nbfp[i] = make_float2(0.5f, 0.25f);
   }
+
+  cudaMemcpy(d_xq,        h_xq,        sizeof(Float4)       * NUM_ATOMS, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_f,         h_f,         sizeof(Float3)       * NUM_ATOMS, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_shiftVec,  h_shiftVec,  sizeof(Float3)       * 45,        cudaMemcpyHostToDevice);
+  cudaMemcpy(d_fShift,    h_fShift,    sizeof(Float3)       * 45,        cudaMemcpyHostToDevice);
+  cudaMemcpy(d_cj4,       h_cj4,       sizeof(nbnxn_cj4_t)  * 56881,     cudaMemcpyHostToDevice);
+  cudaMemcpy(d_sci,       h_sci,       sizeof(nbnxn_sci_t)  * 4806,      cudaMemcpyHostToDevice);
+  cudaMemcpy(d_excl,      h_excl,      sizeof(nbnxn_excl_t) * 19205,     cudaMemcpyHostToDevice);
+  cudaMemcpy(d_atomTypes, h_atomTypes, sizeof(int)          * NUM_ATOMS, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_nbfp,      h_nbfp,      sizeof(Float2)       * 1024,      cudaMemcpyHostToDevice);
+
+  // NbnxmReference reads its inputs directly from host memory -- pass the
+  // h_* buffers, not the d_* ones (it cannot dereference device pointers).
+  NbnxmReference ref(h_xq, h_shiftVec, h_cj4, h_sci, h_excl, h_atomTypes, h_nbfp,
+                     32, 1, 3.12341f, 138.935f);
 
   // Warming-up
   nbnxmKernelTest<<<grids, blocks>>>(
-      a_xq,
-      a_f,
-      shiftVec,
-      fShift,
-      cj4,
-      sci,
-      excl,
-      atomTypes,
-      nbfp,
+      d_xq,
+      d_f,
+      d_shiftVec,
+      d_fShift,
+      d_cj4,
+      d_sci,
+      d_excl,
+      d_atomTypes,
+      d_nbfp,
       32,
       1,
       3.12341,
       138.935,
       0);
-  cudaDeviceSynchronize();
 
+  cudaDeviceSynchronize();
   auto start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < repeat; ++i) {
     nbnxmKernelTest<<<grids, blocks>>>(
-        a_xq,
-        a_f,
-        shiftVec,
-        fShift,
-        cj4,
-        sci,
-        excl,
-        atomTypes,
-        nbfp,
+        d_xq,
+        d_f,
+        d_shiftVec,
+        d_fShift,
+        d_cj4,
+        d_sci,
+        d_excl,
+        d_atomTypes,
+        d_nbfp,
         32,
         1,
         3.12341,
@@ -502,65 +551,42 @@ int main(int argc, char* argv[]) {
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average kernel execution time (w/o shift): %f (us)\n", (time * 1e-3f) / repeat);
 
-#ifdef DEBUG
-  float f0 = 0, f1 = 0, f2 = 0; 
-  for (int i = 0; i < NUM_ATOMS; ++i) {
-    f0 += a_f[i][0];
-    f1 += a_f[i][1];
-    f2 += a_f[i][2];
-  }
-  printf("Checksum (a_f): %f %f %f\n", f0, f1, f2);
+  // Pull the accumulated forces back to host for validation against the
+  // CPU reference (d_f / d_fShift are not host-readable any more).
+  cudaMemcpy(h_f,      d_f,      sizeof(Float3) * NUM_ATOMS, cudaMemcpyDeviceToHost);
+  cudaMemcpy(h_fShift, d_fShift, sizeof(Float3) * 45,        cudaMemcpyDeviceToHost);
 
-  f0 = 0, f1 = 0, f2 = 0; 
-  for (int i = 0; i < 45; ++i) {
-    f0 += fShift[i][0];
-    f1 += fShift[i][1];
-    f2 += fShift[i][2];
-  }
-  printf("Checksum (fShift): %f %f %f\n", f0, f1, f2);
-#endif
+  ref.computeDelta(/*calcShift=*/false);
+  ref.validate(h_f, h_fShift, /*launchCount=*/repeat + 1,
+               1.0f, 0.5f, 0.25f, 1.0f, 0.5f, 0.25f,
+               /*absTol=*/1e-3f, "w/o shift");
 
+  // Reset the force accumulators (host copies), then push the reset back
+  // to device before the second (w/ shift) timed block, exactly mirroring
+  // what the original cudaMallocManaged version did in-place.
   for (int i = 0; i < NUM_ATOMS; ++i) {
-    a_xq[i] = make_float4(1.0f, 0.5f, 0.25f, 0.125f);
-  }
-  for (int i = 0; i < NUM_ATOMS; ++i) {
-    a_f[i] = Float3(1.0f, 0.5f, 0.25f);
+    h_f[i] = Float3(1.0f, 0.5f, 0.25f);
   }
   for (int i = 0; i < 45; ++i) {
-    shiftVec[i] = Float3(1.0f, 0.5f, 0.25f);
+    h_fShift[i] = Float3(1.0f, 0.5f, 0.25f);
   }
-  for (int i = 0; i < 45; ++i) {
-    fShift[i] = Float3(1.0f, 0.5f, 0.25f);
-  }
-  for (int i = 0; i < 56881; ++i) {
-    cj4[i] = get_cj4(i);
-  }
-  for (int i = 0; i < 4806; ++i) {
-    sci[i] = get_sci(i);
-  }
-  for (int i = 0; i < 19205; ++i) {
-    excl[i] = get_excl(i);
-  }
-  for (int i = 0; i < NUM_ATOMS; ++i) {
-    atomTypes[i] = (i % 2);
-  }
-  for (int i = 0; i < 1024; ++i) {
-    nbfp[i] = make_float2(0.5f, 0.25f);
-  }
+  cudaMemcpy(d_f,      h_f,      sizeof(Float3) * NUM_ATOMS, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_fShift, h_fShift, sizeof(Float3) * 45,        cudaMemcpyHostToDevice);
 
+  cudaDeviceSynchronize();
   start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < repeat; ++i) {
     nbnxmKernelTest<<<grids, blocks>>>(
-        a_xq,
-        a_f,
-        shiftVec,
-        fShift,
-        cj4,
-        sci,
-        excl,
-        atomTypes,
-        nbfp,
+        d_xq,
+        d_f,
+        d_shiftVec,
+        d_fShift,
+        d_cj4,
+        d_sci,
+        d_excl,
+        d_atomTypes,
+        d_nbfp,
         32,
         1,
         3.12341,
@@ -573,34 +599,35 @@ int main(int argc, char* argv[]) {
   time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average kernel execution time (w/ shift): %f (us)\n", (time * 1e-3f) / repeat);
 
-#ifdef DEBUG
-  f0 = 0, f1 = 0, f2 = 0; 
-  for (int i = 0; i < NUM_ATOMS; ++i) {
-    f0 += a_f[i][0];
-    f1 += a_f[i][1];
-    f2 += a_f[i][2];
-  }
-  printf("Checksum (a_f): %f %f %f\n", f0, f1, f2);
+  cudaMemcpy(h_f,      d_f,      sizeof(Float3) * NUM_ATOMS, cudaMemcpyDeviceToHost);
+  cudaMemcpy(h_fShift, d_fShift, sizeof(Float3) * 45,        cudaMemcpyDeviceToHost);
 
-  f0 = 0, f1 = 0, f2 = 0; 
-  for (int i = 0; i < 45; ++i) {
-    f0 += fShift[i][0];
-    f1 += fShift[i][1];
-    f2 += fShift[i][2];
-  }
-  printf("Checksum (fShift): %f %f %f\n", f0, f1, f2);
-#endif
+  ref.computeDelta(/*calcShift=*/true);
+  // Second block's `repeat` launches all pass calcShift=1; there is
+  // no extra warm-up launch before this block.
+  ref.validate(h_f, h_fShift, /*launchCount=*/repeat,
+               1.0f, 0.5f, 0.25f, 1.0f, 0.5f, 0.25f,
+               /*absTol=*/1e-3f, "w/ shift");
 
-  cudaFree(nbfp);
-  cudaFree(atomTypes);
-  cudaFree(excl);
-  cudaFree(sci);
-  cudaFree(cj4);
-  cudaFree(fShift);
-  cudaFree(shiftVec);
-  cudaFree(a_f);
-  cudaFree(a_xq);
+  cudaFree(d_nbfp);
+  cudaFree(d_atomTypes);
+  cudaFree(d_excl);
+  cudaFree(d_sci);
+  cudaFree(d_cj4);
+  cudaFree(d_fShift);
+  cudaFree(d_shiftVec);
+  cudaFree(d_f);
+  cudaFree(d_xq);
+
+  delete[] h_nbfp;
+  delete[] h_atomTypes;
+  delete[] h_excl;
+  delete[] h_sci;
+  delete[] h_cj4;
+  delete[] h_fShift;
+  delete[] h_shiftVec;
+  delete[] h_f;
+  delete[] h_xq;
 
   return 0;
 }
-

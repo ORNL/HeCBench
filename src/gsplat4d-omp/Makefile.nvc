@@ -25,7 +25,7 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../gsplat4d-cuda
 
 # Linker Flags
 LDFLAGS =
@@ -42,9 +42,9 @@ ifeq ($(OPTIMIZE),yes)
 endif
 
 ifeq ($(DEVICE),gpu)
-  CFLAGS +=-Minfo -mp=gpu -gpu=$(SM)
+  CFLAGS +=-Minfo -mp=gpu -gpu=$(SM)#,fastmath
 else
-  CFLAGS +=-mp
+  CFLAGS +=
 endif
 #===============================================================================
 # Targets to Build
@@ -53,11 +53,11 @@ endif
 $(program): $(obj) Makefile.nvc
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp Makefile.nvc
+%.o: %.cpp ../gsplat4d-cuda/reference.h Makefile.nvc
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	$(LAUNCHER) ./$(program)
+	$(LAUNCHER) ./$(program) 200000 1280 720 100

@@ -10,6 +10,14 @@
 #include <cstdint>
 #include <ostream>
 
+// The CUDA and HIP variants compile this header with a device compiler and
+// need the accessors annotated; the OpenMP and SYCL variants do not.
+#if defined(__CUDACC__) || defined(__HIPCC__)
+#define HECBENCH_HOST_DEVICE __host__ __device__
+#else
+#define HECBENCH_HOST_DEVICE
+#endif
+
 // struct to store a pixel of image
 struct ImgPixel {
   std::uint8_t b;
@@ -23,7 +31,7 @@ struct ImgPixel {
 
   bool operator!=(ImgPixel const& other) const { return !(*this == other); }
 
-  __host__ __device__
+  HECBENCH_HOST_DEVICE
   void set(std::uint8_t blue, std::uint8_t green, std::uint8_t red,
            std::uint8_t alpha) {
     b = blue;

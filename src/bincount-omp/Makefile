@@ -43,7 +43,7 @@ ifeq ($(OPTIMIZE),yes)
 endif
 
 ifeq ($(DEVICE),gpu)
-  CFLAGS +=-fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__ -DHAVE_OMPX_DEVICE_INFO
+  CFLAGS +=-fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__
   LDFLAGS +=-Xopenmp-target-backend "-cl-fp32-correctly-rounded-divide-sqrt"
 else
   CFLAGS +=-qopenmp

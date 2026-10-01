@@ -43,6 +43,7 @@ DOUBLE get_time_eikonal(DOUBLE a, DOUBLE b, DOUBLE c, DOUBLE s)
 SYCL_EXTERNAL
 void run_solver(
   sycl::nd_item<3> &item,
+  DOUBLE *__restrict sol_mem,
   const double*__restrict spd,
   const bool*__restrict mask,
   const DOUBLE *__restrict sol_in,
@@ -79,12 +80,8 @@ void run_solver(
     uint tz = item.get_local_id(0);
     uint tIdx = tz*BLOCK_LENGTH*BLOCK_LENGTH + ty*BLOCK_LENGTH + tx;
 
-    //__shared__ DOUBLE _sol[BLOCK_LENGTH+2][BLOCK_LENGTH+2][BLOCK_LENGTH+2];
-    sycl::multi_ptr<DOUBLE[BLOCK_LENGTH+2][BLOCK_LENGTH+2][BLOCK_LENGTH+2], \
-                    sycl::access::address_space::local_space> localPtr =
-      sycl::ext::oneapi::group_local_memory_for_overwrite
-      <DOUBLE[BLOCK_LENGTH+2][BLOCK_LENGTH+2][BLOCK_LENGTH+2]>(item.get_group());
-    DOUBLE (*_sol)[BLOCK_LENGTH+2][BLOCK_LENGTH+2] = *localPtr;
+    DOUBLE (*_sol)[BLOCK_LENGTH+2][BLOCK_LENGTH+2] =
+      reinterpret_cast<DOUBLE (*)[BLOCK_LENGTH+2][BLOCK_LENGTH+2]>(sol_mem);
 
     // copy global to shared memory
     //dim3 idx(tx+1,ty+1,tz+1);
@@ -232,6 +229,7 @@ void run_solver(
 SYCL_EXTERNAL
 void run_reduction(
   sycl::nd_item<3> &item,
+  bool *__restrict conv,
   const bool *__restrict con,
   bool *__restrict listVol,
   const uint *__restrict list,
@@ -242,13 +240,6 @@ void run_reduction(
   if(list_idx < nActiveBlock)
   {
     uint block_idx = list[list_idx];
-
-    //__shared__ bool conv[BLOCK_LENGTH*BLOCK_LENGTH*BLOCK_LENGTH];
-    sycl::multi_ptr<bool[BLOCK_LENGTH*BLOCK_LENGTH*BLOCK_LENGTH],
-                    sycl::access::address_space::local_space> localPtr =
-      sycl::ext::oneapi::group_local_memory_for_overwrite
-      <bool[BLOCK_LENGTH*BLOCK_LENGTH*BLOCK_LENGTH]>(item.get_group());
-    bool* conv = *localPtr;
 
     uint blocksize = BLOCK_LENGTH*BLOCK_LENGTH*BLOCK_LENGTH/2;
     uint base_addr = block_idx*blocksize*2;
@@ -284,6 +275,7 @@ void run_reduction(
 SYCL_EXTERNAL
 void run_check_neighbor(
   sycl::nd_item<3> &item,
+  DOUBLE *__restrict sol_mem,
   const double*__restrict spd,
   const bool*__restrict mask,
   const DOUBLE *__restrict sol_in,
@@ -299,12 +291,8 @@ void run_check_neighbor(
   {
     double F;
     bool isValid;
-    //__shared__ DOUBLE _sol[BLOCK_LENGTH+2][BLOCK_LENGTH+2][BLOCK_LENGTH+2];
-    sycl::multi_ptr<DOUBLE[BLOCK_LENGTH+2][BLOCK_LENGTH+2][BLOCK_LENGTH+2], \
-                    sycl::access::address_space::local_space> localPtr =
-      sycl::ext::oneapi::group_local_memory_for_overwrite
-      <DOUBLE[BLOCK_LENGTH+2][BLOCK_LENGTH+2][BLOCK_LENGTH+2]>(item.get_group());
-    DOUBLE (*_sol)[BLOCK_LENGTH+2][BLOCK_LENGTH+2] = *localPtr;
+    DOUBLE (*_sol)[BLOCK_LENGTH+2][BLOCK_LENGTH+2] =
+      reinterpret_cast<DOUBLE (*)[BLOCK_LENGTH+2][BLOCK_LENGTH+2]>(sol_mem);
 
     uint block_idx = list[list_idx];
     uint blocksize = BLOCK_LENGTH*BLOCK_LENGTH*BLOCK_LENGTH;
@@ -460,3 +448,4 @@ void run_check_neighbor(
     }
   }
 }
+

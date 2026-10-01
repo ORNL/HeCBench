@@ -57,8 +57,10 @@ void TaskQueue_gpu(const task_t *__restrict queue,
               sycl::memory_scope::device,
               sycl::access::address_space::global_space> (*consumed);
     next = ao.fetch_add(1);
-    t->id = queue[next].id;
-    t->op = queue[next].op;
+    if(next < gpuQueueSize) {
+      t->id = queue[next].id;
+      t->op = queue[next].op;
+    }
   }
   item.barrier(sycl::access::fence_space::local_space);
   while(next < gpuQueueSize) {
@@ -86,8 +88,10 @@ void TaskQueue_gpu(const task_t *__restrict queue,
                 sycl::access::address_space::global_space> (*consumed);
       next = ao.fetch_add(1);
       // Fetch task
-      t->id = queue[next].id;
-      t->op = queue[next].op;
+      if(next < gpuQueueSize) {
+        t->id = queue[next].id;
+        t->op = queue[next].op;
+      }
     }
     item.barrier(sycl::access::fence_space::local_space);
   }

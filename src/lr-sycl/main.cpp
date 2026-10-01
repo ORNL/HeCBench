@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <chrono>
+#include <cmath>
 #include "linear.h"
 
 extern int cpu_offset;
@@ -58,6 +59,15 @@ static void write_results(results_t * results, const char * restricts) {
   fclose(file);
 }
 
+static void compare_results(const results_t * results) {
+  const float tol = 1e-3f;
+  bool ok = std::fabs(results->iterative.a0 - results->parallelized.a0) <=
+              tol * std::fabs(results->iterative.a0) &&
+            std::fabs(results->iterative.a1 - results->parallelized.a1) <=
+              tol * std::fabs(results->iterative.a1);
+  printf("%s\n", ok ? "PASS" : "FAIL");
+}
+
 int main(int argc, char* argv[]) {
   results_t results = {{0}};
   if (argc != 3) {
@@ -86,6 +96,8 @@ int main(int argc, char* argv[]) {
 
   printf("\n> TEMPERATURE REGRESSION (%d)\n\n", TEMP_SIZE);
   print_results(&results);
+
+  compare_results(&results);
 
   return 0;
 }
