@@ -1,11 +1,18 @@
 #include <cstdio>
 #include <chrono>
 #include <utility> // std::pair
+#ifdef USE_ONEMATH
+#include <oneapi/math.hpp>
+#include <oneapi/math/rng/device.hpp>
+namespace math_ns = oneapi::math;
+#else
 #include <oneapi/mkl.hpp>
 #include <oneapi/mkl/rng/device.hpp>
+namespace math_ns = oneapi::mkl;
+#endif
 #include <sycl/sycl.hpp>
 
-// philox generates 128 bits of randomness at a time. 
+// philox generates 128 bits of randomness at a time.
 // Kernel uses this explicitly by putting suitably transformed result into float4
 // for all members of float4 to be consumed UNROLL has to be 4. Don't change!
 const int UNROLL = 4;
@@ -23,7 +30,7 @@ void fused_dropout_kernel(const scalar_t *__restrict__ a,
   IndexType blockDim = item.get_local_range(0);
   IndexType gridDim = item.get_group_range(0);
 
-  oneapi::mkl::rng::device::philox4x32x10<4> engine (
+  math_ns::rng::device::philox4x32x10<4> engine (
       seeds.first, {seeds.second, idx * 4});
 
   IndexType rounded_size = ((totalElements - 1) / (blockDim * gridDim * UNROLL) + 1) *
@@ -32,8 +39,8 @@ void fused_dropout_kernel(const scalar_t *__restrict__ a,
   for (IndexType linearIndex = idx; linearIndex < rounded_size;
        linearIndex += gridDim * blockDim * UNROLL) {
 
-    oneapi::mkl::rng::device::uniform<float> distr;
-    sycl::float4 rand = oneapi::mkl::rng::device::generate(distr, engine);
+    math_ns::rng::device::uniform<float> distr;
+    sycl::float4 rand = math_ns::rng::device::generate(distr, engine);
 
     scalar_t src[UNROLL];
     rand.x() = rand.x() < p;
@@ -88,7 +95,7 @@ void fused_dropout_kernel_vec(const scalar_t *__restrict__ a,
   IndexType blockDim = item.get_local_range(0);
   IndexType gridDim = item.get_group_range(0);
 
-  oneapi::mkl::rng::device::philox4x32x10<4> engine (
+  math_ns::rng::device::philox4x32x10<4> engine (
       seeds.first, {seeds.second, idx * 4});
 
   // Note: Vectorized loads means we'll stride each thread by an additional VEC factor, as we'll load VEC elements at a time
@@ -100,8 +107,8 @@ void fused_dropout_kernel_vec(const scalar_t *__restrict__ a,
 
     sycl::float4 rand;
     if ((VEC == 4) || (gridxvec_loop_state == 0)) {
-      oneapi::mkl::rng::device::uniform<float> distr;
-      rand = oneapi::mkl::rng::device::generate(distr, engine);
+      math_ns::rng::device::uniform<float> distr;
+      rand = math_ns::rng::device::generate(distr, engine);
     } else {
       // sets up the last two values we generated last iteration to be used this iteration.
       rand.x() = rand.z();
@@ -158,8 +165,8 @@ int main(int argc, char *argv[]) {
   int64_t ret_size = self_size;
   int64_t mask_size = nelem * sizeof(uint8_t);
 
-  float *self_info = (float*) malloc (self_size); 
-  float *ret_info = (float*) malloc (ret_size); 
+  float *self_info = (float*) malloc (self_size);
+  float *ret_info = (float*) malloc (ret_size);
   uint8_t *mask_info = (uint8_t*) malloc (mask_size);
 
   for (int64_t i = 0; i < nelem; i++) {
@@ -194,7 +201,7 @@ int main(int argc, char *argv[]) {
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Total kernel execution time (VEC1) %lf (s)\n", time * 1e-9f);
- 
+
   start = std::chrono::steady_clock::now();
   for (int p = 1; p <= repeat; p++) {
     float pa = (float)p / repeat;
@@ -230,9 +237,9 @@ int main(int argc, char *argv[]) {
   sycl::free(d_self_info, q);
   sycl::free(d_ret_info, q);
   sycl::free(d_mask_info, q);
-  free(self_info); 
-  free(ret_info); 
-  free(mask_info); 
+  free(self_info);
+  free(ret_info);
+  free(mask_info);
 
   return 0;
 }

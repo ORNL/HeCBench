@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: MIT
 // =============================================================
 
+#include <cstdio>
 #include <iomanip>
 #include <iostream>
 #include <chrono>
@@ -19,6 +20,28 @@ int main(int argc, char* argv[]) {
   const int height = atoi(argv[2]);
   const int block_size = atoi(argv[3]);
   const int repeat = atoi(argv[4]);
+
+  if (block_size <= 0) {
+    fprintf(stderr, "Error: block size must be positive (got %d)\n", block_size);
+    return 1;
+  }
+
+  // The average kernel time is divided by the repeat count.
+  if (repeat <= 0) {
+    fprintf(stderr, "Error: repeat count must be positive (got %d)\n", repeat);
+    return 1;
+  }
+
+  // A BMP header stores the file size in 32-bit fields, so reject images
+  // that cannot be represented before allocating anything.
+  if (!ImgFormat::BMP::fits(width, height)) {
+    fprintf(stderr,
+            "Error: an image of %d x %d pixels cannot be represented as a "
+            "BMP file (maximum size is %llu bytes)\n",
+            width, height,
+            static_cast<unsigned long long>(ImgFormat::BMP::maxByteSize));
+    return 1;
+  }
 
   Img<ImgFormat::BMP> image{width, height};
   ImgFractal fractal{width, height};
@@ -65,35 +88,28 @@ int main(int argc, char* argv[]) {
   ImgPixel *pixel = sycl::malloc_device<ImgPixel>(
     image2.width() * image2.height(), q);
 
-  sycl::range<1> gws (width * height);
+  const int image_size = width * height;
+  const int num_groups = (image_size + block_size - 1) / block_size;
+
+  sycl::range<1> gws ((size_t)num_groups * block_size);
   sycl::range<1> lws (block_size); 
 
-  float total_time = 0.f;
+  auto kFn = [&](sycl::handler& cgh) { 
+    cgh.parallel_for<class gamma_correction>( 
+      sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+      int i = item.get_global_id(0); 
+      if (i >= image_size) return;
 
-  for (int i = 0; i < repeat; i++) {
-    q.memcpy(pixel, image2.data(), sizeof(ImgPixel) * image2.width() * image2.height()).wait();
+      // Lambda to process image with gamma = 2
+      const float v = (0.3f * pixel[i].r + 0.59f * pixel[i].g + 0.11f * pixel[i].b) / 255.f;
+      std::uint8_t gamma_pixel = static_cast<std::uint8_t>(255.f * v * v);
+      if (gamma_pixel > 255) gamma_pixel = 255;
+      pixel[i].set(gamma_pixel, gamma_pixel, gamma_pixel, gamma_pixel);
+    });
+  };
 
-    auto start = std::chrono::steady_clock::now();
-
-    q.submit([&](sycl::handler& cgh) { 
-      cgh.parallel_for<class gamma_correction>( 
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        int i = item.get_global_id(0); 
-        // Lambda to process image with gamma = 2
-        const float v = (0.3f * pixel[i].r + 0.59f * pixel[i].g + 0.11f * pixel[i].b) / 255.f;
-        std::uint8_t gamma_pixel = static_cast<std::uint8_t>(255.f * v * v);
-        if (gamma_pixel > 255) gamma_pixel = 255;
-        pixel[i].set(gamma_pixel, gamma_pixel, gamma_pixel, gamma_pixel);
-      });
-    }).wait();
-
-    auto end = std::chrono::steady_clock::now();
-    auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    total_time += time;
-  }
-  
-  printf("Average kernel execution time %f (s)\n", (total_time * 1e-9f) / repeat);
-
+  q.memcpy(pixel, image2.data(), sizeof(ImgPixel) * image2.width() * image2.height());
+  q.submit(kFn);
   q.memcpy(image2.data(), pixel, sizeof(ImgPixel) * image2.width() * image2.height()).wait();
 
   // check correctness
@@ -102,6 +118,15 @@ int main(int argc, char* argv[]) {
   } else {
     std::cout << "FAIL\n";
   }
+
+  auto start = std::chrono::steady_clock::now();
+  for (int i = 0; i < repeat; i++) {
+    q.submit(kFn);
+  }
+  q.wait();
+  auto end = std::chrono::steady_clock::now();
+  auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  printf("Average kernel execution time %f (s)\n", (time * 1e-9f) / repeat);
 
 #ifdef DEBUG
   image.write("fractal_gamma_parallel.bmp");

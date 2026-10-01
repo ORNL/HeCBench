@@ -53,8 +53,10 @@ void TaskQueue_gpu(const task_t *__restrict__ queue,
   // Fetch task
   if(tid == 0) {
     next = atomicAdd(consumed, 1);
-    t->id = queue[next].id;
-    t->op = queue[next].op;
+    if(next < gpuQueueSize) {
+      t->id = queue[next].id;
+      t->op = queue[next].op;
+    }
   }
   __syncthreads();
   while(next < gpuQueueSize) {
@@ -78,8 +80,10 @@ void TaskQueue_gpu(const task_t *__restrict__ queue,
     if(tid == 0) {
       next = atomicAdd(consumed, 1);
       // Fetch task
-      t->id = queue[next].id;
-      t->op = queue[next].op;
+      if(next < gpuQueueSize) {
+        t->id = queue[next].id;
+        t->op = queue[next].op;
+      }
     }
     __syncthreads();
   }

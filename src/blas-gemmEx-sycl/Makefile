@@ -14,6 +14,8 @@ CUDA_ARCH ?= sm_70
 HIP       = no
 HIP_ARCH  ?= gfx908
 ONEMKL    = no
+ONEMATH      = no
+ONEMATH_PATH ?= /path/to/oneMath
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 # path to the install of the oneMKL interface
@@ -46,17 +48,27 @@ ifeq ($(CUDA), yes)
   ONEMKL = yes
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
             -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
-  LDFLAGS = -L$(ONEMKL_PATH)/lib -lonemkl -lonemkl_blas_cublas
-endif
-
-ifeq ($(HIP), yes)
+  ifeq ($(ONEMATH), yes)
+    LDFLAGS = -L$(ONEMATH_PATH)/lib -lonemath -lonemath_blas_cublas
+  else
+    LDFLAGS = -L$(ONEMKL_PATH)/lib -lonemkl -lonemkl_blas_cublas
+  endif
+else ifeq ($(HIP), yes)
   ONEMKL = yes
   CFLAGS += -fsycl-targets=amdgcn-amd-amdhsa \
-	    -Xsycl-target-backend --offload-arch=$(HIP_ARCH)
-  LDFLAGS = -L$(ONEMKL_PATH)/lib -lonemkl -lonemkl_blas_rocblas
+            -Xsycl-target-backend --offload-arch=$(HIP_ARCH)
+  ifeq ($(ONEMATH), yes)
+    LDFLAGS = -L$(ONEMATH_PATH)/lib -lonemath -lonemath_blas_rocblas
+  else
+    LDFLAGS = -L$(ONEMKL_PATH)/lib -lonemkl -lonemkl_blas_rocblas
+  endif
+else ifeq ($(ONEMATH), yes)
+  LDFLAGS = -L$(ONEMATH_PATH)/lib -lonemath
 endif
 
-ifeq ($(ONEMKL), yes)
+ifeq ($(ONEMATH), yes)
+  CFLAGS += -I$(ONEMATH_PATH)/include -DUSE_ONEMATH
+else ifeq ($(ONEMKL), yes)  
   CFLAGS += -I$(ONEMKL_PATH)/include
 else
   CFLAGS += -qmkl=parallel
