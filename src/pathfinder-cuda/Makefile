@@ -7,7 +7,6 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
-OUTPUT    = no
 LAUNCHER  ?=
 
 #===============================================================================
@@ -30,10 +29,6 @@ CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Xcompiler -Wall -arch=$(ARCH)
 # Linker Flags
 LDFLAGS = 
 
-ifeq ($(OUTPUT),yes)
-  CFLAGS += -DBENCH_PRINT
-endif
-
 # Debug Flags
 ifeq ($(DEBUG),yes)
   CFLAGS += -g
@@ -52,7 +47,7 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu Makefile
+%.o: %.cu reference.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

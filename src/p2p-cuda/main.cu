@@ -73,6 +73,19 @@ void pair_access(int i, int j, int repeat)
   float *g1;
   GPU_CHECK(cudaMalloc(&g1, buf_size));
 
+  // Warmup: exclude one-time costs of the first peer copies from the timing
+  for (int i=0; i<4; i++)
+  {
+    if (i % 2 == 0)
+    {
+      GPU_CHECK(cudaMemcpy(g1, g0, buf_size, cudaMemcpyDefault));
+    }
+    else
+    {
+      GPU_CHECK(cudaMemcpy(g0, g1, buf_size, cudaMemcpyDefault));
+    }
+  }
+
   GPU_CHECK(cudaDeviceSynchronize());
   auto start = std::chrono::steady_clock::now();
 

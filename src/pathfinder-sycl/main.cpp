@@ -12,26 +12,19 @@
 // Other header files.
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
+#include <climits>
+#include <cstring>
 #include <chrono>
-#include <iostream>
 #include <sycl/sycl.hpp>
+#include "../pathfinder-cuda/reference.h"
 
 
 // halo width along one direction when advancing to the next iteration
 #define HALO     1
-#define STR_SIZE 256
-#define DEVICE   0
+#define NUMBER_THREADS 250
 #define M_SEED   9
 #define IN_RANGE(x, min, max)	((x)>=(min) && (x)<=(max))
-#define CLAMP_RANGE(x, min, max) x = (x<(min)) ? min : ((x>(max)) ? max : x )
 #define MIN(a, b) ((a)<=(b) ? (a) : (b))
-
-
-void fatal(char *s)
-{
-  fprintf(stderr, "error: %s\n", s);
-}
 
 int main(int argc, char** argv)
 {
@@ -50,9 +43,28 @@ int main(int argc, char** argv)
   }
   else
   {
-    printf("Usage: %s <column length> <row length> <pyramid_height>\n", argv[0]);
+    printf("Usage: %s <column length> <row length> <pyramid_height>\n", argv[0]);
     exit(0);
   }
+
+  if (rows < 1 || cols < 1 || pyramid_height < 1) {
+    fprintf(stderr, "error: rows, cols, and pyramid_height must be positive\n");
+    exit(1);
+  }
+  if (rows > INT_MAX / cols) {
+    fprintf(stderr, "error: rows * cols exceeds INT_MAX\n");
+    exit(1);
+  }
+
+  const int block_size = NUMBER_THREADS;
+  int smallBlockCol = block_size - pyramid_height * HALO * 2;
+  if (smallBlockCol < 1) {
+    fprintf(stderr,
+            "error: pyramid_height (%d) too large for work-group size %d\n",
+            pyramid_height, block_size);
+    exit(1);
+  }
+  int blockCols = (cols + smallBlockCol - 1) / smallBlockCol;
 
   data = new int[rows * cols];
   wall = new int*[rows];
@@ -73,16 +85,6 @@ int main(int argc, char** argv)
       wall[i][j] = rand() % 10;
     }
   }
-#ifdef BENCH_PRINT
-  for (int i = 0; i < rows; i++)
-  {
-    for (int j = 0; j < cols; j++)
-    {
-      printf("%d ", wall[i][j]);
-    }
-    printf("\n");
-  }
-#endif
 
   // Pyramid parameters.
   const int borderCols = (pyramid_height) * HALO;
@@ -90,15 +92,10 @@ int main(int argc, char** argv)
   /* printf("pyramidHeight: %d\ngridSize: [%d]\nborder:[%d]\nblockSize: %d\nblockGrid:[%d]\ntargetBlock:[%d]\n",
      pyramid_height, cols, borderCols, NUMBER_THREADS, blockCols, smallBlockCol); */
 
-  int size = rows * cols; // the size (global work size) is a multiple of lws
+  int size = rows * cols;
 
-  // running the opencl application shows block_size=4000 (cpu) and block_size=250 (gpu)
-#ifdef USE_GPU
-  int block_size = 250;
-#else
-  int block_size = 4000;
-#endif
-  int* outputBuffer = (int*)calloc(16384, sizeof(int));
+  // ND-range covers the current row: overlapping groups of width
+  // smallBlockCol, not the full 2-D wall.
   int theHalo = HALO;
 
   auto start = std::chrono::steady_clock::now();
@@ -116,9 +113,8 @@ int main(int argc, char** argv)
   q.memcpy(d_gpuSrc, data, sizeof(int)*cols);
 
   int *d_gpuResult = sycl::malloc_device<int>(cols, q);
-  int *d_outputBuffer = sycl::malloc_device<int>(16384, q);
 
-  sycl::range<1> gws(size);
+  sycl::range<1> gws((size_t)blockCols * (size_t)block_size);
   sycl::range<1> lws(block_size);
 
   q.wait();
@@ -130,8 +126,7 @@ int main(int argc, char** argv)
     int iteration = MIN(pyramid_height, rows-t-1);
 
     q.submit([&](sycl::handler& cgh) {
-      sycl::local_accessor <int, 1> prev (lws, cgh);
-      sycl::local_accessor <int, 1> result (lws, cgh);
+      sycl::local_accessor<int, 1> sm(sycl::range<1>(2 * block_size), cgh);
       // Set the kernel arguments.
       cgh.parallel_for<class dynproc_kernel>(
         sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
@@ -150,35 +145,26 @@ int main(int argc, char** argv)
   printf("Total kernel execution time: %lf (s)\n", ktime * 1e-9);
 
   q.memcpy(result, d_gpuSrc, sizeof(int)*cols);
-  q.memcpy(outputBuffer, d_outputBuffer, sizeof(int)*16348);
   q.wait();
 
   sycl::free(d_gpuResult, q);
   sycl::free(d_gpuSrc, q);
   sycl::free(d_gpuWall, q);
-  sycl::free(d_outputBuffer, q);
 
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Device offloading time = %lf (s)\n", time * 1e-9);
 
-  // add a null terminator at the end of the string.
-  outputBuffer[16383] = '\0';
-
-#ifdef BENCH_PRINT
-  for (int i = 0; i < cols; i++)
-    printf("%d ", data[i]);
-  printf("\n");
-  for (int i = 0; i < cols; i++)
-    printf("%d ", result[i]);
-  printf("\n");
-#endif
+  int* ref = new int[cols];
+  PathfinderReference(data, rows, cols, ref);
+  int unequal = memcmp(result, ref, sizeof(int) * cols);
+  printf("%s\n", unequal ? "FAIL" : "PASS");
 
   // Memory cleanup here.
   delete[] data;
   delete[] wall;
   delete[] result;
-  free(outputBuffer);
+  delete[] ref;
 
   return EXIT_SUCCESS;
 }

@@ -48,7 +48,7 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu  topk_per_row_kernels.h utils.h Makefile
+%.o: %.cu  topk_per_row_kernels.h ragged_config.h utils.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

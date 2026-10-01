@@ -45,6 +45,8 @@ LDFLAGS =
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
             -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
+  # ptxas runs at link; needed so 1024-thread kernels fit the WG register cap
+  LDFLAGS += -Xcuda-ptxas --maxrregcount=64
 endif
 
 ifeq ($(HIP), yes)
@@ -73,7 +75,7 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp topk_per_row_kernels.h ../blockScan-sycl/utils/*.hpp
+%.o: %.cpp topk_per_row_kernels.h ../topk-cuda/ragged_config.h ../blockScan-sycl/utils/*.hpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
