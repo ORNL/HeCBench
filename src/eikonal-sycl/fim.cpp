@@ -126,9 +126,12 @@ void runEikonalSolverSimple(sycl::queue &q, GPUMEMSTRUCT &cmem)
     q.memcpy(d_list, h_list, nActiveBlock*sizeof(uint));
 
     q.submit([&] (sycl::handler &cgh) {
+      sycl::local_accessor<DOUBLE, 1> sol_local(
+        sycl::range<1>((BLOCK_LENGTH+2)*(BLOCK_LENGTH+2)*(BLOCK_LENGTH+2)), cgh);
       cgh.parallel_for<class solve>(
         sycl::nd_range<3>(grids*blocks, blocks), [=] (sycl::nd_item<3> item) {
-        run_solver(item, d_spd, d_mask, d_sol, t_sol, d_con,
+        run_solver(item, sol_local.get_multi_ptr<sycl::access::decorated::no>().get(),
+                   d_spd, d_mask, d_sol, t_sol, d_con,
                    d_list, xdim, ydim, zdim, nIter, nActiveBlock);
       });
     });
@@ -148,9 +151,12 @@ void runEikonalSolverSimple(sycl::queue &q, GPUMEMSTRUCT &cmem)
     sycl::range<3> lws_reduce (BLOCK_LENGTH/2, BLOCK_LENGTH, BLOCK_LENGTH);
 
     q.submit([&] (sycl::handler &cgh) {
+      sycl::local_accessor<bool, 1> conv_local(
+        sycl::range<1>(BLOCK_LENGTH*BLOCK_LENGTH*BLOCK_LENGTH), cgh);
       cgh.parallel_for<class reduce>(
         sycl::nd_range<3>(grids*lws_reduce, lws_reduce), [=] (sycl::nd_item<3> item) {
-        run_reduction(item, d_con, d_listVol, d_list, nActiveBlock);
+        run_reduction(item, conv_local.get_multi_ptr<sycl::access::decorated::no>().get(),
+                      d_con, d_listVol, d_list, nActiveBlock);
       });
     });
 
@@ -231,9 +237,12 @@ void runEikonalSolverSimple(sycl::queue &q, GPUMEMSTRUCT &cmem)
     q.memcpy(d_list, h_list, nActiveBlock*sizeof(uint)).wait();
 
     q.submit([&] (sycl::handler &cgh) {
+      sycl::local_accessor<DOUBLE, 1> sol_local(
+        sycl::range<1>((BLOCK_LENGTH+2)*(BLOCK_LENGTH+2)*(BLOCK_LENGTH+2)), cgh);
       cgh.parallel_for<class check_neighbor>(
         sycl::nd_range<3>(grids*blocks, blocks), [=] (sycl::nd_item<3> item) {
-        run_check_neighbor(item, d_spd, d_mask, t_sol, d_sol, d_con, d_list,
+        run_check_neighbor(item, sol_local.get_multi_ptr<sycl::access::decorated::no>().get(),
+                           d_spd, d_mask, t_sol, d_sol, d_con, d_list,
                            xdim, ydim, zdim, nOldActiveBlock, nActiveBlock);
       });
     });
@@ -251,9 +260,12 @@ void runEikonalSolverSimple(sycl::queue &q, GPUMEMSTRUCT &cmem)
 #endif
 
     q.submit([&] (sycl::handler &cgh) {
+      sycl::local_accessor<bool, 1> conv_local(
+        sycl::range<1>(BLOCK_LENGTH*BLOCK_LENGTH*BLOCK_LENGTH), cgh);
       cgh.parallel_for<class reduce2>(
         sycl::nd_range<3>(grids*lws_reduce, lws_reduce), [=] (sycl::nd_item<3> item) {
-        run_reduction(item, d_con, d_listVol, d_list, nActiveBlock);
+        run_reduction(item, conv_local.get_multi_ptr<sycl::access::decorated::no>().get(),
+                      d_con, d_listVol, d_list, nActiveBlock);
       });
     });
 

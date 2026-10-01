@@ -209,6 +209,8 @@ When double-precision floating-point operations are not supported on certain Int
 
 # Feedback from the papers
 
+Hagn, M., 2026. LLM-driven Translation of GPU Code Across Parallel Execution Models (Technische Universität Wien).
+
 Stephenson, M., Damani, S., Tarek Ibn Ziad, M., Ladram, A. and Garland, M., 2026. SuperCollider: Scalable and Effective Data Race Detection for CUDA. Proceedings of the ACM on Programming Languages, 10(PLDI), pp.2303-2327.
 
 Velesko, P., Jääskeläinen, P., Linjamäki, H., Babej, M., Tu, P., Sarkar, S., Ashbaugh, B., Bertoni, C., Chen, J., Roth, P.C. and Elwasif, W., 2025. chipStar: Making HIP/CUDA applications cross-vendor portable by building on open standards. The International Journal of High Performance Computing Applications, p.10943420261423001.

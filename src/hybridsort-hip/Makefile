@@ -21,15 +21,11 @@ endif
 
 
 ifdef OUTPUT
-override OUTPUT = -DOUTPUT
-endif
-
-ifdef TIMER
-override TIMER = -DTIMER
+  CFLAGS += -DOUTPUT
 endif
 
 main: hybridsort.o bucketsort.o mergesort.o
-	$(CC) $(CFLAGS) -o main $(VERIFY) $(OUTPUT) $(TIMER) \
+	$(CC) $(CFLAGS) -o main \
 		hybridsort.o bucketsort.o mergesort.o $(LDFLAGS)
 
 hybridsort.o: hybridsort.cu bucketsort.h mergesort.h

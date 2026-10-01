@@ -7,6 +7,7 @@
 #include <chrono> // timing
 #include <stdio.h>
 #include <sycl/sycl.hpp>
+#include "../shmembench-cuda/reference.h"
 
 using namespace std::chrono;
 using float4 = sycl::float4;
@@ -73,19 +74,25 @@ void benchmark_shmem(float4 *g_data, float4* shm_buffer, sycl::nd_item<1> &item)
                                     shm_buffer[tid+5*blk]);
 }
 
-void shmembenchGPU(double *c, const long size, const int n) {
-  const int TOTAL_BLOCKS = size/(BLOCK_SIZE);
-
+void shmembenchGPU(float *c, const size_t size, const int n) {
 #ifdef USE_GPU
   sycl::queue q(sycl::gpu_selector_v, sycl::property::queue::in_order());
 #else
   sycl::queue q(sycl::cpu_selector_v, sycl::property::queue::in_order());
 #endif
 
-  double *cd = sycl::malloc_device<double>(size, q);
+  // size floats, one float4 per work item => size/4 stored values
+  if (size % ((size_t)BLOCK_SIZE * 4) != 0) {
+    printf("size must be a multiple of %zu\n", (size_t)BLOCK_SIZE * 4);
+    printf("FAIL\n");
+    return;
+  }
+  const size_t num_float4 = size / 4;
+
+  float *cd = sycl::malloc_device<float>(num_float4 * 4, q);
 
   sycl::range<1> lws (BLOCK_SIZE);
-  sycl::range<1> gws (TOTAL_BLOCKS/4 * BLOCK_SIZE);
+  sycl::range<1> gws (num_float4);
 
   auto start = high_resolution_clock::now();
   for (int i = 0; i < n; i++) {
@@ -103,18 +110,18 @@ void shmembenchGPU(double *c, const long size, const int n) {
   printf("Average kernel execution time : %f (ms)\n", time_shmem_128b * 1e-6);
 
   // Copy results back to host memory
-  q.memcpy(c, cd, size*sizeof(double)).wait();
+  q.memcpy(c, cd, num_float4 * sizeof(float4)).wait();
   sycl::free(cd, q);
 
-  // simple checksum
-  double sum = 0;
-  for (long i = 0; i < size; i++) sum += c[i];
-  if (sum != 21256458760384741137729978368.00)
-    printf("checksum failed\n");
+  int errors = shmembench_verify(c, num_float4, BLOCK_SIZE, TOTAL_ITERATIONS);
+  printf("%s\n", errors ? "FAIL" : "PASS");
+  if (errors) return;
 
   printf("Memory throughput\n");
-  const long long operations_bytes  = (6LL+4*5*TOTAL_ITERATIONS+6)*size*sizeof(float);
-  const long long operations_128bit = (6LL+4*5*TOTAL_ITERATIONS+6)*size/4;
+  // 6LL keeps the product in 64-bit; 20492*size overflows 32-bit int
+  const long long nops = (6LL + 4 * 5 * TOTAL_ITERATIONS + 6) * size;
+  const long long operations_bytes  = nops * sizeof(float);
+  const long long operations_128bit = nops / 4;
 
   printf("\tusing 128bit operations : %8.2f GB/sec (%6.2f billion accesses/sec)\n",
     (double)operations_bytes / time_shmem_128b,

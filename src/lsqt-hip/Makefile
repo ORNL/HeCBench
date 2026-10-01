@@ -1,7 +1,7 @@
 CC = hipcc
 
 # -DDEBUG sets a constant seed for random number generation
-CFLAGS = -O3 -std=c++17 -ffast-math -DDEBUG
+CFLAGS = $(EXTRA_CFLAGS) -O3 -std=c++17 -ffast-math -DDEBUG
 
 
 SOURCES = main.cu lsqt.cu sigma.cu vector.cu hamiltonian.cu model.cu \

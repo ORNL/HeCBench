@@ -99,7 +99,7 @@ track_ellipse_sycl.o: track_ellipse_sycl.c track_ellipse.h kernel_IMGVF.sycl
 # Use the sycl compiler to build the library
 # Cleanup everything, then clean everything except the static library
 $(MATRIX_DIR)/meschach.a:
-	cd $(MATRIX_DIR); make cleanup; make all CC=$(CC) CFLAGS=-O3; make clean
+	cd $(MATRIX_DIR); make cleanup; make all CC="$(CC)"; make clean
 
 clean:
 	rm -f *.o main 
