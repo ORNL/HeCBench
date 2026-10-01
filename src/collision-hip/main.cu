@@ -2,8 +2,9 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
 //
 
-#include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <iterator>
 #include <vector>
 #include <chrono>

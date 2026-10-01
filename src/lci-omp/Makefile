@@ -8,7 +8,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
 DUMP      = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

@@ -43,14 +43,26 @@ June 2018.
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <hip/hip_runtime.h>
-#include <set>
 #include <chrono>
+#include <set>
+#include <hip/hip_runtime.h>
 #include "graph.h"
 
 static const int ThreadsPerBlock = 256;
 
 static __device__ int topL, posL, topH, posH;
+
+/* relaxed atomic load/store to avoid data races on nstat[] */
+
+static inline __device__ int atomicLoad(const int* const __restrict__ addr)
+{
+  return __hip_atomic_load(addr, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
+}
+
+static inline __device__ void atomicStore(int* const __restrict__ addr, const int val)
+{
+  __hip_atomic_store(addr, val, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
+}
 
 /* initialize with first smaller neighbor ID */
 
@@ -82,11 +94,11 @@ void init(const int nodes,
 
 static inline __device__ int representative(const int idx, int* const __restrict__ nstat)
 {
-  int curr = nstat[idx];
+  int curr = atomicLoad(&nstat[idx]);
   if (curr != idx) {
     int next, prev = idx;
-    while (curr > (next = nstat[curr])) {
-      nstat[prev] = next;
+    while (curr > (next = atomicLoad(&nstat[curr]))) {
+      atomicStore(&nstat[prev], next);
       prev = curr;
       curr = next;
     }
@@ -107,7 +119,7 @@ void compute1(const int nodes,
   const int incr = gridDim.x * ThreadsPerBlock;
 
   for (int v = from; v < nodes; v += incr) {
-    const int vstat = nstat[v];
+    const int vstat = atomicLoad(&nstat[v]);
     if (v != vstat) {
       const int beg = nidx[v];
       const int end = nidx[v + 1];
@@ -260,12 +272,12 @@ void flatten(const int nodes,
   const int incr = gridDim.x * ThreadsPerBlock;
 
   for (int v = from; v < nodes; v += incr) {
-    int next, vstat = nstat[v];
+    int next, vstat = atomicLoad(&nstat[v]);
     const int old = vstat;
-    while (vstat > (next = nstat[vstat])) {
+    while (vstat > (next = atomicLoad(&nstat[vstat]))) {
       vstat = next;
     }
-    if (old != vstat) nstat[v] = vstat;
+    if (old != vstat) atomicStore(&nstat[v], vstat);
   }
 }
 
@@ -364,6 +376,7 @@ int main(int argc, char* argv[])
   }
 
   ECLgraph g = readECLgraph(argv[1]);
+  verifyUndirectedECLgraph(g);
   const int repeat = atoi(argv[2]);
 
   int* nodestatus = NULL;

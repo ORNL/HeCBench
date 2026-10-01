@@ -15,16 +15,10 @@
 
 // RNG choices
 #define USE_ZIGGURAT 0
-#define USE_GSL 0
 
 
 #include <math.h>
 #include <assert.h>
-
-#if USE_GSL
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
-#endif
 
 
 unsigned Kiss()
@@ -47,35 +41,6 @@ double Rand()
 	x=(x<<32)|Kiss();
 	return x*5.4210108624275221703311375920553e-20;
 }
-
-#if USE_GSL
-const gsl_rng_type **t, **t0;
-gsl_rng *rng;
-bool initialised = false;
-
-void initRand()
-{
-    gsl_rng_env_setup();
-
-    t0 = gsl_rng_types_setup ();
-
-    printf ("Available generators:\n");
-
-    for (t = t0; *t != 0; t++)
-    {
-        printf ("%s\n", (*t)->name);
-        if( strcmp("mt19937_1999", (*t)->name) == 0 ) break;
-    }
-
-    rng = gsl_rng_alloc (*t);
-}
-
-double RandN()
-{
-    return gsl_ran_gaussian_ziggurat  (rng, 1.0);
-
-}
-#else
 
 #if USE_ZIGGURAT
 
@@ -276,7 +241,6 @@ double RandN()
 	return cos(b)*a;
 }
 #endif // USE_ZIGGURAT
-#endif // USE_GSL
 
 double MakeChi2Scale(unsigned N)
 {

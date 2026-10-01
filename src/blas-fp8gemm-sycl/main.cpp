@@ -9,8 +9,7 @@ using namespace dnnl;
 //   D(M,N) = (A(M,K) * a_scale) @ (B(N,K) * b_scale)^T
 // A and B are FP8 (f8_e4m3), one byte per element along K.
 // The scales are a single FP32 value per tensor (per-tensor scaling),
-// expressed through per-argument scale attributes with mask 0. This matches
-// the cuBLASLt fp8 path of blas-fp8gemm-cuda. Output D is FP16.
+// expressed through per-argument scale attributes with mask 0.
 //
 // A is stored (M,K) row-major and B is stored (N,K) row-major. B is described
 // as {K,N} with strides {1,K} so that it is interpreted as B^T, producing
@@ -22,7 +21,7 @@ bool OnednnFp8Matmul(const int repeat, Fp8TestBench &tb) {
 
     auto a_md = memory::desc({m, k}, memory::data_type::f8_e4m3, memory::dims{k, 1});
     auto b_md = memory::desc({k, n}, memory::data_type::f8_e4m3, memory::dims{1, k});
-    auto c_md = memory::desc({m, n}, memory::data_type::f16,     memory::dims{n, 1});
+    auto c_md = memory::desc({m, n}, memory::data_type::bf16,    memory::dims{n, 1});
 
     // Per-tensor FP32 scales (mask 0 -> a single scale for the whole tensor).
     primitive_attr attr;

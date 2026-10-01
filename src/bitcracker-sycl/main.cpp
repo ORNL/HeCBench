@@ -41,6 +41,7 @@
 #include <iostream>
 #include <sycl/sycl.hpp>
 #include "bitcracker.h"
+#include "utils.h"
 
 uint32_t max_num_pswd_per_read = 0;
 
@@ -86,7 +87,7 @@ int main (int argc, char **argv)
       case 'f':
         if(strlen(optarg) >= INPUT_SIZE)
         {
-          fprintf(stderr, "ERROR: Inut hash file path is bigger than %d\n", INPUT_SIZE);
+          fprintf(stderr, "ERROR: Input hash file path is bigger than %d\n", INPUT_SIZE);
           exit(EXIT_FAILURE);
         }
         input_hash=(char *)Calloc(INPUT_SIZE, sizeof(char));
@@ -100,7 +101,7 @@ int main (int argc, char **argv)
           exit(EXIT_FAILURE);
         }
         input_dictionary=(char *)Calloc(INPUT_SIZE, sizeof(char));
-        strncpy(input_dictionary,optarg, strlen(optarg)+1);
+        strncpy(input_dictionary, optarg, strlen(optarg)+1);
         break;
 
       case 'b':

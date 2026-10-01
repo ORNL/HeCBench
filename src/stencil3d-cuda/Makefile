@@ -8,7 +8,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
 DUMP      = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

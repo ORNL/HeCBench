@@ -935,7 +935,7 @@ std::tuple<int *, int *, int *, int *, int>
 
     // ******* Phase 1. cover finding without levelized recording *******
     
-    auto start_t = clock();
+    auto start_t = hrClock();
     
     int globalListLen = nPOs > 131072 ? nPOs : 131072; // for dynamically increasing global list length
     int globalListLen2 = globalListLen;                // dynamically increase double buffer and vNodesFilter length
@@ -1023,9 +1023,9 @@ std::tuple<int *, int *, int *, int *, int>
     } while (currLen > 0);
 
     hipDeviceSynchronize();
-    auto phase1_t = clock();
+    auto phase1_t = hrClock();
 
-    printf("Phase 1 time: %lf\n", (phase1_t - start_t) / (double) CLOCKS_PER_SEC);
+    printf("Phase 1 time: %lf\n", (phase1_t - start_t) / (double) NS_PER_SEC);
 
     // get maximum local input length
     int * pMaxCoverLen = thrust::max_element(thrust::device, vCoverTableLens, vCoverTableLens + nObjs);
@@ -1056,7 +1056,7 @@ std::tuple<int *, int *, int *, int *, int>
     int * vStepNodeMask;
     uint32 * vStepNodeLevels;
 
-    auto phase2_start_t = clock();
+    auto phase2_start_t = hrClock();
 
     hipMalloc(&vNodeCoverIdMapping, nObjs * sizeof(int));
 
@@ -1368,9 +1368,9 @@ std::tuple<int *, int *, int *, int *, int>
     hipFree(vReconstructedIds);
     hipFree(vOutIds);
 
-    auto phase2_t = clock();
-    printf("Phase 2 time: %lf\n", (phase2_t - phase2_start_t) / (double) CLOCKS_PER_SEC);
-    printf("Total time: %lf\n", (phase2_t - start_t) / (double) CLOCKS_PER_SEC);
+    auto phase2_t = hrClock();
+    printf("Phase 2 time: %lf\n", (phase2_t - phase2_start_t) / (double) NS_PER_SEC);
+    printf("Total time: %lf\n", (phase2_t - start_t) / (double) NS_PER_SEC);
 
     return {vFanin0New, vFanin1New, vNumFanoutsNew, vNewOuts, nEntries};
 }

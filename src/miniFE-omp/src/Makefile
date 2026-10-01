@@ -12,7 +12,7 @@ MINIFE_MATRIX_TYPE = -DMINIFE_CSR_MATRIX
 
 #-----------------------------------------------------------------------
 
-CFLAGS = -v -O3 -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__\
+CFLAGS = $(EXTRA_CFLAGS) -v -O3 -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__\
 	-ffp-contract=fast 
 #	-S -emit-llvm
 #\
@@ -41,7 +41,6 @@ LIBS=
 
 CXX=icpx
 CC=icc
-LAUNCHER  =
 
 #CXX=clang++
 #CC=clang

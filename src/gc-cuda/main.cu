@@ -326,6 +326,7 @@ int main(int argc, char* argv[])
   }
 
   ECLgraph g = readECLgraph(argv[1]);
+  verifyUndirectedECLgraph(g);
   printf("input: %s\n", argv[1]);
   printf("nodes: %d\n", g.nodes);
   printf("edges: %d\n", g.edges);

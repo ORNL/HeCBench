@@ -6,18 +6,18 @@
 CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 GPU       = yes
 CUDA      = no
-CUDA_ARCH = sm_70
+CUDA_ARCH ?= sm_70
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
 ONEDNN    = no
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 # path to the install of the oneDNN interface
-ONEDNN_PATH   = /path/to/oneDNN
+ONEDNN_PATH   ?= /path/to/oneDNN
 
 #===============================================================================
 # Program name & source code list

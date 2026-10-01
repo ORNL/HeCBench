@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
   // Host problem definition
   const int A_num_rows = m;  // a square matrix
   const int A_num_cols = m;
-  const int A_nnz      = a_nnz;
+  int       A_nnz      = a_nnz;
   const int lda        = A_num_cols;
   const int A_size     = lda * A_num_rows;
 
@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
   int *hA_offsets = (int*) malloc (A_rowidx_size_bytes);
 
   printf("Initializing host matrices..\n");
-  init_matrix(hA, A_num_rows, A_num_cols, A_nnz);
+  A_nnz = init_lower_triangular_matrix(hA, A_num_rows, A_nnz);
   init_csr(hA_offsets, hA_values, hA_columns, hA,
            A_num_rows, A_num_cols, A_nnz);
 

@@ -254,8 +254,8 @@ void AIGMan::saveFile(const char * path) {
 
 void AIGMan::printTime() {
     printf("{time} prev cmd: alg %.2lf s, full %.2lf s; total: alg %.2lf s, full %.2lf s.\n",
-           (double) prevAlgTime / CLOCKS_PER_SEC, (double) prevFullTime / CLOCKS_PER_SEC,
-           (double) totalAlgTime / CLOCKS_PER_SEC, (double) totalFullTime / CLOCKS_PER_SEC);
+           (double) prevAlgTime / NS_PER_SEC, (double) prevFullTime / NS_PER_SEC,
+           (double) totalAlgTime / NS_PER_SEC, (double) totalFullTime / NS_PER_SEC);
 }
 
 
@@ -439,7 +439,7 @@ void AIGMan::updateFromRewriteManager(int deduplicateMode) {
 
     if (deduplicateMode == 1) {
         printf(" before deduplicate, nNodes = %d\n", nNodes);
-        auto deduplicateStartTime = clock();
+        auto deduplicateStartTime = hrClock();
         // rewrite might produce duplicate AND nodes, needs another strashing
         int lit0, lit1, id0, id1, idCounter, temp;
         uint64 key;
@@ -495,7 +495,7 @@ void AIGMan::updateFromRewriteManager(int deduplicateMode) {
         nObjs = idCounter;
         nNodes = nObjs - nPIs - 1;
         printf(" after deduplicate, nNodes = %d, elapsed time = %.2lf sec\n", nNodes, 
-               (clock() - deduplicateStartTime) / (double) CLOCKS_PER_SEC);
+               (hrClock() - deduplicateStartTime) / (double) NS_PER_SEC);
 
         for (int i = 0; i < nPOs; i++) {
             lit0 = invertConstTrueFalse(rwMan.output[i]);
@@ -610,7 +610,7 @@ void AIGMan::rewrite(bool fUseZeros, bool fGPUDeduplicate) {
         return;
     }
 
-clock_t startFullTime = clock();
+double startFullTime = hrClock();
     
     // for the main aig manager, copy data to from gpu to host and free gpu data
     if (deviceAllocated) {
@@ -621,9 +621,9 @@ clock_t startFullTime = clock();
     if (!prevCmdRewrite)
         resetRewriteManager();
     
-clock_t startAlgTime = clock();
+double startAlgTime = hrClock();
     rwMan.Rewrite(fUseZeros, true);
-prevAlgTime = clock() - startAlgTime;
+prevAlgTime = hrClock() - startAlgTime;
 totalAlgTime += prevAlgTime;
     
     prevCmdRewrite = 1;
@@ -632,10 +632,10 @@ totalAlgTime += prevAlgTime;
     assert(fGPUDeduplicate ? deviceAllocated : !deviceAllocated);
     printf("rewrite: after rewrite, nNodes = %d\n", nNodes);
 
-prevFullTime = clock() - startFullTime;
+prevFullTime = hrClock() - startFullTime;
 totalFullTime += prevFullTime;
 printf("rewrite: alg time %.2lf, full time %.2lf\n", 
-       (double)prevAlgTime / CLOCKS_PER_SEC, (double)prevFullTime / CLOCKS_PER_SEC);
+       (double)prevAlgTime / NS_PER_SEC, (double)prevFullTime / NS_PER_SEC);
 }
 
 __global__ void updateDeviceStats(const int nEntries, const int nPIs, int * pnNodes, int * pnObjs) {
@@ -652,7 +652,7 @@ void AIGMan::balance(int sortDecId) {
         return;
     }
 
-clock_t startFullTime = clock();
+double startFullTime = hrClock();
 
     int * vFanin0, * vFanin1, * vNumFanouts, * vPOs;
     int nEntries;
@@ -661,12 +661,12 @@ clock_t startFullTime = clock();
     if (!deviceAllocated)
         toDevice();
 
-clock_t startAlgTime = clock();
+double startAlgTime = hrClock();
     std::tie(vFanin0, vFanin1, vNumFanouts, vPOs, nEntries) = balancePerformV2(
         nObjs, nPIs, nPOs, nNodes, 
         d_pFanin0, d_pFanin1, d_pOuts, d_pNumFanouts, sortDecId
     );
-prevAlgTime = clock() - startAlgTime;
+prevAlgTime = hrClock() - startAlgTime;
 totalAlgTime += prevAlgTime;
 
     // substitute data structures in AIGMan with balanced results
@@ -690,10 +690,10 @@ totalAlgTime += prevAlgTime;
     nLevels = -1; // the levels of the AIG is not computed in balancing!
 
     prevCmdRewrite = 0;
-prevFullTime = clock() - startFullTime;
+prevFullTime = hrClock() - startFullTime;
 totalFullTime += prevFullTime;
 printf("balance: alg time %.2lf, full time %.2lf\n", 
-       (double)prevAlgTime / CLOCKS_PER_SEC, (double)prevFullTime / CLOCKS_PER_SEC);
+       (double)prevAlgTime / NS_PER_SEC, (double)prevFullTime / NS_PER_SEC);
 }
 
 /* -------------- IO Utils -------------- */

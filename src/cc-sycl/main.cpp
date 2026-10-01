@@ -69,6 +69,26 @@ inline int atomicAdd(int *val, int operand)
   return atm.fetch_add(operand);
 }
 
+/* relaxed atomic load/store to avoid data races on nstat[] */
+
+inline int atomicLoad(int* const __restrict addr)
+{
+  auto atm = sycl::atomic_ref<int,
+    sycl::memory_order::relaxed,
+    sycl::memory_scope::device,
+    sycl::access::address_space::global_space>(*addr);
+  return atm.load();
+}
+
+inline void atomicStore(int* const __restrict addr, const int val)
+{
+  auto atm = sycl::atomic_ref<int,
+    sycl::memory_order::relaxed,
+    sycl::memory_scope::device,
+    sycl::access::address_space::global_space>(*addr);
+  atm.store(val);
+}
+
 /* initialize with first smaller neighbor ID */
 
 static 
@@ -104,11 +124,11 @@ void init(sycl::nd_item<1> &item,
 
 static inline int representative(const int idx, int* const __restrict nstat)
 {
-  int curr = nstat[idx];
+  int curr = atomicLoad(&nstat[idx]);
   if (curr != idx) {
     int next, prev = idx;
-    while (curr > (next = nstat[curr])) {
-      nstat[prev] = next;
+    while (curr > (next = atomicLoad(&nstat[curr]))) {
+      atomicStore(&nstat[prev], next);
       prev = curr;
       curr = next;
     }
@@ -132,7 +152,7 @@ void compute1(sycl::nd_item<1> &item,
   const int incr = item.get_group_range(0) * ThreadsPerBlock;
 
   for (int v = from; v < nodes; v += incr) {
-    const int vstat = nstat[v];
+    const int vstat = atomicLoad(&nstat[v]);
     if (v != vstat) {
       const int beg = nidx[v];
       const int end = nidx[v + 1];
@@ -190,14 +210,19 @@ void compute2(sycl::nd_item<1> &item,
 {
   auto sg = item.get_sub_group();
   const int lane = sg.get_local_linear_id();
+  const int sgsize = sg.get_max_local_range()[0];
 
   int idx;
   if (lane == 0) idx = atomicAdd(posL, 1);
+  // The sub-group barrier is required: without it the compiler mis-predicates
+  // the "if (lane == 0)" guard around the following broadcast and executes the
+  // atomicAdd on every lane, corrupting the worklist cursor.
+  sycl::group_barrier(sg);
   idx = sycl::select_from_group(sg, idx, 0);
   while (idx < *topL) {
     const int v = wl[idx];
     int vstat = representative(v, nstat);
-    for (int i = nidx[v] + lane; i < nidx[v + 1]; i += sg.get_max_local_range()[0]) {
+    for (int i = nidx[v] + lane; i < nidx[v + 1]; i += sgsize) {
       const int nli = nlist[i];
       if (v > nli) {
         int ostat = representative(nli, nstat);
@@ -222,6 +247,7 @@ void compute2(sycl::nd_item<1> &item,
       }
     }
     if (lane == 0) idx = atomicAdd(posL, 1);
+    sycl::group_barrier(sg);
     idx = sycl::select_from_group(sg, idx, 0);
   }
 }
@@ -298,12 +324,12 @@ void flatten(sycl::nd_item<1> &item,
   const int incr = item.get_group_range(0) * ThreadsPerBlock;
 
   for (int v = from; v < nodes; v += incr) {
-    int next, vstat = nstat[v];
+    int next, vstat = atomicLoad(&nstat[v]);
     const int old = vstat;
-    while (vstat > (next = nstat[vstat])) {
+    while (vstat > (next = atomicLoad(&nstat[vstat]))) {
       vstat = next;
     }
-    if (old != vstat) nstat[v] = vstat;
+    if (old != vstat) atomicStore(&nstat[v], vstat);
   }
 }
 
@@ -441,6 +467,7 @@ int main(int argc, char* argv[])
   }
 
   ECLgraph g = readECLgraph(argv[1]);
+  verifyUndirectedECLgraph(g);
   const int repeat = atoi(argv[2]);
 
   int* nodestatus = (int*) malloc (sizeof(int) * g.nodes);

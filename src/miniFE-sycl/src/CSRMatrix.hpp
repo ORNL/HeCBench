@@ -31,6 +31,7 @@
 #include <cstddef>
 #include <vector>
 #include <algorithm>
+#include "PinnedVector.hpp"
 #ifdef HAVE_MPI
 #include <mpi.h>
 #endif
@@ -63,10 +64,10 @@ CSRMatrix {
 
   bool                       has_local_indices;
   std::vector<GlobalOrdinal> rows;
-  std::vector<LocalOrdinal>  row_offsets;
+  PinnedVector<LocalOrdinal>  row_offsets;
   std::vector<LocalOrdinal>  row_offsets_external;
-  std::vector<GlobalOrdinal> packed_cols;
-  std::vector<Scalar>        packed_coefs;
+  PinnedVector<GlobalOrdinal> packed_cols;
+  PinnedVector<Scalar>        packed_coefs;
   LocalOrdinal               num_cols;
 
 #ifdef HAVE_MPI

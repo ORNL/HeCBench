@@ -9,7 +9,8 @@
 #include <vector>
 
 #include <cublasLt.h>
-#include <cuda_fp16.h>
+//#include <cuda_fp16.h>
+#include <cuda_bf16.h>
 #include <cuda_runtime_api.h>
 
 inline void checkCudaStatus(cudaError_t status) {
@@ -32,7 +33,7 @@ inline void checkCublasStatus(cublasStatus_t status) {
 //   D(M,N) = (A(M,K) * a_scale) @ (B(N,K) * b_scale)^T
 // A and B are FP4 (E2M1) packed two elements per byte along K.
 // Scales are UE4M3, one scale per 16-element block along K (SCALE_BLOCK_SIZE = 16).
-// Output D is FP16.
+// Output D is BF16.
 struct Fp4TestBench {
     // SCALE_BLOCK_SIZE = 16 for nvfp4 (one UE4M3 scale per 16 FP4 elements along K)
     static constexpr int SCALE_BLOCK_SIZE = 16;
@@ -56,7 +57,7 @@ struct Fp4TestBench {
         checkCudaStatus(cudaMalloc(&Bdev, bBytes));
         checkCudaStatus(cudaMalloc(&AscaleDev, aScaleBytes));
         checkCudaStatus(cudaMalloc(&BscaleDev, bScaleBytes));
-        checkCudaStatus(cudaMalloc(reinterpret_cast<void**>(&Ddev), dElems * sizeof(__half)));
+        checkCudaStatus(cudaMalloc(reinterpret_cast<void**>(&Ddev), dElems * sizeof(__nv_bfloat16)));
         checkCudaStatus(cudaMalloc(&workspace, workspaceSize));
         checkCudaStatus(cudaStreamCreate(&stream));
 
@@ -113,8 +114,8 @@ struct Fp4TestBench {
     //   D = alpha * (A*a_scale) @ (B*b_scale)^T + beta * C
     // equals alpha * (a_elem*a_scale) * (b_elem*b_scale) * K (with beta = 0).
     bool verify(double relTol = 1e-2) {
-        std::vector<__half> Dh(dElems);
-        checkCudaStatus(cudaMemcpy(Dh.data(), Ddev, dElems * sizeof(__half), cudaMemcpyDeviceToHost));
+        std::vector<__nv_bfloat16> Dh(dElems);
+        checkCudaStatus(cudaMemcpy(Dh.data(), Ddev, dElems * sizeof(__nv_bfloat16), cudaMemcpyDeviceToHost));
 
         float aElem  = decodeE2M1(FP4_PACKED_FILL & 0xF);
         float bElem  = decodeE2M1(FP4_PACKED_FILL & 0xF);
@@ -125,7 +126,7 @@ struct Fp4TestBench {
 
         double maxErr = 0.0;
         for (size_t i = 0; i < dElems; i++) {
-            double got = (double)__half2float(Dh[i]);
+            double got = (double)__bfloat162float(Dh[i]);
             maxErr = std::max(maxErr, std::fabs(got - expected));
         }
         bool ok = maxErr <= relTol * (std::fabs(expected) + 1.0);
@@ -142,7 +143,7 @@ struct Fp4TestBench {
 
     void *Adev = nullptr, *Bdev = nullptr;          // packed FP4 (E2M1)
     void *AscaleDev = nullptr, *BscaleDev = nullptr; // UE4M3 block scales
-    __half *Ddev = nullptr;                          // FP16 output
+    __nv_bfloat16 *Ddev = nullptr;                   // BF16 output
     void *workspace = nullptr;
     cudaStream_t stream;
     cublasLtHandle_t ltHandle;

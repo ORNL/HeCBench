@@ -1,3 +1,4 @@
+#include <cmath>
 #define DPMIXGGM_CPP
 #ifndef GRAPH_CPP
 #include "graph.cpp"

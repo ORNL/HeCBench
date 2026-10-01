@@ -2,7 +2,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
-LAUNCHER  =
+LAUNCHER  ?=
 
 # Matrix library path
 MATRIX_DIR = ./meschach_lib
@@ -60,7 +60,7 @@ track_ellipse_gpu.o: track_ellipse_gpu.c track_ellipse.h kernel_IMGVF.h
 
 # Cleanup everything, then clean everything except the static library
 $(MATRIX_DIR)/meschach.a:
-	cd $(MATRIX_DIR); make cleanup; make all CC=$(CC); make clean
+	cd $(MATRIX_DIR); make cleanup; make all CC="$(CC)"; make clean
 
 run: main
 	$(LAUNCHER) ./main ../data/leukocyte/testfile.avi 100

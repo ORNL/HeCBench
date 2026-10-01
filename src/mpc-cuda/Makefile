@@ -7,7 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -50,7 +50,7 @@ $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj) *.txt fpc
+	rm -rf $(program) $(obj) compression.txt decompression.txt fpc
 
 process: fpc.c
 	gcc -O3 fpc.c -o fpc

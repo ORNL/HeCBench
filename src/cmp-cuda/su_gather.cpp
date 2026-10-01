@@ -80,6 +80,7 @@ void su_gather::linearize(int*& ntraces_by_cdp_id, real *&samples, real &dt, rea
   ntraces_by_cdp_id = new int[_cdps.size()];
 
   dt = _cdps[0].traces()[0].dt();
+  assert(dt > 0);
 
   int n_traces = 0;
   for(int i=0; i < _cdps.size(); i++) {

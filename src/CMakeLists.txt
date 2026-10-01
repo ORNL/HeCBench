@@ -370,6 +370,7 @@ set(HECBENCH_POC_BENCHMARKS
     scatterAdd
     scatterThrust
     scel
+    schur-complement
     score
     sddmm-batch
     seam-carving
@@ -391,6 +392,7 @@ set(HECBENCH_POC_BENCHMARKS
     sortKV
     sosfil
     sparkler
+    sparseMLA
     spaxpby
     spd2s
     spgeam
@@ -456,6 +458,7 @@ set(HECBENCH_POC_BENCHMARKS
     # Final batch: remaining benchmarks
     addBiasQKV
     addBiasResidualLayerNorm
+    asyncAllocation
     attentionMergeState
     attention-paged
     allreduce
@@ -465,6 +468,7 @@ set(HECBENCH_POC_BENCHMARKS
     attentionMultiHead
     attentionMultiHeadKVCache
     axhelm
+    awbarrier
     base64e
     bgmv
     bh
@@ -532,14 +536,19 @@ set(HECBENCH_POC_BENCHMARKS
     jacobian
     leukocyte
     miniFE
+    megablocks
     mergeVS
+    mlaDecode
     mlp
+    muon
+    oziMMU
     pointerchase
     rmsnorm
     saxpy-ompt
     silu
     softmax-fused
     softmax-online
+    sundials
     ssm
     storeKVCache
     threadcpy
@@ -547,6 +556,7 @@ set(HECBENCH_POC_BENCHMARKS
     topk
     upsample
     vadd
+    wenofv
 )
 
 # Include benchmark subdirectories

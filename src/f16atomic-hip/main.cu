@@ -5,6 +5,7 @@
 #include <hip/hip_runtime.h>
 #include <hip/hip_fp16.h>
 #include <hip/hip_bf16.h>
+#include "../f16atomic-cuda/verification.h"
 
 static void CheckError( hipError_t err, const char *file, int line ) {
   if (err != hipSuccess) {
@@ -12,8 +13,6 @@ static void CheckError( hipError_t err, const char *file, int line ) {
   }
 }
 #define CHECK_ERROR( err ) (CheckError( err, __FILE__, __LINE__ ))
-
-#define BLOCK_SIZE 256
 
 #define ZERO_FP16 __ushort_as_half((unsigned short)0x0000U)
 #define ONE_FP16  __ushort_as_half((unsigned short)0x3c00U)
@@ -27,7 +26,7 @@ void f16AtomicOnGlobalMem(__half* result, int n)
   if (tid >= n) return;
   __half2 *result_v = reinterpret_cast<__half2*>(result);
   __half2 val {ZERO_FP16, ONE_FP16};
-  unsafeAtomicAdd(&result_v[tid % BLOCK_SIZE], val);
+  unsafeAtomicAdd(&result_v[tid % kBlockSize], val);
 }
 
 __global__
@@ -37,13 +36,13 @@ void f16AtomicOnGlobalMem(__hip_bfloat16* result, int n)
   if (tid >= n) return;
   __hip_bfloat162 *result_v = reinterpret_cast<__hip_bfloat162*>(result);
   __hip_bfloat162 val {ZERO_BF16, ONE_BF16};
-  unsafeAtomicAdd(&result_v[tid % BLOCK_SIZE], val);
+  unsafeAtomicAdd(&result_v[tid % kBlockSize], val);
 }
 
 template <typename T>
-void atomicCost (int nelems, int repeat)
+bool atomicCost (int nelems, int repeat, int max_exact_int)
 {
-  size_t result_size = sizeof(T) * BLOCK_SIZE * 2;
+  size_t result_size = sizeof(T) * kBlockSize * 2;
 
   T* result = (T*) malloc (result_size);
 
@@ -51,17 +50,23 @@ void atomicCost (int nelems, int repeat)
   CHECK_ERROR( hipMalloc((void **)&d_result, result_size) );
   CHECK_ERROR( hipMemset(d_result, 0, result_size) );
 
-  dim3 block (BLOCK_SIZE);
-  dim3 grid ((nelems / 2  + BLOCK_SIZE - 1) / BLOCK_SIZE);
+  dim3 block (kBlockSize);
+  dim3 grid ((nelems / 2  + kBlockSize - 1) / kBlockSize);
 
-  //  warmup
   f16AtomicOnGlobalMem<<<grid, block>>>(d_result, nelems/2);
+  CHECK_ERROR( hipDeviceSynchronize() );
   CHECK_ERROR( hipMemcpy(result, d_result, result_size, hipMemcpyDeviceToHost) );
-  // nelems / 2 / BLOCK_SIZE
-  printf("Print the first two elements in HEX: 0x%04x 0x%04x\n", result[0], result[1]);
-  printf("Print the first two elements in FLOAT32: %f %f\n\n", (float)result[0], (float)result[1]);
 
+  bool pass = verifyAtomicPairs(result, nelems / 2, max_exact_int);
+  printf("%s\n", pass ? "PASS" : "FAIL");
 
+  free(result);
+  if (!pass) {
+    CHECK_ERROR(hipFree(d_result));
+    return false;
+  }
+
+  CHECK_ERROR( hipMemset(d_result, 0, result_size) );
   CHECK_ERROR( hipDeviceSynchronize() );
   auto start = std::chrono::steady_clock::now();
   for(int i=0; i<repeat; i++)
@@ -73,8 +78,8 @@ void atomicCost (int nelems, int repeat)
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average execution time of 16-bit floating-point atomic add on global memory: %f (us)\n",
           time * 1e-3f / repeat);
-  free(result);
   CHECK_ERROR(hipFree(d_result));
+  return true;
 }
 
 int main(int argc, char* argv[])
@@ -90,10 +95,10 @@ int main(int argc, char* argv[])
   assert(nelems > 0 && (nelems % 2) == 0);
 
   printf("\nFP16 atomic add\n");
-  atomicCost<__half>(nelems, repeat);
+  bool fp16_pass = atomicCost<__half>(nelems, repeat, kFp16MaxExactInt);
 
   printf("\nBF16 atomic add\n");
-  atomicCost<__hip_bfloat16>(nelems, repeat);
+  bool bf16_pass = atomicCost<__hip_bfloat16>(nelems, repeat, kBf16MaxExactInt);
 
-  return 0;
+  return (fp16_pass && bf16_pass) ? 0 : 1;
 }

@@ -1,0 +1,6 @@
+The matrix file can be downloaded at https://suitesparse-collection-website.herokuapp.com/MM/Guettel/TEM27623.tar.gz
+
+The sparse (gemv, trsv) and dense (dot, nrm2, axpy, scal) kernels are provided
+by oneMKL. oneMKL has no sparse incomplete-LU factorization for SYCL devices,
+so the ILU(0) preconditioner (cusparseDcsrilu02 in the CUDA version) is computed
+on the host. It is a one-time setup step outside of the timed BiCGStab loop.

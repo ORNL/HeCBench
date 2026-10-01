@@ -10,9 +10,9 @@ DEBUG     = no
 SYCL      = yes
 GPU       = yes
 CUDA      = no
-CUDA_ARCH = sm_90
+CUDA_ARCH ?= sm_90
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
 #GCC_TOOLCHAIN = "/packages/gcc/10.2.0/"
 
 #===============================================================================

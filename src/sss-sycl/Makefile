@@ -6,13 +6,12 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
-GSL       = /path/to/GSL
-LAUNCHER  =
+LAUNCHER  ?=
 
 CUDA      = no
-CUDA_ARCH = sm_70
+CUDA_ARCH ?= sm_70
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
@@ -30,8 +29,7 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl \
-          -I$(GSL)/include \
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl -I../sss-cuda \
           --gcc-toolchain=$(GCC_TOOLCHAIN)
 
 ifeq ($(VENDOR), AdaptiveCpp)
@@ -40,7 +38,7 @@ ifeq ($(VENDOR), AdaptiveCpp)
 endif
 
 # Linker Flags
-LDFLAGS = -L$(GSL)/lib -lgsl
+LDFLAGS =
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
@@ -70,12 +68,16 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp DPmixGGM.cpp  DPmixGGM_Lists.cpp  DPmixGGM_SSSmoves.cpp  \
-           kernels.cpp graph.cpp  gwish.cpp  utilities.cpp
+SHARED_SRC = ../sss-cuda/DPmixGGM.cpp ../sss-cuda/DPmixGGM_Lists.cpp \
+             ../sss-cuda/graph.cpp ../sss-cuda/gwish.cpp \
+             ../sss-cuda/utilities.cpp ../sss-cuda/graph.h \
+             ../sss-cuda/gsl_compat.h
+
+%.o: %.cpp DPmixGGM_SSSmoves.cpp kernels.cpp $(SHARED_SRC)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj) RES/f9_n150_p50_modes_GPU.txt
 
 run: $(program)
-	$(LAUNCHER) GSL_RNG_SEED=123 ./$(program) f9_n150_p50
+	$(LAUNCHER) ./$(program) f9_n150_p50

@@ -31,6 +31,10 @@ void get_CRSM_from_svm(Classification_Data_CRS &M, const std::string &file_path)
       //Splitting on whitespace as some SVMS have more than one space character or a tab character
       std::istringstream iss_obs(observation);
       std::vector<std::string> splitString(std::istream_iterator<std::string>{iss_obs}, std::istream_iterator<std::string>());
+
+      // Return on a blank line
+      if (splitString.empty()) continue;
+
       //I am pushing back the label to the y_label vector
       M.y_label.push_back(std::stoi(splitString[0]));
 

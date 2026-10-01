@@ -193,6 +193,19 @@ Argument parse_argument(int argc, char **argv)
     throw invalid_argument("invalid argument");
   }
 
+  // these must be positive: they are used as divisors and array sizes
+  // (e.g. grid segmentation and gridSize allocation), so a value <= 0
+  // would cause a division-by-zero or zero-size allocation later on.
+  if(arg.param.k <= 0)
+    throw invalid_argument("number of factors (-k) must be positive");
+  if(arg.param.num_iters <= 0)
+    throw invalid_argument("number of iterations (-t) must be positive");
+  if(arg.param.num_workers <= 0)
+    throw invalid_argument("number of workers (-s) must be positive");
+  if(arg.param.u_grid <= 0 || arg.param.v_grid <= 0 ||
+     arg.param.x_grid <= 0 || arg.param.y_grid <= 0)
+    throw invalid_argument("grid sizes (-u/-v/-x/-y) must be positive");
+
   if(arg.param.u_grid*arg.param.v_grid == 1)
   {
     arg.param.x_grid = 1;
@@ -263,6 +276,12 @@ int main(int argc, char**argv)
 
   int deviceCount = 0;
   cudaError_t error_id = cudaGetDeviceCount(&deviceCount);
+  if(error_id != cudaSuccess || deviceCount <= 0)
+  {
+    fprintf(stderr, "no CUDA capable device found: %s\n",
+        cudaGetErrorString(error_id));
+    return 1;
+  }
   cudaSetDevice(arg.param.gpu%deviceCount);
 
   mf_problem tr,va;

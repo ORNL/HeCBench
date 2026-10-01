@@ -2,7 +2,7 @@ CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 PROFILE   = yes
-LAUNCHER  =
+LAUNCHER  ?=
 
 
 # Standard flags

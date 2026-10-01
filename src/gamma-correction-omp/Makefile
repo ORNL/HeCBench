@@ -7,7 +7,7 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
-LAUNCHER  =
+LAUNCHER  ?=
 
 
 #===============================================================================
@@ -25,7 +25,7 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../gamma-correction-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -53,7 +53,8 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp
+%.o: %.cpp ../gamma-correction-cuda/utils/* \
+           ../gamma-correction-cuda/utils.hpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

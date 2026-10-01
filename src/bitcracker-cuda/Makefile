@@ -7,7 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -15,9 +15,9 @@ LAUNCHER  =
 
 program = main
 
-source = attack.cu  main.cu  utils.cu  w_blocks.cu
+source = attack.cu main.cu w_blocks.cu utils.cpp
 
-obj = $(source:.cu=.o)
+obj = attack.o main.o w_blocks.o utils.o
 
 #===============================================================================
 # Sets Flags
@@ -46,7 +46,10 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu Makefile
+%.o: %.cu aes.h bitcracker.h utils.h Makefile
+	$(CC) $(CFLAGS) -c $< -o $@
+
+utils.o: utils.cpp utils.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

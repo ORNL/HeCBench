@@ -19,12 +19,12 @@
 /// A and B are FP8 (CUDA_R_8F_E4M3), one byte per element along K.
 /// The block scales are UE8M0 (CUDA_R_8F_UE8M0) with one scale per 32 elements
 /// along the K dimension (scale mode CUBLASLT_MATMUL_MATRIX_SCALE_VEC32_UE8M0).
-/// Output D is FP16.
+/// Output D is BF16.
 ///
 /// A is stored (M,K) row-major and B is stored (N,K) row-major. To compute
 /// A @ B^T on the column-major cuBLASLt we use transa = OP_T, transb = OP_N so
 /// that A is interpreted as (K x M) and B as (K x N), producing D = (M x N).
-void LtMxfp8Matmul(const int repeat,
+bool LtMxfp8Matmul(const int repeat,
                    cublasLtHandle_t ltHandle,
                    int m,
                    int n,
@@ -37,7 +37,7 @@ void LtMxfp8Matmul(const int repeat,
                    const void *b_scale, /* device pointer, UE8M0 block scales */
                    const void *B,       /* device pointer, FP8 E4M3 (N,K) */
                    int ldb,
-                   __half *D,           /* device pointer, FP16 (M,N) */
+                   __nv_bfloat16 *D,    /* device pointer, BF16 (M,N) */
                    int ldd,
                    void *workspace,
                    size_t workspaceSize) {
@@ -67,8 +67,8 @@ void LtMxfp8Matmul(const int repeat,
     // Create matrix descriptors. FP8 dimensions are in elements (1 byte each).
     checkCublasStatus(cublasLtMatrixLayoutCreate(&Adesc, CUDA_R_8F_E4M3, k, m, lda));
     checkCublasStatus(cublasLtMatrixLayoutCreate(&Bdesc, CUDA_R_8F_E4M3, k, n, ldb));
-    checkCublasStatus(cublasLtMatrixLayoutCreate(&Cdesc, CUDA_R_16F, m, n, ldd));
-    checkCublasStatus(cublasLtMatrixLayoutCreate(&Ddesc, CUDA_R_16F, m, n, ldd));
+    checkCublasStatus(cublasLtMatrixLayoutCreate(&Cdesc, CUDA_R_16BF, m, n, ldd));
+    checkCublasStatus(cublasLtMatrixLayoutCreate(&Ddesc, CUDA_R_16BF, m, n, ldd));
 
     checkCublasStatus(cublasLtMatmulPreferenceCreate(&preference));
     checkCublasStatus(cublasLtMatmulPreferenceSetAttribute(preference, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, &workspaceSize, sizeof(workspaceSize)));
@@ -83,8 +83,21 @@ void LtMxfp8Matmul(const int repeat,
         if (Bdesc) cublasLtMatrixLayoutDestroy(Bdesc);
         if (Adesc) cublasLtMatrixLayoutDestroy(Adesc);
         if (operationDesc) cublasLtMatmulDescDestroy(operationDesc);
-        return;
+        return false;
     }
+
+    // Warm up
+    checkCublasStatus(cublasLtMatmul(ltHandle,
+                                     operationDesc,
+                                     alpha, A, Adesc,
+                                     B, Bdesc, beta,
+                                     D, Cdesc,
+                                     D, Ddesc,
+                                     &heuristicResult.algo,
+                                     workspace,
+                                     workspaceSize,
+                                     0));
+    cudaDeviceSynchronize();
 
     auto start = std::chrono::steady_clock::now();
 
@@ -114,6 +127,7 @@ void LtMxfp8Matmul(const int repeat,
     if (Bdesc) checkCublasStatus(cublasLtMatrixLayoutDestroy(Bdesc));
     if (Adesc) checkCublasStatus(cublasLtMatrixLayoutDestroy(Adesc));
     if (operationDesc) checkCublasStatus(cublasLtMatmulDescDestroy(operationDesc));
+    return true;
 }
 
 #endif // MXFP8_GEMM_SUPPORTED
@@ -152,7 +166,7 @@ int main(int argc, char *argv[]) {
 
         Mxfp8TestBench props(m, n, k, 1.0f, 0.0f, 32ULL * 1024 * 1024);
 
-        LtMxfp8Matmul(repeat,
+        bool ran = LtMxfp8Matmul(repeat,
                       props.ltHandle,
                       props.m,
                       props.n,
@@ -165,7 +179,7 @@ int main(int argc, char *argv[]) {
                       props.workspace,
                       props.workspaceSize);
 
-        props.verify();
+        if (ran) props.verify();
     }
 
     return 0;

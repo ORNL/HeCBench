@@ -3,8 +3,7 @@
 #include <stdlib.h>
 #include <chrono>
 #include <sycl/sycl.hpp>
-
-#define BLOCK_SIZE 256
+#include "../f16atomic-cuda/verification.h"
 
 #define ZERO_FP16 \
   sycl::bit_cast<sycl::half, unsigned short>((unsigned short)0x0000U)
@@ -40,7 +39,7 @@ inline sycl::half2 atomicAdd(sycl::half2 *addr, sycl::half2 operand) {
   return output.h;
 }
 
-struct alignas(8) bfloat162
+struct alignas(4) bfloat162
 {
   sycl::ext::oneapi::bfloat16 x, y;
 };
@@ -76,7 +75,7 @@ void f16AtomicOnGlobalMem(sycl::half *result, int n,
   if (tid >= n) return;
   sycl::half2 *result_v = reinterpret_cast<sycl::half2 *>(result);
   sycl::half2 val{ZERO_FP16, ONE_FP16};
-  atomicAdd(&result_v[tid % BLOCK_SIZE], val);
+  atomicAdd(&result_v[tid % kBlockSize], val);
 }
 
 void f16AtomicOnGlobalMem(sycl::ext::oneapi::bfloat16 *result, int n,
@@ -86,13 +85,13 @@ void f16AtomicOnGlobalMem(sycl::ext::oneapi::bfloat16 *result, int n,
   if (tid >= n) return;
   bfloat162 *result_v = reinterpret_cast<bfloat162 *>(result);
   bfloat162 val{ZERO_BF16, ONE_BF16};
-  atomicAdd(&result_v[tid % BLOCK_SIZE], val);
+  atomicAdd(&result_v[tid % kBlockSize], val);
 }
 
 template <typename T>
-void atomicCost (int nelems, int repeat)
+bool atomicCost (int nelems, int repeat, int max_exact_int)
 {
-  size_t result_size = sizeof(T) * BLOCK_SIZE * 2;
+  size_t result_size = sizeof(T) * kBlockSize * 2;
 
   T* result = (T*) malloc (result_size);
 
@@ -105,8 +104,9 @@ void atomicCost (int nelems, int repeat)
   T *d_result = (T *)sycl::malloc_device(result_size, q);
   q.memset(d_result, 0, result_size);
 
-  sycl::range<1> lws (BLOCK_SIZE);
-  sycl::range<1> gws ((nelems / 2 + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE);
+  sycl::range<1> lws (kBlockSize);
+  sycl::range<1> gws ((nelems / 2 + kBlockSize - 1) /
+                       kBlockSize * kBlockSize);
 
   auto kFn = [&](sycl::handler &cgh) {
     auto nelems_ct1 = nelems / 2;
@@ -115,13 +115,19 @@ void atomicCost (int nelems, int repeat)
     });
   };
 
-  //  warmup
   q.submit(kFn);
-
   q.memcpy(result, d_result, result_size).wait();
-  printf("Print the first two elements: 0x%04x 0x%04x\n\n", result[0], result[1]);
-  printf("Print the first two elements in FLOAT32: %f %f\n\n", (float)result[0], (float)result[1]);
 
+  bool pass = verifyAtomicPairs(result, nelems / 2, max_exact_int);
+  printf("%s\n", pass ? "PASS" : "FAIL");
+
+  free(result);
+  if (!pass) {
+    sycl::free(d_result, q);
+    return false;
+  }
+
+  q.memset(d_result, 0, result_size).wait();
   auto start = std::chrono::steady_clock::now();
   for(int i=0; i<repeat; i++)
   {
@@ -132,8 +138,8 @@ void atomicCost (int nelems, int repeat)
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average execution time of 16-bit floating-point atomic add on global memory: %f (us)\n",
           time * 1e-3f / repeat);
-  free(result);
   sycl::free(d_result, q);
+  return true;
 }
 
 int main(int argc, char* argv[])
@@ -149,10 +155,11 @@ int main(int argc, char* argv[])
   assert(nelems > 0 && (nelems % 2) == 0);
 
   printf("\nFP16 atomic add\n");
-  atomicCost<sycl::half>(nelems, repeat);
+  bool fp16_pass = atomicCost<sycl::half>(nelems, repeat, kFp16MaxExactInt);
 
   printf("\nBF16 atomic add\n");
-  atomicCost<sycl::ext::oneapi::bfloat16>(nelems, repeat);
+  bool bf16_pass = atomicCost<sycl::ext::oneapi::bfloat16>(nelems, repeat,
+                                                           kBf16MaxExactInt);
 
-  return 0;
+  return (fp16_pass && bf16_pass) ? 0 : 1;
 }

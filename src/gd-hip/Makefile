@@ -6,7 +6,11 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
+
+# HIP device specific
+UNSAFE_FP_ATOMICS = yes
+
 
 #===============================================================================
 # Program name & source code list
@@ -32,10 +36,13 @@ ifeq ($(DEBUG),yes)
   LDFLAGS  += -g
 endif
 
+ifeq ($(UNSAFE_FP_ATOMICS),yes)
+  CFLAGS += -munsafe-fp-atomics -DUNSAFE_FP_ATOMICS
+endif
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-  CFLAGS += -O3 -munsafe-fp-atomics
+  CFLAGS += -O3
 endif
 
 #===============================================================================

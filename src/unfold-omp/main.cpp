@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <chrono>
+#include <cstring>
 #include <omp.h>
 
 template <int n_threads, int n_elems_per_thread, typename func_t>
@@ -95,6 +96,7 @@ int main(int argc, char* argv[])
 
   scalar_t *h_grad_in = (scalar_t*) malloc (input_size_bytes);
   scalar_t *h_grad_out = (scalar_t*) malloc (output_size_bytes);
+  memset(h_grad_out, 0, output_size_bytes);
 
   srand(123);
   for (int i = 0; i < grad_in_dim_size; i++) {
@@ -104,7 +106,7 @@ int main(int argc, char* argv[])
   const int64_t h_idx_dim = 0; // one dimension
 
   #pragma omp target data map(to: h_grad_in[0:grad_in_dim_size], h_idx_dim) \
-                          map(from: h_grad_out[0:grad_in_dim_size])
+                          map(tofrom: h_grad_out[0:grad_in_dim_size])
 
   {
     auto start = std::chrono::steady_clock::now();

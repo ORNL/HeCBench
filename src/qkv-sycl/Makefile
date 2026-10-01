@@ -6,18 +6,18 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 GPU       = yes
 CUDA      = no
-CUDA_ARCH = sm_70
+CUDA_ARCH ?= sm_70
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
 ONEMKL    = no
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
-ONEMKL_PATH   = /path/to/oneMKL
-ONEDNN_PATH   = /path/to/oneDNN
+ONEMKL_PATH   ?= /path/to/oneMKL
+ONEDNN_PATH   ?= /path/to/oneDNN
 
 #===============================================================================
 # Program name & source code list

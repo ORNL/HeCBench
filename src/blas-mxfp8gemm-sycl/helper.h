@@ -19,7 +19,7 @@
 // A and B are FP8 (E4M3), one byte per element along K (not packed).
 // Scales are E8M0 (UE8M0), one scale per 32-element block along K
 // (SCALE_BLOCK_SIZE = 32), matching the OCP microscaling (MX) format.
-// Output D is FP16.
+// Output D is BF16.
 //
 // The A / B elements and their block scales are supplied by the caller
 // (already quantized), which matches the oneDNN mxfp8 matmul example where the
@@ -53,7 +53,7 @@ struct Mxfp8TestBench {
         Bdev = sycl::malloc_device<uint8_t>(bBytes, q);
         AscaleDev = sycl::malloc_device<uint8_t>(aScaleBytes, q);
         BscaleDev = sycl::malloc_device<uint8_t>(bScaleBytes, q);
-        Ddev = sycl::malloc_device<sycl::half>(dElems, q);
+        Ddev = sycl::malloc_device<sycl::ext::oneapi::bfloat16>(dElems, q);
 
         fillData();
     }
@@ -97,8 +97,8 @@ struct Mxfp8TestBench {
     //   D = alpha * (A*a_scale) @ (B*b_scale)^T + beta * C
     // equals alpha * (a_elem*a_scale) * (b_elem*b_scale) * K (with beta = 0).
     bool verify(double relTol = 1e-2) {
-        std::vector<sycl::half> Dh(dElems);
-        q.memcpy(Dh.data(), Ddev, dElems * sizeof(sycl::half)).wait();
+        std::vector<sycl::ext::oneapi::bfloat16> Dh(dElems);
+        q.memcpy(Dh.data(), Ddev, dElems * sizeof(sycl::ext::oneapi::bfloat16)).wait();
 
         float aElem  = decodeE4M3(FP8_FILL);
         float bElem  = decodeE4M3(FP8_FILL);
@@ -127,5 +127,5 @@ struct Mxfp8TestBench {
 
     uint8_t *Adev = nullptr, *Bdev = nullptr;          // FP8 (E4M3)
     uint8_t *AscaleDev = nullptr, *BscaleDev = nullptr; // UE8M0 block scales
-    sycl::half *Ddev = nullptr;                         // FP16 output
+    sycl::ext::oneapi::bfloat16 *Ddev = nullptr;        // BF16 output
 };

@@ -8,7 +8,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
 ARCH      = gfx906
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -50,15 +50,11 @@ endif
 # Targets to Build
 #===============================================================================
 
-$(program): divergence.o timer.o 
+$(program): divergence.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
-divergence.o: divergence.cpp divergence.hpp Makefile
+divergence.o: divergence.cpp divergence.hpp Makefile.aomp
 	$(CC) $(CFLAGS) -c $< -o $@
-
-timer.o: timer/timer.cpp timer/timer.hpp
-	$(CC) $(CFLAGS) -c $< -o $@
-
 
 clean:
 	rm -rf $(program) *.o

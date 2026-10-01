@@ -8,8 +8,8 @@ OPTIMIZE  = yes
 DEBUG     = no
 VERIFY    = yes
 DEVICE    = gpu
-SM        = cc70
-LAUNCHER  =
+SM        ?= cc70
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

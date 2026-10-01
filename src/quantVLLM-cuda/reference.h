@@ -1,3 +1,20 @@
+// Off-by-one tolerance verification for int8 quantization results.
+// Host (reference) and device may differ by a small amount at quantization
+// midpoints due to fp32 rounding/division precision (device fp32 ops are only
+// required to be accurate to within a few ULPs). This mirrors vLLM's upstream
+// int8-quant tests, which verify with torch.testing.assert_close(atol=1/2,
+// rtol=0) rather than bit-exact equality. See intel/llvm issue #16636.
+// Returns 0 if all elements are within atol, non-zero otherwise.
+static inline int compare_int8_tol(const int8_t* a, const int8_t* b,
+                                   size_t n, int atol) {
+  for (size_t i = 0; i < n; i++) {
+    int d = static_cast<int>(a[i]) - static_cast<int>(b[i]);
+    if (d < 0) d = -d;
+    if (d > atol) return 1;
+  }
+  return 0;
+}
+
 template <typename scalar_t, typename scale_type>
 void static_scaled_int8_quant_reference(
     scalar_t const* __restrict__ input, int8_t* __restrict__ out,

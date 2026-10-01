@@ -9,7 +9,7 @@ DEBUG     = no
 DEVICE    = gpu
 ARCH     ?= gfx906
 ROCM_PATH ?= /opt/rocm
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

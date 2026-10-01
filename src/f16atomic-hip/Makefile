@@ -6,7 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -45,7 +45,7 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu Makefile
+%.o: %.cu ../f16atomic-cuda/verification.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

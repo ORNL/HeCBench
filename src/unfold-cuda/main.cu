@@ -110,7 +110,9 @@ int main(int argc, char* argv[])
   cudaMemcpy(d_idx_dim, &h_idx_dim, sizeof(int64_t), cudaMemcpyHostToDevice); 
 
   cudaMalloc((void**)&d_grad_out, output_size_bytes);
+  cudaMemset(d_grad_out, 0, output_size_bytes);
 
+  cudaDeviceSynchronize();
   auto start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < repeat; i++) {

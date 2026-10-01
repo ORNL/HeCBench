@@ -7,7 +7,7 @@ ROCM_PATH ?= /opt/rocm
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -53,7 +53,7 @@ device.o: device.cu ../pcc-cuda/device.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj) *.txt
+	rm -rf $(program) $(obj) corrs.txt
 
 run: $(program)
 	$(LAUNCHER) ./$(program) 90112 165

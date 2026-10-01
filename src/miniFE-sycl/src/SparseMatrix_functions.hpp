@@ -515,23 +515,20 @@ namespace miniFE {
 
           sycl::range<1> gws ((rows_size+255)/256*256);
           sycl::range<1> lws (256);
-          q.submit([&] (sycl::handler &h) {
-             h.parallel_for<class matvec_kernel>(
-               sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-               MINIFE_LOCAL_ORDINAL row = item.get_global_id(0);
-               if (row < rows_size) {
-                 MINIFE_GLOBAL_ORDINAL row_start = d_Arowoffsets[row];
-                 MINIFE_GLOBAL_ORDINAL row_end   = d_Arowoffsets[row+1];
-                 MINIFE_SCALAR sum = 0;
+          launch_nd(q, sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+             MINIFE_LOCAL_ORDINAL row = item.get_global_id(0);
+             if (row < rows_size) {
+               MINIFE_GLOBAL_ORDINAL row_start = d_Arowoffsets[row];
+               MINIFE_GLOBAL_ORDINAL row_end   = d_Arowoffsets[row+1];
+               MINIFE_SCALAR sum = 0;
 
-	         // Use the unroll factor in the OpenMP program
-                 #pragma unroll 27
-                 for(MINIFE_GLOBAL_ORDINAL i = row_start; i < row_end; ++i) {
-                   sum += d_Acoefs[i] * d_xcoefs[d_Acols[i]];
-                 }
-                 d_ycoefs[row] = sum;
+	       // Use the unroll factor in the OpenMP program
+               #pragma unroll 27
+               for(MINIFE_GLOBAL_ORDINAL i = row_start; i < row_end; ++i) {
+                 sum += d_Acoefs[i] * d_xcoefs[d_Acols[i]];
                }
-            });
+               d_ycoefs[row] = sum;
+             }
           });
         }
       };

@@ -7,7 +7,7 @@ CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 SP        = yes
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

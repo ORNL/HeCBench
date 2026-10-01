@@ -125,6 +125,11 @@ void call_kernel(std::vector<CtgWithReads>& data_in, uint32_t max_ctg_size, uint
   sycl::queue q{sycl::default_selector_v};
   std::cout << "Running on " << q.get_device().get_info<sycl::info::device::name>() << std::endl;
 
+  unsigned warp_sz = 32;
+  auto sg_sizes = q.get_device().get_info<sycl::info::device::sub_group_sizes>();
+  if (!sg_sizes.empty())
+    warp_sz = *std::max_element(sg_sizes.begin(), sg_sizes.end());
+
   int max_mer_len = LASSM_MAX_KMER_LEN;//mer_len;
 
   unsigned tot_extensions = data_in.size();
@@ -380,7 +385,7 @@ void call_kernel(std::vector<CtgWithReads>& data_in, uint32_t max_ctg_size, uint
     tim_temp.timer_end();
     data_mv_tim += tim_temp.get_total_time();
     //call kernel here, one thread per contig
-    unsigned total_threads = vec_size*32;// we need one warp (32 threads) per extension, vec_size = extensions
+    unsigned total_threads = vec_size*warp_sz;// we need one warp (warp_sz threads) per extension, vec_size = extensions
     unsigned thread_per_blk = 512;
     unsigned blocks = (total_threads + thread_per_blk - 1)/thread_per_blk;
 

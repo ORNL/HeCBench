@@ -6,7 +6,7 @@
 CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Sets Flags

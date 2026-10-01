@@ -6,14 +6,15 @@
 #define  bidx  omp_get_team_num()
 #define  tidx  omp_get_thread_num()
 
-#include "modP.h"
+#include "reference.h"
 
 void intt_3_64k_modcrt(
   const uint32 numTeams,
+  const uint32 threadsPerTeam,
         uint32 *__restrict dst,
   const uint64 *__restrict src)
 {
-  #pragma omp target teams num_teams(numTeams) thread_limit(64)
+  #pragma omp target teams num_teams(numTeams) thread_limit(threadsPerTeam)
   {
     uint64 buffer[512];
     #pragma omp parallel 
@@ -61,8 +62,11 @@ int main(int argc, char* argv[]) {
   const int repeat = atoi(argv[1]);
 
   const int nttLen = 64 * 1024;
+  const int blockSize = 512;
+  const int threadsPerBlock = 64;
   uint64 *ntt = (uint64*) malloc (nttLen*sizeof(uint64));
   uint32 *res = (uint32*) malloc (nttLen*sizeof(uint32));
+  uint32 *ref = (uint32*) malloc (nttLen*sizeof(uint32));
 
   srand(123);
   for (int i = 0; i < nttLen; i++) {
@@ -71,25 +75,37 @@ int main(int argc, char* argv[]) {
     ntt[i] = (hi << 32) | lo;
   }
 
+  reference(ref, ntt, nttLen, blockSize, threadsPerBlock);
+
   #pragma omp target data map (to: ntt[0:nttLen]) \
                           map (from: res[0:nttLen])
   {
+    intt_3_64k_modcrt(nttLen/blockSize, threadsPerBlock, res, ntt);
+
     auto start = std::chrono::steady_clock::now();
 
     for (int i = 0; i < repeat; i++)
-      intt_3_64k_modcrt(nttLen/512, res, ntt);
+      intt_3_64k_modcrt(nttLen/blockSize, threadsPerBlock, res, ntt);
 
     auto end = std::chrono::steady_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     printf("Average kernel execution time: %f (us)\n", (time * 1e-3f) / repeat);
   }
 
-  uint64 checksum = 0;
-  for (int i = 0; i < nttLen; i++)
-    checksum += res[i];
-  printf("Checksum: %lu\n", checksum);
+  for (int i = 0; i < nttLen; i++) {
+    if (res[i] != ref[i]) {
+      //printf("Mismatch at index %d: device=%u, reference=%u\n", i, res[i], ref[i]);
+      printf("FAIL\n");
+      free(ntt);
+      free(res);
+      free(ref);
+      return 1;
+    }
+  }
+  printf("PASS\n");
 
   free(ntt);
   free(res);
+  free(ref);
   return 0;
 }

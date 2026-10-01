@@ -7,7 +7,7 @@ CC        = nvc++
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_80
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

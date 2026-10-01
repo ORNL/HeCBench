@@ -3,7 +3,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
 ARCH      = gfx906
-LAUNCHER  =
+LAUNCHER  ?=
 
 # Standard flags
 #CFLAGS := $(EXTRA_CFLAGS) -std=c++11 -Wall

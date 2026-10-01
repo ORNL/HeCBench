@@ -7,7 +7,7 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -24,7 +24,7 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall 
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I ../zeropoint-cuda 
 
 # Linker Flags
 LDFLAGS = 
@@ -53,7 +53,7 @@ $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
 %.o: %.cpp ../zeropoint-cuda/reference.h
-	$(CC) $(CFLAGS) -I ../zeropoint-cuda -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)

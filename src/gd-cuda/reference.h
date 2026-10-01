@@ -120,8 +120,24 @@ void reference (Classification_Data_CRS &A,
     update_ref(h_x, h_grad, m, n, lambda, alpha);
   }
 
-  bool ok = (fabsf(obj_val - h_obj_val) < 1e-3f) &&
-            (fabsf(train_error - h_train_error) < 1e-3f);
+  const float atol = 1e-4f; // absolute tolerance floor
+  #ifdef UNSAFE_FP_ATOMICS
+  const float rtol = 5e-3f; // relative tolerance
+  #else
+  const float rtol = 1e-3f;
+  #endif
+
+  float obj_diff = fabsf(obj_val - h_obj_val);
+  float obj_bound = atol + rtol * fabsf(h_obj_val);
+  float err_diff = fabsf(train_error - h_train_error);
+  float err_bound = atol + rtol * fabsf(h_train_error);
+
+  printf("Objective value : device = %f, reference = %f, |diff| = %e (bound %e)\n",
+         obj_val, h_obj_val, obj_diff, obj_bound);
+  printf("Training error  : device = %f, reference = %f, |diff| = %e (bound %e)\n",
+         train_error, h_train_error, err_diff, err_bound);
+
+  bool ok = (obj_diff <= obj_bound) && (err_diff <= err_bound);
   printf("%s\n", ok ? "PASS" : "FAIL");
 
   free(h_row_ptr);

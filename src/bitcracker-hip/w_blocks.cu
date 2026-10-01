@@ -22,6 +22,7 @@
 #include <chrono>
 #include <iostream>
 #include "bitcracker.h"
+#include "utils.h"
 
 #define ROR(x, i) (((x) << (32 - (i))) | ((x) >> (i)))
 
@@ -167,7 +168,7 @@ int evaluate_w_block(
   HIP_CHECK( hipMemcpy(padding_d, padding, PADDING_SIZE * sizeof(unsigned char), hipMemcpyHostToDevice) );
 
   // launch kernel
-  hipDeviceSynchronize();
+  HIP_CHECK( hipDeviceSynchronize() );
   auto start = std::chrono::steady_clock::now();
 
   kernel_w_block<<<1024, 16>>>(salt_d, padding_d, d_w_words_uint32);

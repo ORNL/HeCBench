@@ -27,6 +27,9 @@
 #define SDK_SUCCESS 0
 #define SDK_FAILURE 1
 
+#define MAX_SAFE_WIDTH  16384
+#define MAX_SAFE_HEIGHT 16384
+
 static const short bitMapID = 19778;
 
 
@@ -304,6 +307,11 @@ class SDKBitMap : public BitMapHeader, public BitMapInfoHeader
           // Support only 8 or 24 bits images
           if (bitsPerPixel != 8 && bitsPerPixel != 24)
           {
+            fclose(fd);
+            return;
+          }
+          if (width > MAX_SAFE_WIDTH || height > MAX_SAFE_HEIGHT) {
+            printf("Image size exceeds the maximum allowed.\n");
             fclose(fd);
             return;
           }

@@ -39,6 +39,7 @@
 
 #include <sycl/sycl.hpp>
 #include "bitcracker.h"
+#include "utils.h"
 #include "aes.h"
 
 inline unsigned int __byte_perm(unsigned int a, unsigned int b,

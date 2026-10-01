@@ -6,13 +6,13 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 GPU       = yes
 CUDA      = no
-CUDA_ARCH = sm_70
+CUDA_ARCH ?= sm_70
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
@@ -30,8 +30,10 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
+# icpx defaults to -ffp-model=fast, which turns the host reference's float
+# divide into a reciprocal multiply and breaks the exact comparison below.
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../bincount-cuda \
-          -fsycl --gcc-toolchain=$(GCC_TOOLCHAIN)
+          -fsycl --gcc-toolchain=$(GCC_TOOLCHAIN) -ffp-model=precise
 
 ifeq ($(VENDOR), AdaptiveCpp)
     CFLAGS_TMP := $(CFLAGS)
@@ -49,6 +51,15 @@ endif
 ifeq ($(HIP), yes)
   CFLAGS += -fsycl-targets=amdgcn-amd-amdhsa \
 	    -Xsycl-target-backend --offload-arch=$(HIP_ARCH) 
+endif
+
+# The bin index is computed in float, so the kernel and the host reference must
+# round identically for the exact comparison to hold. Intel's OpenCL/Level Zero
+# backend uses an approximate fp32 divide unless asked otherwise;
+ifneq ($(CUDA), yes)
+ifneq ($(HIP), yes)
+  LDFLAGS += -Xs "-cl-fp32-correctly-rounded-divide-sqrt"
+endif
 endif
 
 # Debug Flags

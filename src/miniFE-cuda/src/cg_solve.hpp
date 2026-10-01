@@ -30,6 +30,8 @@
 
 #include <cmath>
 #include <limits>
+#include <chrono>
+#include <iostream>
 
 #include <Vector_functions.hpp>
 #include <mytimer.hpp>
@@ -39,8 +41,8 @@
 
 namespace miniFE {
 
-  template<typename Scalar>
-    void print_vec(const std::vector<Scalar>& vec, const std::string& name)
+  template<typename VecType>
+    void print_vec(const VecType& vec, const std::string& name)
     {
       for(size_t i=0; i<vec.size(); ++i) {
         std::cout << name << "["<<i<<"]: " << vec[i] << std::endl;
@@ -52,7 +54,8 @@ namespace miniFE {
         const VectorType& v,
         const VectorType& w,
         typename VectorType::ScalarType *d_v,
-        typename VectorType::ScalarType *d_w)
+        typename VectorType::ScalarType *d_w,
+        typename VectorType::ScalarType *d_dot)
     {
       typedef typename VectorType::ScalarType Scalar;
       typedef typename TypeTraits<Scalar>::magnitude_type magnitude;
@@ -64,8 +67,8 @@ namespace miniFE {
       //v and w are considered orthogonal if
       //  |inner| < 100 * ||v||_2 * ||w||_2 * epsilon
 
-      magnitude vnorm = std::sqrt(dot(v,v, d_v, d_v));
-      magnitude wnorm = std::sqrt(dot(w,w, d_w, d_w));
+      magnitude vnorm = std::sqrt(dot(v,v, d_v, d_v, d_dot));
+      magnitude wnorm = std::sqrt(dot(w,w, d_w, d_w, d_dot));
       return std::abs(inner) <= 100*vnorm*wnorm*std::numeric_limits<magnitude>::epsilon();
     }
 
@@ -147,6 +150,10 @@ namespace miniFE {
         cudaMalloc((void**)&d_Arowoffsets, sizeof(LocalOrdinalType) * A.row_offsets.size());
         cudaMalloc((void**)&d_Acols, sizeof(GlobalOrdinalType) * A.packed_cols.size());
         cudaMalloc((void**)&d_Acoefs, sizeof(MINIFE_SCALAR) * A.packed_coefs.size());
+#ifdef MINIFE_TIME_H2D
+        cudaDeviceSynchronize();
+        auto _h2d_t0 = std::chrono::steady_clock::now();
+#endif
         cudaMemcpy(d_r, r_ptr, sizeof(MINIFE_SCALAR) * r.coefs.size(), cudaMemcpyHostToDevice);
         cudaMemcpy(d_p, p_ptr, sizeof(MINIFE_SCALAR) * p.coefs.size(), cudaMemcpyHostToDevice);
         cudaMemcpy(d_Ap, Ap_ptr, sizeof(MINIFE_SCALAR) * Ap.coefs.size(), cudaMemcpyHostToDevice);
@@ -155,6 +162,22 @@ namespace miniFE {
         cudaMemcpy(d_Arowoffsets, Arowoffsets, sizeof(LocalOrdinalType) * A.row_offsets.size(), cudaMemcpyHostToDevice);
         cudaMemcpy(d_Acols, Acols, sizeof(GlobalOrdinalType) * A.packed_cols.size(), cudaMemcpyHostToDevice);
         cudaMemcpy(d_Acoefs, Acoefs, sizeof(MINIFE_SCALAR) * A.packed_coefs.size(), cudaMemcpyHostToDevice);
+#ifdef MINIFE_TIME_H2D
+        cudaDeviceSynchronize();
+        auto _h2d_t1 = std::chrono::steady_clock::now();
+        double _h2d_ms = std::chrono::duration_cast<std::chrono::duration<double,std::milli>>(_h2d_t1 - _h2d_t0).count();
+        double _h2d_bytes = sizeof(MINIFE_SCALAR)*(r.coefs.size()+p.coefs.size()+Ap.coefs.size()+x.coefs.size()+b.coefs.size()+A.packed_coefs.size())
+                          + sizeof(LocalOrdinalType)*A.row_offsets.size() + sizeof(GlobalOrdinalType)*A.packed_cols.size();
+        std::cout << "[H2D] setup copies: " << _h2d_ms << " ms, " << _h2d_bytes/1e6 << " MB, "
+                  << (_h2d_bytes/1e9)/(_h2d_ms/1e3) << " GB/s" << std::endl;
+#endif
+
+        // Persistent scratch/result buffer for the dot-product reductions,
+        // allocated once here (MAX_NUM_BLOCKS elements) instead of on every
+        // dot/dot_r2 call inside the CG loop.
+        const int DOT_MAX_NUM_BLOCKS = 256;
+        MINIFE_SCALAR *d_dot;
+        cudaMalloc((void**)&d_dot, sizeof(MINIFE_SCALAR) * DOT_MAX_NUM_BLOCKS);
 
         TICK(); waxpby(one, x, zero, x, p, d_x, d_x, d_p); TOCK(tWAXPY);
 
@@ -170,7 +193,7 @@ namespace miniFE {
         waxpby(one, b, -one, Ap, r, d_b, d_Ap, d_r); 
         TOCK(tWAXPY);
 
-        TICK(); rtrans = dot_r2(r, d_r); TOCK(tDOT);
+        TICK(); rtrans = dot_r2(r, d_r, d_dot); TOCK(tDOT);
 
 #ifdef MINIFE_DEBUG
         std::cout << "rtrans="<<rtrans<<std::endl;
@@ -199,7 +222,7 @@ namespace miniFE {
           }
           else {
             oldrtrans = rtrans;
-            TICK(); rtrans = dot_r2(r, d_r); TOCK(tDOT);
+            TICK(); rtrans = dot_r2(r, d_r, d_dot); TOCK(tDOT);
             magnitude_type beta = rtrans/oldrtrans;
             TICK(); 
             daxpby(one, r, beta, p, d_r, d_p); 
@@ -219,14 +242,14 @@ namespace miniFE {
           matvec(A, p, Ap, d_Arowoffsets, d_Acols, d_Acoefs, d_p, d_Ap);
           TOCK(tMATVEC);
 
-          TICK(); p_ap_dot = dot(Ap, p, d_Ap, d_p); TOCK(tDOT);
+          TICK(); p_ap_dot = dot(Ap, p, d_Ap, d_p, d_dot); TOCK(tDOT);
 
 #ifdef MINIFE_DEBUG
           os << "iter " << k << ", p_ap_dot = " << p_ap_dot;
           os.flush();
 #endif
           if (p_ap_dot < brkdown_tol) {
-            if (p_ap_dot < 0 || breakdown(p_ap_dot, Ap, p, d_Ap, d_p)) {
+            if (p_ap_dot < 0 || breakdown(p_ap_dot, Ap, p, d_Ap, d_p, d_dot)) {
               std::cerr << "miniFE::cg_solve ERROR, numerical breakdown!"<<std::endl;
 #ifdef MINIFE_DEBUG
               os << "ERROR, numerical breakdown!"<<std::endl;
@@ -269,6 +292,7 @@ namespace miniFE {
         cudaFree(d_Arowoffsets);
         cudaFree(d_Acols);
         cudaFree(d_Acoefs);
+        cudaFree(d_dot);
       }
 
 }//namespace miniFE

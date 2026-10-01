@@ -6,7 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -51,7 +51,7 @@ $(program): $(obj) iso2dfd.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj) *.bin *.txt
+	rm -rf $(program) $(obj) *.bin error_diff.txt
 
 run: $(program)
 	$(LAUNCHER) ./$(program) 2048 2048 1000

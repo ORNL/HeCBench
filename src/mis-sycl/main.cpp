@@ -199,6 +199,7 @@ int main(int argc, char* argv[])
   }
 
   ECLgraph g = readECLgraph(argv[1]);
+  verifyUndirectedECLgraph(g);
   printf("configuration: %d nodes and %d edges (%s)\n", g.nodes, g.edges, argv[1]);
   printf("average degree: %.2f edges per node\n", 1.0 * g.edges / g.nodes);
 

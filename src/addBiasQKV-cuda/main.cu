@@ -16,9 +16,13 @@
 
 #include <chrono>
 #include <cstdio>
+#include <cstdint>
+#include <random>
+#include <vector>
 #include <cuda.h>
 #include <cuda_fp16.h>
 #include <cuda_fp8.h>
+#include "reference.h"
 
 // scale = AMAX(tensor) / FP8_MAX
 // A (original) = A_scaled (fp8) * "scale of A"
@@ -103,7 +107,32 @@ void addBias(int batch_size, int seq_len, int hidden_units, int head_num, int re
   cudaMalloc(&bias, sizeof(T2) * bias_size);
   cudaMalloc(&oscale, sizeof(float));
   cudaMalloc(&oscale_inv, sizeof(float));
- 
+
+  // Host-side inputs (kept in device storage formats: FP8 bytes / bf16 words).
+  // NVIDIA GPUs use the OCP / E4M3FN encoding, so fnuz is always false.
+  const bool fnuz = false;
+  const int total = m * 3 * hidden_units;
+
+  std::vector<uint8_t>  h_src(total);
+  std::vector<uint16_t> h_bias(bias_size);
+  std::vector<uint8_t>  h_out(total);
+  std::vector<uint8_t>  h_ref(total);
+
+  std::mt19937 rng(123);
+  std::uniform_real_distribution<float> dist(-2.0f, 2.0f);
+  for (int i = 0; i < total; i++)
+    h_src[i] = ref::f32_to_fp8_e4m3(dist(rng), fnuz);
+  for (int i = 0; i < bias_size; i++)
+    h_bias[i] = ref::f32_to_bf16(dist(rng));
+
+  const float input_scale  = 0.5f;
+  const float output_scale = 1.25f;
+
+  cudaMemcpy(qkv_buf, h_src.data(), sizeof(T1) * total, cudaMemcpyHostToDevice);
+  cudaMemcpy(bias, h_bias.data(), sizeof(T2) * bias_size, cudaMemcpyHostToDevice);
+  cudaMemcpy(oscale, &input_scale, sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpy(oscale_inv, &output_scale, sizeof(float), cudaMemcpyHostToDevice);
+
   FP8TrtAddQKVBiasParam<T1, T2> param{q_buf,
                                       qkv_buf,
                                       bias,   //att_query_weight_bias,
@@ -131,6 +160,19 @@ void addBias(int batch_size, int seq_len, int hidden_units, int head_num, int re
   auto end = std::chrono::high_resolution_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average execution time of the kernel: %f (us)\n", (time * 1e-3f) / repeat);
+
+  // Verify the GPU result against the host reference.
+  cudaMemcpy(h_out.data(), q_buf, sizeof(T1) * total, cudaMemcpyDeviceToHost);
+
+  addBiasQKV_reference(h_ref.data(), h_src.data(), h_bias.data(),
+                       input_scale, output_scale,
+                       m, head_num, size_per_head, hidden_units, fnuz);
+
+  int mismatches = 0;
+  for (int i = 0; i < total; i++)
+    if (h_out[i] != h_ref[i]) mismatches++;
+
+  printf("%s\n", mismatches == 0 ? "PASS" : "FAIL");
 
   cudaFree(qkv_buf);
   cudaFree(q_buf);

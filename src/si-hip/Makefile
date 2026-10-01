@@ -2,7 +2,7 @@
 # This wrapper drives the CMake build out-of-tree under release/ and
 # matches the all/clean interface the rest of HeCBench expects.
 
-LAUNCHER  =
+LAUNCHER  ?=
 
 .PHONY: all clean run
 

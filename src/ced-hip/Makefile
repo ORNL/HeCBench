@@ -7,7 +7,7 @@ CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 OPENCV    = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

@@ -8,7 +8,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 SHARED_DATA_PATH = ../../../daphne-cuda/data
 SHARED_SRC_PATH = ../../../daphne-cuda/src
-LAUNCHER        =
+LAUNCHER        ?=
 
 #===============================================================================
 # Program name & source code list

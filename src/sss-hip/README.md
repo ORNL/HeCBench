@@ -20,3 +20,10 @@ and L of the initial model configuration in the first row and xi-indices of the 
 G_l (l=1:L).
 
 A list of highest-score models is stored in folder RES/.
+
+Dependencies
+------------
+None beyond a C++17 compiler. The uniform random number generator (MT19937) and
+the adaptive Gauss-Kronrod quadrature the sampler needs are implemented in
+`../sss-cuda/gsl_compat.h`, which this variant shares with the CUDA variant
+along with the rest of the host sources.

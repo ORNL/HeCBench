@@ -6,18 +6,18 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 GPU       = yes
 CUDA      = no
-CUDA_ARCH = sm_70
+CUDA_ARCH ?= sm_70
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
 ONEMKL    = no
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 # path to the install of the oneMKL interface
-ONEMKL_PATH   = /path/to/oneMKL
+ONEMKL_PATH   ?= /path/to/oneMKL
 
 #===============================================================================
 # Program name & source code list
@@ -91,7 +91,7 @@ device.o: device.cpp ../pcc-cuda/device.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj) *.txt
+	rm -rf $(program) $(obj) corrs.txt
 
 run: $(program)
 	$(LAUNCHER) ./$(program) 90112 165

@@ -6,7 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -23,7 +23,7 @@ obj = main.o kernel_gpu.o kernel_cpu.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := -std=c++17 -Wall -I../pso-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../pso-cuda
 
 # Linker Flags
 LDFLAGS = 

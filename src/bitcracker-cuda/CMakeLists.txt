@@ -3,7 +3,7 @@
 add_hecbench_benchmark(
     NAME bitcracker
     MODEL cuda
-    SOURCES attack.cu main.cu utils.cu w_blocks.cu
+    SOURCES attack.cu main.cu utils.cpp w_blocks.cu
     CATEGORIES algorithms
     COMPILE_OPTIONS -use_fast_math
 )

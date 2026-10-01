@@ -34,11 +34,7 @@ void compare_results(const datatype *cpu_results, const datatype *gpu_results, c
     if (cpu_results[i]!=gpu_results[i])
       passed = false; 
   }
-  if (passed)
-    std::cout << "Passed" << std::endl;
-  else
-    std::cout << "Failed" << std::endl;
-  return ;
+  std::cout << (passed ? "PASS" : "FAIL") << std::endl;
 }
 
 #endif

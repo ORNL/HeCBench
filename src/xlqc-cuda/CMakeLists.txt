@@ -11,8 +11,10 @@ add_hecbench_benchmark(
             basis.cc
             int_lib/crys.cc
             int_lib/cints.cc
-    INCLUDE_DIRS ${SRC_DIR}/int_lib
+    INCLUDE_DIRS ${SRC_DIR} ${SRC_DIR}/int_lib
     CATEGORIES algorithms
-    COMPILE_OPTIONS -dc
-    LINK_LIBRARIES gsl gslcblas
+    # nvcc-only options; the .cc sources go through the host compiler, which rejects them
+    COMPILE_OPTIONS $<$<COMPILE_LANGUAGE:CUDA>:-dc>
+                    $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>
+    LINK_LIBRARIES Eigen3::Eigen
 )

@@ -21,7 +21,12 @@ scatter_kernel(const scalar_t *src_data,
   int k = thread_idx % K;
 
   if (thread_idx < numel) {
-    int offset = IndexToOffset<int64_t, int64_t, -1>::get(
+    // Use the compile-time (Dims=1) specialization instead of the dynamic
+    // (Dims=-1) one. With runtime dims, IndexToOffset::get indexes the 416-byte
+    // TensorInfo with a runtime index, which forces DPC++/NVPTX to spill the
+    // whole struct to per-thread local memory (a byte-by-byte copy on every
+    // element). Fixing dims at compile time keeps it in fast param/const memory.
+    int offset = IndexToOffset<int64_t, int64_t, 1>::get(
         thread_idx, index_info);
     int64_t idx = index_info.data[offset];
 

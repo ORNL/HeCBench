@@ -6,7 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -52,7 +52,12 @@ $(program): $(obj)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj)
+	rm -rf $(program) $(obj) verify *.aig
 
-run: $(program)
+VERIFY_SRC = ../logic-rewrite-cuda/verify.cpp
+verify: $(VERIFY_SRC)
+	$(CXX) -O3 -std=c++17 $(VERIFY_SRC) -o verify
+
+run: $(program) verify
 	$(LAUNCHER) ./$(program) -c "read ../logic-rewrite-cuda/benchmarks/arithmetic/hyp.aig; resyn2; write hyp_resyn2.aig"
+	./verify ../logic-rewrite-cuda/benchmarks/arithmetic/hyp.aig hyp_resyn2.aig

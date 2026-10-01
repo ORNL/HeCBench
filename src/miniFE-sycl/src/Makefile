@@ -17,11 +17,13 @@ OPTIMIZE  = yes
 DEBUG     = no
 GPU       = yes
 CUDA      = no
-CUDA_ARCH = sm_70
+CUDA_ARCH ?= sm_70
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
+# Use sycl_ext_oneapi_enqueue_functions (event-less kernel submission) to
+# reduce per-launch overhead of the many small CG kernels.
+ENQUEUE_FUNCTIONS = yes
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
-LAUNCHER       =
 
 CPPFLAGS = -I. -I../utils -I../fem $(MINIFE_TYPES) $(MINIFE_MATRIX_TYPE) \
            -std=c++17 -Wall -fsycl --gcc-toolchain=$(GCC_TOOLCHAIN)
@@ -32,6 +34,16 @@ ifeq ($(VENDOR), AdaptiveCpp)
 endif
 
 ifeq ($(CUDA), yes)
+  # Auto-detect the installed NVIDIA GPU's compute capability (e.g. 12.0 -> sm_120)
+  # so we build natively for the target device. Detection is skipped when
+  # CUDA_ARCH comes from the environment or the command line.
+  ifeq ($(filter environment command line,$(origin CUDA_ARCH)),)
+    DETECTED_CC := $(shell nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | tr -d '. ')
+    ifneq ($(DETECTED_CC),)
+      CUDA_ARCH := sm_$(DETECTED_CC)
+    endif
+  endif
+  $(info miniFE: building for CUDA arch $(CUDA_ARCH))
   CPPFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
               -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
 endif
@@ -54,6 +66,12 @@ CXXFLAGS = $(CFLAGS)
 
 ifeq ($(GPU),yes)
   CPPFLAGS +=-DUSE_GPU
+endif
+
+ifeq ($(ENQUEUE_FUNCTIONS),yes)
+  # The enqueue_functions extension needs the new offloading driver so that its
+  # free-function kernels are registered in these separate compile + link builds.
+  CPPFLAGS += -DUSE_ENQUEUE_FUNCTIONS --offload-new-driver
 endif
 
 LIBS=

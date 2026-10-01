@@ -127,6 +127,8 @@ int main(int argc, char* argv[]) {
   end = std::chrono::steady_clock::now();
   time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average kernel execution time (reference) %f (s)\n", time * 1e-9f / repeat);
+
+  q.memcpy(cs, d_cs, n).wait();
   complex_double_check &= check(cs, n);
 
   printf("%s\n", (complex_float_check && complex_double_check)

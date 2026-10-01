@@ -43,6 +43,7 @@
 
 #include <TypeTraits.hpp>
 #include <Vector.hpp>
+#include <sycl_launch.hpp>
 
 #define MINIFE_MIN(X, Y)  ((X) < (Y) ? (X) : (Y))
 
@@ -66,7 +67,7 @@ void write_vector(const std::string& filename,
 
   typedef typename VectorType::ScalarType ScalarType;
 
-  const std::vector<ScalarType>& coefs = vec.coefs;
+  const auto& coefs = vec.coefs;
   for(int p=0; p<numprocs; ++p) {
     if (p == myproc) {
       if (p == 0) {
@@ -96,7 +97,7 @@ void sum_into_vector(size_t num_indices,
   GlobalOrdinal first = vec.startIndex;
   GlobalOrdinal last = first + vec.local_size - 1;
 
-  std::vector<Scalar>& vec_coefs = vec.coefs;
+  auto& vec_coefs = vec.coefs;
 
   for(size_t i=0; i<num_indices; ++i) {
     if (indices[i] < first || indices[i] > last) continue;
@@ -156,38 +157,26 @@ void
 
   if(beta == 0.0) {
     if(alpha == 1.0) {
-      q.submit([&] (sycl::handler &h) {
-        h.parallel_for<class wx_kernel>(
-          sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-          int i = item.get_global_id(0);
-          if (i < n) d_wcoefs[i] = d_xcoefs[i];
-        });
+      launch_nd(q, sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+        int i = item.get_global_id(0);
+        if (i < n) d_wcoefs[i] = d_xcoefs[i];
       });
     } else {
-      q.submit([&] (sycl::handler &h) {
-        h.parallel_for<class wax_kernel>(
-          sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-          int i = item.get_global_id(0);
-          if (i < n) d_wcoefs[i] = alpha * d_xcoefs[i];
-        });
+      launch_nd(q, sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+        int i = item.get_global_id(0);
+        if (i < n) d_wcoefs[i] = alpha * d_xcoefs[i];
       });
     }
   } else {
     if(alpha == 1.0) {
-      q.submit([&] (sycl::handler &h) {
-        h.parallel_for<class wxby_kernel>(
-          sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-          int i = item.get_global_id(0);
-          if (i < n) d_wcoefs[i] = d_xcoefs[i] + beta * d_ycoefs[i];
-        });
+      launch_nd(q, sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+        int i = item.get_global_id(0);
+        if (i < n) d_wcoefs[i] = d_xcoefs[i] + beta * d_ycoefs[i];
       });
     } else {
-      q.submit([&] (sycl::handler &h) {
-        h.parallel_for<class waxby_kernel>(
-          sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-          int i = item.get_global_id(0);
-          if (i < n) d_wcoefs[i] = alpha * d_xcoefs[i] + beta * d_ycoefs[i];
-        });
+      launch_nd(q, sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+        int i = item.get_global_id(0);
+        if (i < n) d_wcoefs[i] = alpha * d_xcoefs[i] + beta * d_ycoefs[i];
       });
     }
   }
@@ -214,44 +203,29 @@ daxpby(const MINIFE_SCALAR alpha,
   sycl::range<1> lws (256);
 
   if(alpha == 1.0 && beta == 1.0) {
-    q.submit([&] (sycl::handler &h) {
-      h.parallel_for<class dyx_kernel>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        int i = item.get_global_id(0);
-        if (i < n) d_ycoefs[i] += d_xcoefs[i];
-      });
+    launch_nd(q, sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+      int i = item.get_global_id(0);
+      if (i < n) d_ycoefs[i] += d_xcoefs[i];
     });
   } else if (beta == 1.0) {
-    q.submit([&] (sycl::handler &h) {
-      h.parallel_for<class dyax_kernel>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        int i = item.get_global_id(0);
-        if (i < n) d_ycoefs[i] += alpha * d_xcoefs[i];
-      });
+    launch_nd(q, sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+      int i = item.get_global_id(0);
+      if (i < n) d_ycoefs[i] += alpha * d_xcoefs[i];
     });
   } else if (alpha == 1.0) {
-    q.submit([&] (sycl::handler &h) {
-      h.parallel_for<class yxby_kernel>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        int i = item.get_global_id(0);
-        if (i < n) d_ycoefs[i] = d_xcoefs[i] + beta * d_ycoefs[i];
-      });
+    launch_nd(q, sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+      int i = item.get_global_id(0);
+      if (i < n) d_ycoefs[i] = d_xcoefs[i] + beta * d_ycoefs[i];
     });
   } else if (beta == 0.0) {
-    q.submit([&] (sycl::handler &h) {
-      h.parallel_for<class yax_kernel>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        int i = item.get_global_id(0);
-        if (i < n) d_ycoefs[i] = alpha * d_xcoefs[i];
-      });
+    launch_nd(q, sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+      int i = item.get_global_id(0);
+      if (i < n) d_ycoefs[i] = alpha * d_xcoefs[i];
     });
   } else {
-    q.submit([&] (sycl::handler &h) {
-      h.parallel_for<class yaxby_kernel>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        int i = item.get_global_id(0);
-        if (i < n) d_ycoefs[i] = alpha * d_xcoefs[i] + beta * d_ycoefs[i];
-      });
+    launch_nd(q, sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+      int i = item.get_global_id(0);
+      if (i < n) d_ycoefs[i] = alpha * d_xcoefs[i] + beta * d_ycoefs[i];
     });
   }
 }
@@ -310,7 +284,8 @@ dot(const Vector& x,
     const Vector& y,
     sycl::queue &q,
     typename Vector::ScalarType *d_xcoefs,
-    typename Vector::ScalarType *d_ycoefs)
+    typename Vector::ScalarType *d_ycoefs,
+    typename Vector::ScalarType *d_dot)
 {
   const MINIFE_LOCAL_ORDINAL n = x.coefs.size();
 
@@ -321,7 +296,8 @@ dot(const Vector& x,
   MINIFE_SCALAR result = 0;
 
 #ifdef ONEAPI_REDUCTION
-  MINIFE_SCALAR *d_result = sycl::malloc_device<MINIFE_SCALAR>(1, q);
+  // Reuse the caller-provided persistent device buffer for the result slot.
+  MINIFE_SCALAR *d_result = d_dot;
   q.memcpy(d_result, &result, sizeof(MINIFE_SCALAR));
 
   sycl::range<1> gws((n+255)/256*256);
@@ -349,32 +325,22 @@ dot(const Vector& x,
   sycl::range<1> lws (BLOCK_SIZE);
 
   // sum-of-product
-  MINIFE_SCALAR *d_sop = sycl::malloc_device<MINIFE_SCALAR>(MAX_NUM_BLOCKS, q);
+  // Reuse the caller-provided persistent device scratch/result buffer
+  // (MAX_NUM_BLOCKS elements) instead of allocating/freeing it every call.
+  MINIFE_SCALAR *d_sop = d_dot;
   q.memset(d_sop, 0, sizeof(MINIFE_SCALAR)*MAX_NUM_BLOCKS);
 
-  q.submit([&] (sycl::handler &h) {
-    sycl::local_accessor<MINIFE_SCALAR, 1> red(lws, h);
-    h.parallel_for(
-      sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        dot_kernel<MINIFE_SCALAR, BLOCK_SIZE>(item,
-                   red.get_multi_ptr<sycl::access::decorated::no>().get(),
-                   n, d_xcoefs, d_ycoefs, d_sop);
-
+  launch_nd_local<MINIFE_SCALAR>(q, sycl::nd_range<1>(gws, lws), BLOCK_SIZE,
+    [=] (sycl::nd_item<1> item, MINIFE_SCALAR *red) {
+      dot_kernel<MINIFE_SCALAR, BLOCK_SIZE>(item, red, n, d_xcoefs, d_ycoefs, d_sop);
     });
-  });
 
-  q.submit([&] (sycl::handler &h) {
-    sycl::local_accessor<MINIFE_SCALAR, 1> red(lws, h);
-    h.parallel_for(
-      sycl::nd_range<1>(lws, lws), [=] (sycl::nd_item<1> item) {
-      final_reduce<MINIFE_SCALAR, MAX_NUM_BLOCKS>(item,
-                   red.get_multi_ptr<sycl::access::decorated::no>().get(),
-                   d_sop);
+  launch_nd_local<MINIFE_SCALAR>(q, sycl::nd_range<1>(lws, lws), BLOCK_SIZE,
+    [=] (sycl::nd_item<1> item, MINIFE_SCALAR *red) {
+      final_reduce<MINIFE_SCALAR, MAX_NUM_BLOCKS>(item, red, d_sop);
     });
-  });
 
   q.memcpy(&result, d_sop, sizeof(MINIFE_SCALAR)).wait();
-  sycl::free(d_sop, q);
 #endif
 
 #ifdef HAVE_MPI
@@ -390,7 +356,8 @@ dot(const Vector& x,
 
 template<typename Vector>
 typename TypeTraits<typename Vector::ScalarType>::magnitude_type
-dot_r2(const Vector& x, sycl::queue &q, const typename Vector::ScalarType *d_xcoefs)
+dot_r2(const Vector& x, sycl::queue &q, const typename Vector::ScalarType *d_xcoefs,
+       typename Vector::ScalarType *d_dot)
 {
 #ifdef HAVE_MPI
 #ifdef MINIFE_DEBUG
@@ -414,7 +381,8 @@ dot_r2(const Vector& x, sycl::queue &q, const typename Vector::ScalarType *d_xco
   sycl::range<1> gws ((n+255)/256*256);
   sycl::range<1> lws (256);
 
-  MINIFE_SCALAR *d_result = sycl::malloc_device<MINIFE_SCALAR>(1, q);
+  // Reuse the caller-provided persistent device buffer for the result slot.
+  MINIFE_SCALAR *d_result = d_dot;
   q.memcpy(d_result, &result, sizeof(MINIFE_SCALAR));
 
   // use SYCL Reduction
@@ -437,31 +405,22 @@ dot_r2(const Vector& x, sycl::queue &q, const typename Vector::ScalarType *d_xco
   sycl::range<1> gws (NUM_BLOCKS * BLOCK_SIZE);
   sycl::range<1> lws (BLOCK_SIZE);
 
-  MINIFE_SCALAR *d_sop = sycl::malloc_device<MINIFE_SCALAR>(MAX_NUM_BLOCKS, q);
+  // Reuse the caller-provided persistent device scratch/result buffer
+  // (MAX_NUM_BLOCKS elements) instead of allocating/freeing it every call.
+  MINIFE_SCALAR *d_sop = d_dot;
   q.memset(d_sop, 0, sizeof(MINIFE_SCALAR)*MAX_NUM_BLOCKS);
 
-  q.submit([&] (sycl::handler &h) {
-    sycl::local_accessor<MINIFE_SCALAR, 1> red(lws, h);
-    h.parallel_for(
-      sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        dot_kernel<MINIFE_SCALAR, BLOCK_SIZE>(item,
-                   red.get_multi_ptr<sycl::access::decorated::no>().get(),
-                   n, d_xcoefs, d_xcoefs, d_sop);
+  launch_nd_local<MINIFE_SCALAR>(q, sycl::nd_range<1>(gws, lws), BLOCK_SIZE,
+    [=] (sycl::nd_item<1> item, MINIFE_SCALAR *red) {
+      dot_kernel<MINIFE_SCALAR, BLOCK_SIZE>(item, red, n, d_xcoefs, d_xcoefs, d_sop);
     });
-  });
 
-  q.submit([&] (sycl::handler &h) {
-    sycl::local_accessor<MINIFE_SCALAR, 1> red(lws, h);
-    h.parallel_for(
-      sycl::nd_range<1>(lws, lws), [=] (sycl::nd_item<1> item) {
-      final_reduce<MINIFE_SCALAR, MAX_NUM_BLOCKS>(item,
-                   red.get_multi_ptr<sycl::access::decorated::no>().get(),
-                   d_sop);
+  launch_nd_local<MINIFE_SCALAR>(q, sycl::nd_range<1>(lws, lws), BLOCK_SIZE,
+    [=] (sycl::nd_item<1> item, MINIFE_SCALAR *red) {
+      final_reduce<MINIFE_SCALAR, MAX_NUM_BLOCKS>(item, red, d_sop);
     });
-  });
 
   q.memcpy(&result, d_sop, sizeof(MINIFE_SCALAR)).wait();
-  sycl::free(d_sop, q);
 
 #endif
 

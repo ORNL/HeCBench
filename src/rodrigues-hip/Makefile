@@ -6,7 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -23,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := -std=c++17 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = 

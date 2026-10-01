@@ -6,13 +6,13 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 GPU       = yes
 CUDA      = no
-CUDA_ARCH = sm_70
+CUDA_ARCH ?= sm_70
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
@@ -30,7 +30,8 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl --gcc-toolchain=$(GCC_TOOLCHAIN)
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../gamma-correction-cuda \
+          -fsycl --gcc-toolchain=$(GCC_TOOLCHAIN)
 
 ifeq ($(VENDOR), AdaptiveCpp)
     CFLAGS_TMP := $(CFLAGS)
@@ -71,7 +72,8 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp
+%.o: %.cpp ../gamma-correction-cuda/utils/* \
+           ../gamma-correction-cuda/utils.hpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

@@ -9,7 +9,8 @@
 #include <stdexcept>
 #include <vector>
 
-#include <hip/hip_fp16.h>
+//#include <hip/hip_fp16.h>
+#include <hip/hip_bf16.h>
 #include <hip/hip_runtime_api.h>
 #include <hipblaslt/hipblaslt.h>
 
@@ -34,7 +35,7 @@ inline void checkHipblasStatus(hipblasStatus_t status) {
 // A and B are FP6 (E2M3) packed four elements per three bytes along K.
 // Scales are E8M0 (UE8M0), one scale per 32-element block along K (VEC_SIZE = 32),
 // as required by the OCP microscaling (MX) format on CDNA4.
-// Output D is FP16.
+// Output D is BF16.
 struct Mxfp6TestBench {
     // VEC_SIZE = 32 for mxfp6 (one UE8M0 scale per 32 FP6 elements along K)
     static constexpr int VEC_SIZE = 32;
@@ -60,7 +61,7 @@ struct Mxfp6TestBench {
         checkHipStatus(hipMalloc(&Bdev, bBytes));
         checkHipStatus(hipMalloc(&AscaleDev, aScaleBytes));
         checkHipStatus(hipMalloc(&BscaleDev, bScaleBytes));
-        checkHipStatus(hipMalloc(reinterpret_cast<void**>(&Ddev), dElems * sizeof(__half)));
+        checkHipStatus(hipMalloc(reinterpret_cast<void**>(&Ddev), dElems * sizeof(__hip_bfloat16)));
         checkHipStatus(hipMalloc(&workspace, workspaceSize));
         checkHipStatus(hipStreamCreate(&stream));
 
@@ -139,8 +140,8 @@ struct Mxfp6TestBench {
     //   D = alpha * (A*a_scale) @ (B*b_scale)^T + beta * C
     // equals alpha * (a_elem*a_scale) * (b_elem*b_scale) * K (with beta = 0).
     bool verify(double relTol = 1e-2) {
-        std::vector<__half> Dh(dElems);
-        checkHipStatus(hipMemcpy(Dh.data(), Ddev, dElems * sizeof(__half), hipMemcpyDeviceToHost));
+        std::vector<__hip_bfloat16> Dh(dElems);
+        checkHipStatus(hipMemcpy(Dh.data(), Ddev, dElems * sizeof(__hip_bfloat16), hipMemcpyDeviceToHost));
 
         float aElem  = decodeE2M3(FP6_FILL);
         float bElem  = decodeE2M3(FP6_FILL);
@@ -151,7 +152,7 @@ struct Mxfp6TestBench {
 
         double maxErr = 0.0;
         for (size_t i = 0; i < dElems; i++) {
-            double got = (double)__half2float(Dh[i]);
+            double got = (double)__bfloat162float(Dh[i]);
             maxErr = std::max(maxErr, std::fabs(got - expected));
         }
         bool ok = maxErr <= relTol * (std::fabs(expected) + 1.0);
@@ -167,7 +168,7 @@ struct Mxfp6TestBench {
 
     void *Adev = nullptr, *Bdev = nullptr;           // packed FP6 (E2M3)
     void *AscaleDev = nullptr, *BscaleDev = nullptr;  // UE8M0 block scales
-    __half *Ddev = nullptr;                           // FP16 output
+    __hip_bfloat16 *Ddev = nullptr;                   // BF16 output
     void *workspace = nullptr;
     hipStream_t stream;
     hipblasLtHandle_t ltHandle;

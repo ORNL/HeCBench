@@ -13,7 +13,7 @@ add_hecbench_benchmark(
             ${INC_DIR}/basis.cc
             ${INC_DIR}/int_lib/crys.cc
             ${INC_DIR}/int_lib/cints.cc
-    INCLUDE_DIRS ${GSL_INCLUDE_DIRS} ${INC_DIR} ${INC_DIR}/int_lib
+    INCLUDE_DIRS ${INC_DIR} ${INC_DIR}/int_lib
     CATEGORIES algorithms
-    LINK_LIBRARIES gsl gslcblas
+    LINK_LIBRARIES Eigen3::Eigen
 )

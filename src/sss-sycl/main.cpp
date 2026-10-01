@@ -66,13 +66,11 @@
 #define ISFLOAT 10
 using namespace std;
 
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_sf.h>
+#include "gsl_compat.h"
 #define GSL_INTEGRATION_GRIDSIZE 1000
 gsl_integration_workspace *w;
 gsl_function F;
 
-#include <gsl/gsl_randist.h>
 #define RANDOMSEED 314159265
 
 // Define hyperparameters for the prior distribution of (mu, K | G)
@@ -271,6 +269,7 @@ int main(int argc, char *argv[]) {
   for (l = 0; l < L; l++) {
     score += state->pll[l];
   }
+  k = 0;
   printf("initial: k=%ld L=%d score=%.4f localBestScore=%.4f globalBestScore=%.4f "
          "nmodes=%d num_cases=%d num_allModels=%ld\n",
          k, state->L, score, localBestScore, globalBestScore, nmodes,
@@ -278,7 +277,6 @@ int main(int argc, char *argv[]) {
 
   // start the stopwatch
   auto start = std::chrono::steady_clock::now();
-  k = 0;
   while (nmodes <= maxNmodes) {
     k++;
     num_cases = 0;
@@ -352,7 +350,6 @@ int main(int argc, char *argv[]) {
       modesList->UpdateList(globalBestState);
       nmodes++;
       gsl_rng_set(rnd, seedset[nmodes - 1]);
-      start = std::chrono::steady_clock::now();
       k = 0;
       localBestScore = NEG_INF;
       globalBestScore = NEG_INF;

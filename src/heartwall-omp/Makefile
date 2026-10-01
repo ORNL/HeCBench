@@ -3,7 +3,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 DUMP      = yes
 DEVICE    = gpu
-LAUNCHER  =
+LAUNCHER  ?=
 
 
 

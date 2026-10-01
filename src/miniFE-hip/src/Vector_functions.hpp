@@ -66,7 +66,7 @@ namespace miniFE {
 
       typedef typename VectorType::ScalarType ScalarType;
 
-      const std::vector<ScalarType>& coefs = vec.coefs;
+      const auto& coefs = vec.coefs;
       for(int p=0; p<numprocs; ++p) {
         if (p == myproc) {
           if (p == 0) {
@@ -96,7 +96,7 @@ namespace miniFE {
       GlobalOrdinal first = vec.startIndex;
       GlobalOrdinal last = first + vec.local_size - 1;
 
-      std::vector<Scalar>& vec_coefs = vec.coefs;
+      auto& vec_coefs = vec.coefs;
 
       for(size_t i=0; i<num_indices; ++i) {
         if (indices[i] < first || indices[i] > last) continue;
@@ -358,7 +358,8 @@ namespace miniFE {
     dot(const Vector& x,
         const Vector& y,
         typename Vector::ScalarType *d_xcoefs,
-        typename Vector::ScalarType *d_ycoefs)
+        typename Vector::ScalarType *d_ycoefs,
+        typename Vector::ScalarType *d_dot)
     {
       const MINIFE_LOCAL_ORDINAL n = x.coefs.size();
       typedef typename Vector::ScalarType Scalar;
@@ -368,13 +369,13 @@ namespace miniFE {
       const int NUM_BLOCKS = std::min(MAX_NUM_BLOCKS, (n+BLOCK_SIZE-1)/BLOCK_SIZE);
       dim3 grids (NUM_BLOCKS);
       dim3 threads (BLOCK_SIZE);
-      Scalar* d;
-      hipMalloc((void**)&d, sizeof(Scalar)*MAX_NUM_BLOCKS);
+      // Reuse the caller-provided device scratch/result buffer (MAX_NUM_BLOCKS
+      // elements) instead of allocating/freeing it on every dot call.
+      Scalar* d = d_dot;
       hipMemset(d, 0, sizeof(Scalar)*MAX_NUM_BLOCKS);
       dot_kernel<Scalar, BLOCK_SIZE><<<grids, threads>>>(n, d_xcoefs, d_ycoefs, d);
       final_reduce<Scalar, MAX_NUM_BLOCKS><<<1, MAX_NUM_BLOCKS>>>(d);
       hipMemcpy(&result, d, sizeof(Scalar), hipMemcpyDeviceToHost);
-      hipFree(d);
 
 #ifdef HAVE_MPI
       typedef typename TypeTraits<typename Vector::ScalarType>::magnitude_type magnitude;
@@ -389,7 +390,8 @@ namespace miniFE {
 
   template<typename Vector>
     typename TypeTraits<typename Vector::ScalarType>::magnitude_type
-    dot_r2(const Vector& x, const typename Vector::ScalarType *d_xcoefs)
+    dot_r2(const Vector& x, const typename Vector::ScalarType *d_xcoefs,
+           typename Vector::ScalarType *d_dot)
     {
 #ifdef HAVE_MPI
 #ifdef MINIFE_DEBUG
@@ -407,13 +409,13 @@ namespace miniFE {
       int NUM_BLOCKS = std::min(MAX_NUM_BLOCKS,(n+BLOCK_SIZE-1)/BLOCK_SIZE);
       dim3 grids (NUM_BLOCKS);
       dim3 threads (BLOCK_SIZE);
-      Scalar* d;
-      hipMalloc((void**)&d, sizeof(Scalar)*MAX_NUM_BLOCKS);
+      // Reuse the caller-provided device scratch/result buffer (MAX_NUM_BLOCKS
+      // elements) instead of allocating/freeing it on every dot call.
+      Scalar* d = d_dot;
       hipMemset(d, 0, sizeof(Scalar)*MAX_NUM_BLOCKS);
       dot_kernel<Scalar, BLOCK_SIZE><<<grids, threads>>>(n, d_xcoefs, d_xcoefs, d);
       final_reduce<Scalar, MAX_NUM_BLOCKS><<<1, MAX_NUM_BLOCKS>>>(d);
       hipMemcpy(&result, d, sizeof(Scalar), hipMemcpyDeviceToHost);
-      hipFree(d);
 
 #ifdef HAVE_MPI
       typedef typename TypeTraits<typename Vector::ScalarType>::magnitude_type magnitude;

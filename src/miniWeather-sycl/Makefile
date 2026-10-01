@@ -6,21 +6,21 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 GPU       = yes
 CUDA      = no
-CUDA_ARCH = sm_70
+CUDA_ARCH ?= sm_70
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 ifeq ($(CUDA), yes)
-  MPI_INCLUDE = "/opt/nvidia/hpc_sdk/Linux_x86_64/22.11/comm_libs/mpi/include"
-  MPI_LIB_DIR = "/opt/nvidia/hpc_sdk/Linux_x86_64/22.11/comm_libs/mpi/lib"
+  MPI_INCLUDE ?= "/opt/nvidia/hpc_sdk/Linux_x86_64/22.11/comm_libs/mpi/include"
+  MPI_LIB_DIR ?= "/opt/nvidia/hpc_sdk/Linux_x86_64/22.11/comm_libs/mpi/lib"
 else
-  MPI_INCLUDE = "/usr/lib/x86_64-linux-gnu/openmpi/include"
-  MPI_LIB_DIR = "/usr/lib/x86_64-linux-gnu/openmpi/lib"
+  MPI_INCLUDE ?= "/usr/lib/x86_64-linux-gnu/openmpi/include"
+  MPI_LIB_DIR ?= "/usr/lib/x86_64-linux-gnu/openmpi/lib"
 endif
 
 #===============================================================================

@@ -7,7 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -53,7 +53,7 @@ $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj) *.txt
+	rm -rf $(program) $(obj) corrs.txt
 
 run: $(program)
 	$(LAUNCHER) ./$(program) 90112 165

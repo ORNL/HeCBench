@@ -7,7 +7,7 @@ CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 ROCM_PATH ?= /opt/rocm
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

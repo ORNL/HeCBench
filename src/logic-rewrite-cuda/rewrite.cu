@@ -32,11 +32,11 @@ __managed__ int replaceHasFullCorrsp = 0;
 double ENUM_TIME = 0, EVAL_TIME = 0, REPLACE_TIME = 0, REORDER_TIME = 0, REDUNDANCY_TIME = 0;
 double COPYBACK_TIME = 0, REID_TIME = 0, CHOICE_TIME = 0;
 
-time_t wall_time = clock();
-string time(time_t t = 0) {
-    if (t == 0) t = clock();
+double wall_time = hrClock();
+string time(double t = 0) {
+    if (t == 0) t = hrClock();
     stringstream t_ss;
-    t_ss << "[" << setprecision(3) << setw(6) << fixed << (float) t / 1000000 << "] ";
+    t_ss << "[" << setprecision(3) << setw(6) << fixed << (float) (t / NS_PER_SEC) << "] ";
     return t_ss.str();
 }
 ostream& print() {
@@ -694,21 +694,21 @@ void GPUSolver::EnumerateAndPreEvaluate(int *level, const vector<int> &levelCoun
     cudaMemcpy(nRef, CPUref, (n + 1) * sizeof(int), cudaMemcpyHostToDevice);
     cudaMemset(hashTable, -1, sizeof(TableNode) * (2 * n + 1 + P));
     cudaMemset(cuts, 0, CUT_SET_SIZE * (n + 1) * sizeof(Cut));
-    auto startTime = clock();
+    auto startTime = hrClock();
     Convert<<<BLOCK_NUMBER(n + 1, LARGE_BLOCK_SIZE), LARGE_BLOCK_SIZE>>> (fanin0, isComplement0, (n + 1));
     Convert<<<BLOCK_NUMBER(n + 1, LARGE_BLOCK_SIZE), LARGE_BLOCK_SIZE>>> (fanin1, isComplement1, (n + 1));
     Inputs<<<BLOCK_NUMBER(levelCount[0], LARGE_BLOCK_SIZE), LARGE_BLOCK_SIZE>>> (nRef, cuts, levelCount[0]);        
     for(int i = 1; i < levelCount.size(); i++)
         CutEnumerate<<<BLOCK_NUMBER(levelCount[i] - levelCount[i - 1], LARGE_BLOCK_SIZE), LARGE_BLOCK_SIZE>>> (fanin0, fanin1, isComplement0, isComplement1, nRef, cuts, levelCount[i - 1], levelCount[i] - levelCount[i - 1]);
     cudaDeviceSynchronize();
-    ENUM_TIME += clock() - startTime;
-    startTime = clock();
+    ENUM_TIME += hrClock() - startTime;
+    startTime = hrClock();
     BuildHashTable<<<BLOCK_NUMBER(n, LARGE_BLOCK_SIZE), LARGE_BLOCK_SIZE>>> (hashTable, n, fanin0, fanin1, isComplement0, isComplement1);           
     EvaluateNode<<<BLOCK_NUMBER(n, LARGE_BLOCK_SIZE), LARGE_BLOCK_SIZE>>> (n, bestSubgraph, fanin0, fanin1, isComplement0, isComplement1, nodeLevels, cuts, selectedCuts, nRef, lib, hashTable, fUseZeros == true);
     gpuErrchk( cudaDeviceSynchronize() );
     std::cerr << cudaGetLastError() << " in EvaluateNode " << std::endl;
 
-    EVAL_TIME += clock() - startTime;
+    EVAL_TIME += hrClock() - startTime;
 } 
 
 int GPUSolver::ReplaceSubgraphs(int n, int *CPUfanin0, int *CPUfanin1, int *CPUphase, int *CPUreplace) {
@@ -725,16 +725,16 @@ printf("N = %d   n = %d   n * RATIO = %d\n", N, n, static_cast<int> (RATIO * n))
     Revert<<<BLOCK_NUMBER(N + 1, LARGE_BLOCK_SIZE), LARGE_BLOCK_SIZE>>>(fanin1, isComplement1, N + 1);
     cudaDeviceSynchronize();
     // Detach and attach sequentially
-    auto startTime = clock();
+    auto startTime = hrClock();
     int *tempIn0 = (int*)malloc(5 * (n + 1) * sizeof(int));
     int *tempIn1 = (int*)malloc(5 * (n + 1) * sizeof(int));
     cudaMemcpy(tempIn0, fanin0, (N + 1) * sizeof(int), cudaMemcpyDeviceToHost);
     cudaMemcpy(tempIn1, fanin1, (N + 1) * sizeof(int), cudaMemcpyDeviceToHost);
     cudaMemcpy(CPUreplace, replace, (n + 1) * sizeof(int), cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
-    COPYBACK_TIME += clock() - startTime;
+    COPYBACK_TIME += hrClock() - startTime;
 
-    startTime = clock();
+    startTime = hrClock();
     int nn = n;
     int *mapping = new int[N+1];
     memset(mapping, -1, (N+1)*sizeof(int));
@@ -763,13 +763,13 @@ printf("N = %d   n = %d   n * RATIO = %d\n", N, n, static_cast<int> (RATIO * n))
     free(tempIn0);
     free(tempIn1);
 
-    REID_TIME += clock() - startTime;
+    REID_TIME += hrClock() - startTime;
     return n;
 }
 
 
 void Message(string s) {
-    cerr << fixed << setprecision(5) << "[" << 1.0 * clock() / CLOCKS_PER_SEC << "] " << s << endl;
+    cerr << fixed << setprecision(5) << "[" << 1.0 * hrClock() / NS_PER_SEC << "] " << s << endl;
 }
 
 
@@ -816,7 +816,7 @@ void CPUSolver::Rewrite(bool fUseZeros, bool GPUReplace) {
     LevelCount();
     gpuSolver->EnumerateAndPreEvaluate(level, levelCount, n, fanin0, fanin1, ref, fUseZeros);
     prt << "Finished GPU enumeration and pre-evaluation" << endl;
-    auto startTime = clock();
+    auto startTime = hrClock();
     if (GPUReplace) {
         gpuSolver->GetResults(n, bestOut, bestCut);
         int nn = n;
@@ -824,7 +824,7 @@ void CPUSolver::Rewrite(bool fUseZeros, bool GPUReplace) {
         n = gpuSolver->ReplaceSubgraphs(n, fanin0, fanin1, phase, replace);
         printf("after rebuild, n = %d\n", n);
         // printf(" ** pre-eval good cones: %d, replace has full corrspondence: %d\n", GPUexpected, replaceHasFullCorrsp);
-        auto choiceStartTime = clock();
+        auto choiceStartTime = hrClock();
         for (int i = nn + 1; i <= n; i++) { // initially, new nodes are marked as deleted
             isDeleted[i] = 1;
             ref[i] = 0;
@@ -890,7 +890,7 @@ void CPUSolver::Rewrite(bool fUseZeros, bool GPUReplace) {
             }
         }
         free(replace);
-        CHOICE_TIME += clock() - choiceStartTime;
+        CHOICE_TIME += hrClock() - choiceStartTime;
         printf("successfully replaced %d cones (pos %d, zero %d), reverted %d cones, compromised %d cones, pre-eval rejected %d cones, small cut reject %d cones, new idx reject %d cones\n", 
                replacedCount, replacedPosCount, replacedZeroCount, revertedCount, compromisedCount, preEvalRejectCount, smallCutRejectCount, newIdxRejectCount);
     } else {
@@ -900,13 +900,13 @@ void CPUSolver::Rewrite(bool fUseZeros, bool GPUReplace) {
         int nn = n;
         for(int i = numInputs + 1; i <= nn; i++) EvalAndReplace(i, bestCut[i]);
     }
-    REPLACE_TIME += clock() - startTime;
+    REPLACE_TIME += hrClock() - startTime;
 
     printf("after replace, n = %d\n", n);
 
 
     prt << "Finished eval and replace" << endl;
-    startTime = clock();
+    startTime = hrClock();
     for(int i = numInputs + 1; i <= n; i++) if(!isDeleted[i]) {
         if(!isRedundant(i)) {
             fanin0[i] = Fanin(fanin0[i]);
@@ -916,20 +916,20 @@ void CPUSolver::Rewrite(bool fUseZeros, bool GPUReplace) {
     }
     for(int i = 0; i < numOutputs; i++)
         output[i] = Fanin(output[i]);
-    REDUNDANCY_TIME += clock() - startTime;
-    startTime = clock();
+    REDUNDANCY_TIME += hrClock() - startTime;
+    startTime = hrClock();
     Reorder(); // remove deleted nodes
     prt << "Rewrite Iteration Ends" << endl;
     // printf("GPU expected: %d\n", GPUexpected);
     printf("real reduction: %d\n", expected);
 
     printf("** Total Time breakdown: ENUM %.2lf, EVAL %.2lf, REPLACE %.2lf, REORDER %.2lf, REDUNDANCY %.2lf\n",
-           ENUM_TIME / CLOCKS_PER_SEC, EVAL_TIME / CLOCKS_PER_SEC, 
-           REPLACE_TIME / CLOCKS_PER_SEC, REORDER_TIME / CLOCKS_PER_SEC,
-           REDUNDANCY_TIME / CLOCKS_PER_SEC);
+           ENUM_TIME / NS_PER_SEC, EVAL_TIME / NS_PER_SEC, 
+           REPLACE_TIME / NS_PER_SEC, REORDER_TIME / NS_PER_SEC,
+           REDUNDANCY_TIME / NS_PER_SEC);
     printf("** Replace Time breakdown: COPYBACK %.2lf, REID %.2lf, CHOICE %.2lf\n", 
-           COPYBACK_TIME / CLOCKS_PER_SEC, REID_TIME / CLOCKS_PER_SEC, CHOICE_TIME / CLOCKS_PER_SEC);
-    printf("** CPU sequential time: %.2lf sec\n", (REDUNDANCY_TIME + CHOICE_TIME + (double)(clock() - startTime)) / CLOCKS_PER_SEC);
+           COPYBACK_TIME / NS_PER_SEC, REID_TIME / NS_PER_SEC, CHOICE_TIME / NS_PER_SEC);
+    printf("** CPU sequential time: %.2lf sec\n", (REDUNDANCY_TIME + CHOICE_TIME + (double)(hrClock() - startTime)) / NS_PER_SEC);
 
     delete gpuSolver;
     printf("after rewrite, n = %d\n", n);
@@ -1072,7 +1072,7 @@ int GPUSolver::EnumerateAndPreEvaluateWave(int currIter, int *level, const std::
     cudaMemset(hashTable, -1, sizeof(TableNode) * (2 * n + 1 + P));
     cudaMemset(cuts, 0, CUT_SET_SIZE * (n + 1) * sizeof(Cut));
 
-    auto startTime = clock();
+    auto startTime = hrClock();
     Convert<<<BLOCK_NUMBER(n + 1, LARGE_BLOCK_SIZE), LARGE_BLOCK_SIZE>>> (fanin0, isComplement0, (n + 1));
     Convert<<<BLOCK_NUMBER(n + 1, LARGE_BLOCK_SIZE), LARGE_BLOCK_SIZE>>> (fanin1, isComplement1, (n + 1));
     Inputs<<<BLOCK_NUMBER(levelCount[0], LARGE_BLOCK_SIZE), LARGE_BLOCK_SIZE>>> (nRef, cuts, levelCount[0]);
@@ -1081,15 +1081,15 @@ int GPUSolver::EnumerateAndPreEvaluateWave(int currIter, int *level, const std::
         CutEnumerate<<<BLOCK_NUMBER(levelCount[i] - levelCount[i - 1], LARGE_BLOCK_SIZE), LARGE_BLOCK_SIZE>>> 
             (fanin0, fanin1, isComplement0, isComplement1, nRef, cuts, levelCount[i - 1], levelCount[i] - levelCount[i - 1]);
     cudaDeviceSynchronize();
-    ENUM_TIME += clock() - startTime;
+    ENUM_TIME += hrClock() - startTime;
     
-    startTime = clock();
+    startTime = hrClock();
     BuildHashTable<<<BLOCK_NUMBER(n, LARGE_BLOCK_SIZE), LARGE_BLOCK_SIZE>>>(hashTable, n, fanin0, fanin1, isComplement0, isComplement1);
     EvaluateNodeWave<<<BLOCK_NUMBER(n, 768), 768>>>(n, bestSubgraph, fanin0, fanin1, isComplement0, isComplement1, 
                                                     nodeLevels, cuts, selectedCuts, nRef, lib, hashTable, vWaveMask, fUseZeros == true);
     gpuErrchk( cudaDeviceSynchronize() );
     std::cerr << "Error code " << cudaGetLastError() << " in EvaluateNode " << std::endl;
-    EVAL_TIME += clock() - startTime;
+    EVAL_TIME += hrClock() - startTime;
     std::cout << "Finished GPU enumeration and pre-evaluation" << std::endl;
     return 1;
 }
@@ -1110,14 +1110,14 @@ void CPUSolver::RewriteWave(bool fUseZeros) {
             break;
         }
 
-        auto startTime = clock();
+        auto startTime = hrClock();
         gpuSolver->GetResults(n, bestOut, bestCut);
         int nn = n;
         int *replace = (int*)malloc((n + 1) * sizeof(int));
         n = gpuSolver->ReplaceSubgraphs(n, fanin0, fanin1, phase, replace);
         printf("after rebuild, n = %d\n", n);
         printf(" ** pre-eval good cones: %d, replace has full corrspondence: %d\n", GPUexpected, replaceHasFullCorrsp);
-        auto choiceStartTime = clock();
+        auto choiceStartTime = hrClock();
         for (int i = nn + 1; i <= n; i++) { // initially, new nodes are marked as deleted
             isDeleted[i] = 1;
             ref[i] = 0;
@@ -1183,15 +1183,15 @@ void CPUSolver::RewriteWave(bool fUseZeros) {
             }
         }
         free(replace);
-        CHOICE_TIME += clock() - choiceStartTime;
+        CHOICE_TIME += hrClock() - choiceStartTime;
         printf("successfully replaced %d cones (pos %d, zero %d), reverted %d cones, compromised %d cones, pre-eval rejected %d cones, small cut reject %d cones, new idx reject %d cones\n", 
                replacedCount, replacedPosCount, replacedZeroCount, revertedCount, compromisedCount, preEvalRejectCount, smallCutRejectCount, newIdxRejectCount);
         
-        REPLACE_TIME += clock() - startTime;
+        REPLACE_TIME += hrClock() - startTime;
         printf("after replace, n = %d\n", n);
         std::cout << "Finished eval and replace" << std::endl;
 
-        startTime = clock();
+        startTime = hrClock();
         for(int i = numInputs + 1; i <= n; i++) if(!isDeleted[i]) {
             if(!isRedundant(i)) {
                 fanin0[i] = Fanin(fanin0[i]);
@@ -1201,7 +1201,7 @@ void CPUSolver::RewriteWave(bool fUseZeros) {
         }
         for(int i = 0; i < numOutputs; i++)
             output[i] = Fanin(output[i]);
-        REDUNDANCY_TIME += clock() - startTime;
+        REDUNDANCY_TIME += hrClock() - startTime;
         
         Reorder(); // remove deleted nodes
 
@@ -1210,11 +1210,11 @@ void CPUSolver::RewriteWave(bool fUseZeros) {
         printf("real reduction: %d\n", expected);
 
         printf("** Total Time breakdown: ENUM %.2lf, EVAL %.2lf, REPLACE %.2lf, REORDER %.2lf, REDUNDANCY %.2lf\n",
-            ENUM_TIME / CLOCKS_PER_SEC, EVAL_TIME / CLOCKS_PER_SEC, 
-            REPLACE_TIME / CLOCKS_PER_SEC, REORDER_TIME / CLOCKS_PER_SEC,
-            REDUNDANCY_TIME / CLOCKS_PER_SEC);
+            ENUM_TIME / NS_PER_SEC, EVAL_TIME / NS_PER_SEC, 
+            REPLACE_TIME / NS_PER_SEC, REORDER_TIME / NS_PER_SEC,
+            REDUNDANCY_TIME / NS_PER_SEC);
         printf("** Replace Time breakdown: COPYBACK %.2lf, REID %.2lf, CHOICE %.2lf\n", 
-            COPYBACK_TIME / CLOCKS_PER_SEC, REID_TIME / CLOCKS_PER_SEC, CHOICE_TIME / CLOCKS_PER_SEC);
+            COPYBACK_TIME / NS_PER_SEC, REID_TIME / NS_PER_SEC, CHOICE_TIME / NS_PER_SEC);
 
         delete gpuSolver;
         printf("after rewrite iter, n = %d\n", n);
@@ -1241,11 +1241,11 @@ void CPUSolver::Init() {
 }
 
 void CPUSolver::Reorder() {
-    auto startTime = clock();
+    auto startTime = hrClock();
 
     for(int i = 1; i <= n; i++)
         level[i] = i <= numInputs ? 0 : -1;
-    auto startTime2 = clock();
+    auto startTime2 = hrClock();
     
     // skipping the deleted nodes might cause errors, so do not skip them
     // the redundant nodes can be deleted by strash 
@@ -1254,7 +1254,7 @@ void CPUSolver::Reorder() {
 
     for(int i = numInputs + 1; i <= n; i++) 
         if(!isDeleted[i]) TopoSort(i);
-    printf(" *** Topo sort time: %.2lf sec\n", (clock() - startTime2) / (double) CLOCKS_PER_SEC);
+    printf(" *** Topo sort time: %.2lf sec\n", (hrClock() - startTime2) / (double) NS_PER_SEC);
     LevelCount();
     int newN = levelCount.back();
     for(int i = n; i >= 1; i--)
@@ -1272,7 +1272,7 @@ void CPUSolver::Reorder() {
     for(int i = 0; i < numOutputs; i++)
         output[i] = order[id(output[i])] * 2 + isC(output[i]);
     n = newN;
-    REORDER_TIME += clock() - startTime;
+    REORDER_TIME += hrClock() - startTime;
     Init();
 }
 
@@ -1311,7 +1311,6 @@ void CPUSolver::EvalAndReplace(int id, Cut &cut) {
     for(int i = 0; i < cut.nLeaves; i++)
         if(isDeleted[cut.leaves[i]]) return;
     visCnt++;
-    //auto startTime = clock::now();
     int saved = MarkMFFC(id, cut);
     int uPhase = lib.pPhases[cut.truthtable];
     int Class = lib.pMap[cut.truthtable];
@@ -1337,14 +1336,11 @@ void CPUSolver::EvalAndReplace(int id, Cut &cut) {
             match[num] = nodeId;
     }
     int added = Eval(rt, Class, match);
-    //buildTime += chrono::duration<double> (clock::now() - startTime).count();
     if(match[rt] == id) return;
     if(saved - added > 0) {
         expected += saved - added;
-        //auto startTime = clock::now();
         Build(rt, Class, match, isComplement);
         Replace(match[rt], id, phase[match[rt]] ^ phase[id]);
-        //replaceTime += chrono::duration<double> (clock::now() - startTime).count();
     }
 }
 

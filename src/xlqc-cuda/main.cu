@@ -2,7 +2,6 @@
  This file is part of the XLQC program.                                      
  Copyright (C) 2015 Xin Li <lixin.reco@gmail.com>                            
                                                                            
- Filename:  main.cu                                                      
  License:   BSD 3-Clause License
 
  This software is provided by the copyright holders and contributors "as is"
@@ -18,7 +17,6 @@
  *****************************************************************************/
 
 #include <chrono>
-#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -26,11 +24,7 @@
 #include <string>
 #include <iostream>
 
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_eigen.h>
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_linalg.h>
+#include "gsl_compat.h"
 
 #include "int_lib/cints.h"
 #include "int_lib/crys.h"
@@ -48,6 +42,8 @@ int main(int argc, char* argv[])
     int use_5d = 1;
     // use double precision?
     int use_dp = 1;
+    // status is set on failure of result check
+    int status = 0;
 
     if (argc > 1) {
         for (int i = 1; i < argc; ++ i) {
@@ -569,34 +565,48 @@ int main(int argc, char* argv[])
         ++ iter;
     }
 
-    // SCF converged
-    fprintf(stdout, "SCF converged! E_total = %20.10f\n", ene_total);
-
-
     end = std::chrono::steady_clock::now();
     time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     time_in_usec = time * 1e-3f;
     time_txt += "Time_SCF_Conv = " + std::to_string(time_in_usec) + " usec\n";
     time_total += time_in_usec;
 
+    // Validate the RHF/STO-3G energy of H2O (geometry in example/geom.xyz).
+    // Reference: Szabo & Ostlund, "Modern Quantum Chemistry", Table 3.13 lists the
+    // HF/STO-3G total energy of H2O as -74.963 Eh at the standard geometry of
+    // Table 3.10 (R_OH = 1.809 a.u., angle 104.52 deg), which is the geometry in
+    // example/geom.xyz. Both references below round to that value; SP and DP differ
+    // only in the trailing digits due to floating-point accumulation in the SCF.
 
-    // print MO information
-    start = std::chrono::steady_clock::now();
+    // SCF converged
+    fprintf(stdout, "SCF converged! E_total = %20.10f\n", ene_total);
 
-    fprintf(stdout, "%5s %10s %15s %12s\n", "MO", "State", "E(Eh)", "E(eV)");
-    for (ibasis = 0; ibasis < p_basis->num; ++ ibasis)
-    {
-        char occ[10];
-        if (ibasis < n_occ) { strcpy(occ, "occ."); }
-        else { strcpy(occ, "virt."); }
+    const double ref_energy = use_dp ? -74.9629229672 : -74.9629154055;
+    const double tol = use_dp ? 1.0e-6 : 1.0e-4;
+    const double err = fabs(ene_total - ref_energy);
+    if (err < tol) {
+        fprintf(stdout, "PASS: E_total error %.2e within tolerance %.0e\n", err, tol);
+        // print MO information
+        fprintf(stdout, "%5s %10s %15s %12s\n", "MO", "State", "E(Eh)", "E(eV)");
+        for (ibasis = 0; ibasis < p_basis->num; ++ ibasis)
+        {
+            char occ[10];
+            if (ibasis < n_occ) { strcpy(occ, "occ."); }
+            else { strcpy(occ, "virt."); }
 
-        double ener = gsl_vector_get(emo, ibasis);
-        fprintf(stdout, "%5d %10s %15.5f %12.2f\n",
-                ibasis + 1, occ, ener, ener * HARTREE2EV);
+            double ener = gsl_vector_get(emo, ibasis);
+            fprintf(stdout, "%5d %10s %15.5f %12.2f\n",
+                    ibasis + 1, occ, ener, ener * HARTREE2EV);
+        }
+    } else {
+        fprintf(stderr, "FAIL: E_total = %.10f, expected %.10f (error %.2e > tol %.0e)\n",
+                ene_total, ref_energy, err, tol);
+        status = 1;
     }
 
 
     //====== free device memories ========
+    start = std::chrono::steady_clock::now();
 
     cudaFree(dev_pbf_xlec);
     cudaFree(dev_pbf_to_cbf);
@@ -700,5 +710,5 @@ int main(int argc, char* argv[])
 
     //====== the end of program ========
 
-    return 0;
+    return status;
 }

@@ -6,13 +6,13 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 GPU       = yes
 CUDA      = no
-CUDA_ARCH = sm_70
+CUDA_ARCH ?= sm_70
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
@@ -75,7 +75,7 @@ $(program): $(obj)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj) *.txt *.bin
+	rm -rf $(program) $(obj) error_diff.txt *.bin
 
 run: $(program)
 	$(LAUNCHER) ./$(program) 2048 2048 1000

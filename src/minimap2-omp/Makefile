@@ -7,7 +7,7 @@ CC        = icpx
 OPTIMIZE  = no
 DEBUG     = yes
 DEVICE    = gpu
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

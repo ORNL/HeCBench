@@ -13,11 +13,7 @@ __global__ void store_kv_cache_256x1(
     const uint64_t kv_input_stride,
     const uint64_t num_items)
 {
-#if defined(__GFX8__) || defined(__GFX9__)
-  #define WarpSize 64
-#else
-  #define WarpSize 32
-#endif
+  const int WarpSize = warpSize;
   const auto idx = blockIdx.x * blockDim.x + threadIdx.x;
   const auto warp_id = idx / WarpSize;
   const auto lane_id = idx % WarpSize;
@@ -49,11 +45,7 @@ __global__ void store_kv_cache_256x1_v2(
     const uint64_t kv_input_stride,
     const uint64_t num_items)
 {
-#if defined(__GFX8__) || defined(__GFX9__)
-  #define WarpSize 64
-#else
-  #define WarpSize 32
-#endif
+  const int WarpSize = warpSize;
   const auto idx = blockIdx.x * blockDim.x + threadIdx.x;
   const auto warp_id = idx / WarpSize;
   const auto lane_id = idx % WarpSize;
@@ -87,11 +79,7 @@ __global__ void store_kv_cache_256x1_v4(
     const uint64_t kv_input_stride,
     const uint64_t num_items)
 {
-#if defined(__GFX8__) || defined(__GFX9__)
-  #define WarpSize 64
-#else
-  #define WarpSize 32
-#endif
+  const int WarpSize = warpSize;
   const auto idx = blockIdx.x * blockDim.x + threadIdx.x;
   const auto warp_id = idx / WarpSize;
   const auto lane_id = idx % WarpSize;
@@ -125,11 +113,7 @@ __global__ void store_kv_cache_128x2(
     const uint64_t kv_input_stride,
     const uint64_t num_items)
 {
-#if defined(__GFX8__) || defined(__GFX9__)
-  #define WarpSize 64
-#else
-  #define WarpSize 32
-#endif
+  const int WarpSize = warpSize;
   const auto idx = blockIdx.x * blockDim.x + threadIdx.x;
   const auto warp_id = idx / WarpSize;
   const auto lane_id = idx % WarpSize;

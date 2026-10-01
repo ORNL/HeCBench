@@ -14,11 +14,7 @@ void buildMST(const ID num,
               edge* const __restrict__ edges,
               ctype dist[PinLimit])
 {
-#if defined(__GFX8__) || defined(__GFX9__)
-  #define WS 64
-#else
-  #define WS 32
-#endif
+  const int WS = warpSize;
   __shared__ ID source[WarpsPerBlock][PinLimit];
   __shared__ ID destin[WarpsPerBlock][PinLimit];
   __shared__ ctype mindj[WarpsPerBlock];
@@ -72,11 +68,7 @@ bool insertSteinerPoints(ID& num,
                          const edge* const __restrict__ edges,
                          ctype dist[PinLimit])
 {
-#if defined(__GFX8__) || defined(__GFX9__)
-  #define WS 64
-#else
-  #define WS 32
-#endif
+  const int WS = warpSize;
   __shared__ ID adj[WarpsPerBlock][PinLimit][8];
   __shared__ int cnt[WarpsPerBlock][PinLimit];
 
@@ -179,11 +171,7 @@ inline void processSmallNet(const int i,
                              edge* const __restrict__ edges,
                               int* const __restrict__ wl)
 {
-#if defined(__GFX8__) || defined(__GFX9__)
-  #define WS 64
-#else
-  #define WS 32
-#endif
+  const int WS = warpSize;
   __shared__ ctype dist[WarpsPerBlock][PinLimit];
   const int lane = threadIdx.x % WS;
   const int warp = threadIdx.x / WS;
@@ -233,11 +221,7 @@ inline void processLargeNet(const int i,
                             ctype* const __restrict__ yout,
                              edge* const __restrict__ edges)
 {
-#if defined(__GFX8__) || defined(__GFX9__)
-  #define WS 64
-#else
-  #define WS 32
-#endif
+  const int WS = warpSize;
   __shared__ ctype dist[WarpsPerBlock][PinLimit];
   const int warp = threadIdx.x / WS;
 
@@ -252,8 +236,8 @@ inline void processLargeNet(const int i,
   } while (insertSteinerPoints<WarpsPerBlock, PinLimit>(cnt, &xout[pout], &yout[pout], &edges[pout], dist[warp]));
 }
 
-template <int WarpsPerBlock, int PinLimit>
-static __global__ __launch_bounds__(WarpsPerBlock * WS, 2)
+template <int WarpsPerBlock, int PinLimit, int WaveSize>
+static __global__ __launch_bounds__(WarpsPerBlock * WaveSize, 2)
 void largeNetKernel(const int* const __restrict__ idxin,
                     const ctype* const __restrict__ xin,
                     const ctype* const __restrict__ yin,
@@ -264,6 +248,7 @@ void largeNetKernel(const int* const __restrict__ idxin,
                     const int numnets,
                     int* const __restrict__ wl)
 {
+  const int WS = warpSize;
   // compute Steiner points and edges
   const int lane = threadIdx.x % WS;
   do {
@@ -280,14 +265,15 @@ void largeNetKernel(const int* const __restrict__ idxin,
   }
 }
 
-template <int WarpsPerBlock, int PinLimit>
-static __global__ __launch_bounds__(WarpsPerBlock * WS, 2)
+template <int WarpsPerBlock, int PinLimit, int WaveSize>
+static __global__ __launch_bounds__(WarpsPerBlock * WaveSize, 2)
 void smallNetKernel(const int* const __restrict__ idxin,
                     ctype* __restrict__ xout,
                     ctype* __restrict__ yout,
                      edge* __restrict__ edges,
                       int* const __restrict__ wl)
 {
+  const int WS = warpSize;
   // compute Steiner points and edges
   const int lane = threadIdx.x % WS;
   do {
@@ -316,7 +302,9 @@ static void computeRSMT(const int* const __restrict__ idxin,
   GPU_CHECK(hipGetDeviceProperties(&deviceProp, 0));
   const int SMs = deviceProp.multiProcessorCount;
   const int blocks = SMs * 2;
-  printf("launching %d thread blocks with %d threads per block\n", blocks, 24 * WS);
+  const int largeWarpsPerBlock = (WarpSize == 64) ? 12 : 24;
+  printf("launching %d thread blocks with %d threads per block (warp size %d)\n",
+         blocks, largeWarpsPerBlock * WarpSize, WarpSize);
 
   // allocate and initialize GPU memory
   int* d_idxin;  ctype* d_xin;  ctype* d_yin;
@@ -344,17 +332,17 @@ static void computeRSMT(const int* const __restrict__ idxin,
   GPU_CHECK(hipMemset(d_yout, -1, 2 * size * sizeof(ctype)));
   GPU_CHECK(hipMemset(d_edges, 0, 2 * size * sizeof(edge)));
 
-  const int threadsPerBlock = 24 * 32;
-
-  if (WarpSize == 64)
-    largeNetKernel<12, 64><<<blocks, threadsPerBlock>>>(
+  if (WarpSize == 64) {
+    largeNetKernel<12, 64, 64><<<blocks, 12 * WarpSize>>>(
       d_idxin, d_xin, d_yin, d_idxout, d_xout, d_yout, d_edges, numnets, d_wl);
-  else
-    largeNetKernel<24, 64><<<blocks, threadsPerBlock>>>(
+    smallNetKernel<3, 512, 64><<<blocks, 3 * WarpSize>>>(
+      d_idxin, d_xout, d_yout, d_edges, d_wl);
+  } else {
+    largeNetKernel<24, 64, 32><<<blocks, 24 * WarpSize>>>(
       d_idxin, d_xin, d_yin, d_idxout, d_xout, d_yout, d_edges, numnets, d_wl);
-
-  smallNetKernel<3, 512><<<blocks, 3 * WarpSize>>>(
-    d_idxin, d_xout, d_yout, d_edges, d_wl);
+    smallNetKernel<3, 512, 32><<<blocks, 3 * WarpSize>>>(
+      d_idxin, d_xout, d_yout, d_edges, d_wl);
+  }
 
   // end time
   GPU_CHECK(hipDeviceSynchronize());

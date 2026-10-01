@@ -8,7 +8,7 @@ OPTIMIZE    = yes
 DEBUG       = no
 DEVICE      = gpu
 DMND_PATH   = ../diamond-sycl
-LAUNCHER    =
+LAUNCHER    ?=
 
 #===============================================================================
 # Program name & source code list

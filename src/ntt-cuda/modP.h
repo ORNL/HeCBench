@@ -1,5 +1,5 @@
 #if (defined(__CUDACC__) || defined(__HIPCC__))
-  #define ESS __inline__ __device__
+  #define ESS __inline__ __host__ __device__
 #else
   #define ESS inline
 #endif

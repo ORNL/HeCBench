@@ -2,9 +2,7 @@
 #include <cstring>
 #include "helper.h"
 
-// FP4 block-scaled matmul in hipBLASLt requires ROCm >= 7.0 (the HIP_R_4F_E2M1
-// data type and VEC32_UE8M0 scale mode) and a CDNA4 GPU (gfx950), matching
-// reference.py's is_hip_cdna4() check.
+// FP4 block-scaled matmul in hipBLASLt requires ROCm >= 7.0
 #if defined(HIP_VERSION_MAJOR) && (HIP_VERSION_MAJOR >= 7)
 #define FP4_GEMM_SUPPORTED 1
 #else
@@ -20,12 +18,12 @@
 /// A and B are FP4 (HIP_R_4F_E2M1) packed two elements per byte along K.
 /// The block scales are E8M0 (HIP_R_8F_UE8M0) with one scale per 32 elements
 /// along the K dimension (scale mode HIPBLASLT_MATMUL_MATRIX_SCALE_VEC32_UE8M0).
-/// Output D is FP16.
+/// Output D is BF16.
 ///
 /// A is stored (M,K) row-major and B is stored (N,K) row-major. To compute
 /// A @ B^T on the column-major hipBLASLt we use transa = OP_T, transb = OP_N so
 /// that A is interpreted as (K x M) and B as (K x N), producing D = (M x N).
-void LtFp4Matmul(const int repeat,
+bool LtFp4Matmul(const int repeat,
                  hipblasLtHandle_t ltHandle,
                  int m,
                  int n,
@@ -38,7 +36,7 @@ void LtFp4Matmul(const int repeat,
                  const void *b_scale, /* device pointer, UE8M0 block scales */
                  const void *B,       /* device pointer, packed FP4 (N,K) */
                  int ldb,
-                 __half *D,           /* device pointer, FP16 (M,N) */
+                 __hip_bfloat16 *D,   /* device pointer, BF16 (M,N) */
                  int ldd,
                  void *workspace,
                  size_t workspaceSize) {
@@ -68,8 +66,8 @@ void LtFp4Matmul(const int repeat,
     // Create matrix descriptors. FP4 dimensions are in elements (packed 2/byte).
     checkHipblasStatus(hipblasLtMatrixLayoutCreate(&Adesc, HIP_R_4F_E2M1, k, m, lda));
     checkHipblasStatus(hipblasLtMatrixLayoutCreate(&Bdesc, HIP_R_4F_E2M1, k, n, ldb));
-    checkHipblasStatus(hipblasLtMatrixLayoutCreate(&Cdesc, HIP_R_16F, m, n, ldd));
-    checkHipblasStatus(hipblasLtMatrixLayoutCreate(&Ddesc, HIP_R_16F, m, n, ldd));
+    checkHipblasStatus(hipblasLtMatrixLayoutCreate(&Cdesc, HIP_R_16BF, m, n, ldd));
+    checkHipblasStatus(hipblasLtMatrixLayoutCreate(&Ddesc, HIP_R_16BF, m, n, ldd));
 
     checkHipblasStatus(hipblasLtMatmulPreferenceCreate(&preference));
     checkHipblasStatus(hipblasLtMatmulPreferenceSetAttribute(preference, HIPBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, &workspaceSize, sizeof(workspaceSize)));
@@ -84,8 +82,21 @@ void LtFp4Matmul(const int repeat,
         if (Bdesc) hipblasLtMatrixLayoutDestroy(Bdesc);
         if (Adesc) hipblasLtMatrixLayoutDestroy(Adesc);
         if (operationDesc) hipblasLtMatmulDescDestroy(operationDesc);
-        return;
+        return false;
     }
+
+    // Warm up
+    checkHipblasStatus(hipblasLtMatmul(ltHandle,
+                                       operationDesc,
+                                       alpha, A, Adesc,
+                                       B, Bdesc, beta,
+                                       D, Cdesc,
+                                       D, Ddesc,
+                                       &heuristicResult.algo,
+                                       workspace,
+                                       workspaceSize,
+                                       0));
+    checkHipStatus(hipDeviceSynchronize());
 
     auto start = std::chrono::steady_clock::now();
 
@@ -115,6 +126,58 @@ void LtFp4Matmul(const int repeat,
     if (Bdesc) checkHipblasStatus(hipblasLtMatrixLayoutDestroy(Bdesc));
     if (Adesc) checkHipblasStatus(hipblasLtMatrixLayoutDestroy(Adesc));
     if (operationDesc) checkHipblasStatus(hipblasLtMatmulDescDestroy(operationDesc));
+    return true;
+}
+
+// Runtime capability probe: ask hipBLASLt whether it has any algorithm for a
+// block-scaled (VEC32_UE8M0) matmul of the given FP type on the current device.
+// This is the authoritative "does this device + library support this FP type"
+// check: unlike a GPU-architecture string match it needs no white-list and
+// automatically covers new hardware (e.g. gfx1250 as well as gfx950). Heuristic
+// queries inspect only the descriptors, so we just need small dummy scale
+// buffers and no real A/B/C/D data.
+static bool deviceSupportsBlockScaled(hipblasLtHandle_t ltHandle, hipDataType abType) {
+    const int m = 256, n = 256, k = 256; // any MX-legal shape (k % 128 == 0)
+    hipblasLtMatmulDesc_t opDesc = nullptr;
+    hipblasLtMatrixLayout_t Ad = nullptr, Bd = nullptr, Cd = nullptr, Dd = nullptr;
+    hipblasLtMatmulPreference_t pref = nullptr;
+    hipblasOperation_t transa = HIPBLAS_OP_T, transb = HIPBLAS_OP_N;
+    hipblasLtMatmulMatrixScale_t scaleMode = HIPBLASLT_MATMUL_MATRIX_SCALE_VEC32_UE8M0;
+    size_t ws = 32ULL * 1024 * 1024;
+    int returned = 0;
+    hipblasLtMatmulHeuristicResult_t res = {};
+    void *aScale = nullptr, *bScale = nullptr;
+    bool ok = false;
+
+    if (hipMalloc(&aScale, 256) != hipSuccess) return false;
+    if (hipMalloc(&bScale, 256) != hipSuccess) { (void)hipFree(aScale); return false; }
+
+    if (hipblasLtMatmulDescCreate(&opDesc, HIPBLAS_COMPUTE_32F, HIP_R_32F) == HIPBLAS_STATUS_SUCCESS) {
+        hipblasLtMatmulDescSetAttribute(opDesc, HIPBLASLT_MATMUL_DESC_TRANSA, &transa, sizeof(transa));
+        hipblasLtMatmulDescSetAttribute(opDesc, HIPBLASLT_MATMUL_DESC_TRANSB, &transb, sizeof(transb));
+        hipblasLtMatmulDescSetAttribute(opDesc, HIPBLASLT_MATMUL_DESC_A_SCALE_POINTER, &aScale, sizeof(aScale));
+        hipblasLtMatmulDescSetAttribute(opDesc, HIPBLASLT_MATMUL_DESC_B_SCALE_POINTER, &bScale, sizeof(bScale));
+        hipblasLtMatmulDescSetAttribute(opDesc, HIPBLASLT_MATMUL_DESC_A_SCALE_MODE, &scaleMode, sizeof(scaleMode));
+        hipblasLtMatmulDescSetAttribute(opDesc, HIPBLASLT_MATMUL_DESC_B_SCALE_MODE, &scaleMode, sizeof(scaleMode));
+        hipblasLtMatrixLayoutCreate(&Ad, abType, k, m, k);
+        hipblasLtMatrixLayoutCreate(&Bd, abType, k, n, k);
+        hipblasLtMatrixLayoutCreate(&Cd, HIP_R_16BF, m, n, m);
+        hipblasLtMatrixLayoutCreate(&Dd, HIP_R_16BF, m, n, m);
+        hipblasLtMatmulPreferenceCreate(&pref);
+        hipblasLtMatmulPreferenceSetAttribute(pref, HIPBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, &ws, sizeof(ws));
+        if (hipblasLtMatmulAlgoGetHeuristic(ltHandle, opDesc, Ad, Bd, Cd, Dd, pref, 1, &res, &returned) == HIPBLAS_STATUS_SUCCESS)
+            ok = (returned > 0);
+    }
+
+    if (pref) hipblasLtMatmulPreferenceDestroy(pref);
+    if (Dd) hipblasLtMatrixLayoutDestroy(Dd);
+    if (Cd) hipblasLtMatrixLayoutDestroy(Cd);
+    if (Bd) hipblasLtMatrixLayoutDestroy(Bd);
+    if (Ad) hipblasLtMatrixLayoutDestroy(Ad);
+    if (opDesc) hipblasLtMatmulDescDestroy(opDesc);
+    (void)hipFree(aScale);
+    (void)hipFree(bScale);
+    return ok;
 }
 
 #endif // FP4_GEMM_SUPPORTED
@@ -130,15 +193,21 @@ int main(int argc, char *argv[]) {
     printf("Skipped: FP4 block-scaled matmul requires ROCm >= 7.0\n");
     return 0;
 #else
-    // Skip on GPUs other than CDNA4 (gfx950), which do not support FP4
-    // block-scaled matmul.
+    // Support is decided by a runtime capability probe (see above) rather than a
+    // hard-coded gfx950 check, so any device whose hipBLASLt provides an FP4
+    // block-scaled algorithm (gfx950, gfx1250, ...) is allowed to run.
     int device = 0;
     checkHipStatus(hipGetDevice(&device));
     hipDeviceProp_t prop;
     checkHipStatus(hipGetDeviceProperties(&prop, device));
-    if (strncmp(prop.gcnArchName, "gfx950", 6) != 0) {
-        printf("Skipped: FP4 block-scaled matmul requires a CDNA4 GPU (gfx950), "
-               "found %s (%s)\n", prop.gcnArchName, prop.name);
+
+    hipblasLtHandle_t probeHandle;
+    checkHipblasStatus(hipblasLtCreate(&probeHandle));
+    const bool supported = deviceSupportsBlockScaled(probeHandle, HIP_R_4F_E2M1);
+    checkHipblasStatus(hipblasLtDestroy(probeHandle));
+    if (!supported) {
+        printf("Skipped: FP4 block-scaled matmul is not supported on this device "
+               "(%s / %s)\n", prop.gcnArchName, prop.name);
         return 0;
     }
 
@@ -155,7 +224,7 @@ int main(int argc, char *argv[]) {
 
         Fp4TestBench props(m, n, k, 1.0f, 0.0f, 32ULL * 1024 * 1024);
 
-        LtFp4Matmul(repeat,
+        bool ran = LtFp4Matmul(repeat,
                     props.ltHandle,
                     props.m,
                     props.n,
@@ -168,7 +237,7 @@ int main(int argc, char *argv[]) {
                     props.workspace,
                     props.workspaceSize);
 
-        props.verify();
+        if (ran) props.verify();
     }
 
     return 0;

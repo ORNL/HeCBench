@@ -1,3 +1,4 @@
+#include <cmath>
 #include <complex>
 
 void ref_complex_float (sycl::nd_item<1> &item, char* checkSum, int n)
@@ -14,18 +15,18 @@ void ref_complex_float (sycl::nd_item<1> &item, char* checkSum, int n)
   auto z1 = std::complex<float>(r1, r2);
   auto z2 = std::complex<float>(r3, r4);
 
-  char s = sycl::fabs(std::abs(z1 * z2) - std::abs(z1) * std::abs(z2)) < 1e-3f;
+  char s = std::fabs(std::abs(z1 * z2) - std::abs(z1) * std::abs(z2)) < 1e-3f;
 
-  s += sycl::fabs(std::abs(z1 + z2) * std::abs(z1 + z2) -
+  s += std::fabs(std::abs(z1 + z2) * std::abs(z1 + z2) -
              ((z1 + z2) * (std::conj(z1) + std::conj(z2))).real()) < 1e-3f; 
 
-  s += sycl::fabs(std::abs(z1 - z2) * std::abs(z1 - z2) -
+  s += std::fabs(std::abs(z1 - z2) * std::abs(z1 - z2) -
              ((z1 - z2) * (std::conj(z1) - std::conj(z2))).real()) < 1e-3f;
 
-  s += sycl::fabs((z1 * std::conj(z2) + z2 * std::conj(z1)).real() -
+  s += std::fabs((z1 * std::conj(z2) + z2 * std::conj(z1)).real() -
              2.0f * (z1.real() * z2.real() + z1.imag() * z2.imag())) < 1e-3f;
 
-  s += sycl::fabs(std::abs(std::conj(z1) / z2) -
+  s += std::fabs(std::abs(std::conj(z1) / z2) -
              std::abs(std::conj(z1) / std::conj(z2))) < 1e-3f;
 
   checkSum[i] = s;
@@ -45,18 +46,18 @@ void ref_complex_double (sycl::nd_item<1> &item, char* checkSum, int n)
   auto z1 = std::complex<double>(r1, r2);
   auto z2 = std::complex<double>(r3, r4);
 
-  char s = sycl::fabs(std::abs(z1 * z2) - std::abs(z1) * std::abs(z2)) < 1e-3;
+  char s = std::fabs(std::abs(z1 * z2) - std::abs(z1) * std::abs(z2)) < 1e-3;
 
-  s += sycl::fabs(std::abs(z1 + z2) * std::abs(z1 + z2) -
+  s += std::fabs(std::abs(z1 + z2) * std::abs(z1 + z2) -
              ((z1 + z2) * (std::conj(z1) + std::conj(z2))).real()) < 1e-3; 
 
-  s += sycl::fabs(std::abs(z1 - z2) * std::abs(z1 - z2) -
+  s += std::fabs(std::abs(z1 - z2) * std::abs(z1 - z2) -
              ((z1 - z2) * (std::conj(z1) - std::conj(z2))).real()) < 1e-3;
 
-  s += sycl::fabs((z1 * std::conj(z2) + z2 * std::conj(z1)).real() -
+  s += std::fabs((z1 * std::conj(z2) + z2 * std::conj(z1)).real() -
              2.0 * (z1.real() * z2.real() + z1.imag() * z2.imag())) < 1e-3;
 
-  s += sycl::fabs(std::abs(std::conj(z1) / z2) -
+  s += std::fabs(std::abs(std::conj(z1) / z2) -
              std::abs(std::conj(z1) / std::conj(z2))) < 1e-3;
 
   checkSum[i] = s;

@@ -1,8 +1,7 @@
-ARCH = gfx908
-
+# reuse the NVCC variables
 NVCC = hipcc
 NVCC_ARCH =
-NVCC_FLAGS = --std=c++17 -O3
+NVCC_FLAGS = $(EXTRA_CFLAGS) --std=c++17 -O3
 
 INC_DIR = include
 SRC_DIR = src

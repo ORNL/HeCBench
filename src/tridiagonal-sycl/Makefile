@@ -6,13 +6,13 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 GPU       = yes
 CUDA      = no
-CUDA_ARCH = sm_70
+CUDA_ARCH ?= sm_70
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
@@ -93,7 +93,7 @@ cmd_arg_reader.o: cmd_arg_reader.cpp cmd_arg_reader.h exception.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj) *.dat *.timing *.txt *.csv
+	rm -rf $(program) $(obj) *.dat *.timing oclTridiagonal.txt SdkConsoleLog.txt *.csv
 
 run: $(program)
 	$(LAUNCHER) ./$(program) -num_systems=524288

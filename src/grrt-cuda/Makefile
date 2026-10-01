@@ -7,7 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -52,7 +52,7 @@ $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj) *.txt
+	rm -rf $(program) $(obj) Output_task1.txt Output_task2.txt
 
 run: $(program)
 	$(LAUNCHER) ./$(program)

@@ -6,13 +6,15 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 GPU       = yes
 CUDA      = no
-CUDA_ARCH = sm_70
+CUDA_ARCH ?= sm_70
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
+# Use sycl_ext_oneapi_enqueue_functions (event-less kernel submission)
+ENQUEUE_FUNCTIONS = yes
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
@@ -63,6 +65,10 @@ endif
 
 ifeq ($(GPU),yes)
   CFLAGS +=-DUSE_GPU
+endif
+
+ifeq ($(ENQUEUE_FUNCTIONS),yes)
+  CFLAGS += -DUSE_ENQUEUE_FUNCTIONS
 endif
 #===============================================================================
 # Targets to Build

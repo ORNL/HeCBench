@@ -13,6 +13,35 @@ typedef float fp32;
 
 using namespace sycl::ext::oneapi::experimental::matrix;
 
+// Host-side, run-once query of whether the device advertises support for the
+// joint_matrix combination this benchmark uses:
+//   A: fp16, B: fp16, C/D: fp32, with the fixed M x N x K tile shape.
+static bool device_supports_wmma(const sycl::device &dev, uint32_t tile_m,
+                                 uint32_t tile_n, uint32_t tile_k) {
+  const auto combos =
+      dev.get_info<sycl::ext::oneapi::experimental::info::device::matrix_combinations>();
+  if (combos.empty())
+    return true; // query unsupported on this backend; assume ok
+
+  using sycl::ext::oneapi::experimental::matrix::matrix_type;
+  for (const auto &c : combos) {
+    if (c.atype != matrix_type::fp16 || c.btype != matrix_type::fp16 ||
+        c.ctype != matrix_type::fp32 || c.dtype != matrix_type::fp32)
+      continue;
+    // A combination is either fixed (msize/nsize/ksize) or a range whose
+    // upper bound is given by max_msize/max_nsize/max_ksize.
+    const bool m_ok = (c.msize == tile_m) ||
+                      (c.msize == 0 && tile_m <= c.max_msize);
+    const bool n_ok = (c.nsize == tile_n) ||
+                      (c.nsize == 0 && tile_n <= c.max_nsize);
+    const bool k_ok = (c.ksize == tile_k) ||
+                      (c.ksize == 0 && tile_k <= c.max_ksize);
+    if (m_ok && n_ok && k_ok)
+      return true;
+  }
+  return false;
+}
+
 // Matrix data initialization
 template <typename DataT>
 static inline void fill(DataT *mat, uint32_t m, uint32_t n) {
@@ -163,6 +192,14 @@ void gemm_wmma(int impl, uint32_t m, uint32_t n, uint32_t k, fp32 alpha,
 #else
   sycl::queue q(sycl::cpu_selector_v, sycl::property::queue::in_order());
 #endif
+
+  if (!device_supports_wmma(q.get_device(), WMMA_M, WMMA_N, WMMA_K)) {
+    std::cout << "The device does not support the joint_matrix combination "
+              << "fp16(A) x fp16(B) -> fp32(C/D) with shape "
+              << WMMA_M << "x" << WMMA_N << "x" << WMMA_K
+              << "; skipping.\n";
+    return;
+  }
 
   auto sg_sizes = q.get_device().get_info<sycl::info::device::sub_group_sizes>();
   auto r = std::max_element(sg_sizes.begin(), sg_sizes.end());

@@ -7,7 +7,7 @@ CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = CDNA
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

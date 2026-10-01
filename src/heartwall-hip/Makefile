@@ -2,7 +2,7 @@ CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 DUMP      = yes
-LAUNCHER  =
+LAUNCHER  ?=
 
 
 # Standard flags ('-std=c++17' not allowed with 'C')

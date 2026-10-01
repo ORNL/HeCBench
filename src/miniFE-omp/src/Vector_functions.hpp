@@ -246,15 +246,13 @@ typename TypeTraits<typename Vector::ScalarType>::magnitude_type
   const Scalar*  ycoefs = &y.coefs[0];
   MINIFE_SCALAR result = 0;
 
-  //#pragma omp target teams distribute parallel for reduction(+:result) \
-	map(tofrom:result) num_teams(512)
-
-  #pragma omp target data map(tofrom: result)
-  {
-  #pragma omp target teams distribute parallel for reduction(+:result) num_teams(512)
+  // Keep the reduction result on device via the reduction clause's implicit
+  // mapping and return it directly, instead of opening a per-call
+  // `target data` device-data region (device alloc/copy) on every dot call.
+  #pragma omp target teams distribute parallel for reduction(+:result) \
+          map(tofrom: result) num_teams(512)
   for(int i=0; i<n; ++i) {
     result += xcoefs[i] * ycoefs[i];
-  }
   }
 
 #ifdef HAVE_MPI
@@ -285,14 +283,13 @@ typename TypeTraits<typename Vector::ScalarType>::magnitude_type
   const MINIFE_SCALAR*  xcoefs = &x.coefs[0];
   MINIFE_SCALAR result = 0;
 
-  //#pragma omp target teams distribute parallel for reduction(+:result) \
-	map(tofrom: result) num_teams(512)
-  #pragma omp target data map(tofrom: result)
-  {
-  #pragma omp target teams distribute parallel for reduction(+:result) num_teams(512)
+  // Keep the reduction result on device via the reduction clause's implicit
+  // mapping and return it directly, instead of opening a per-call
+  // `target data` device-data region (device alloc/copy) on every dot call.
+  #pragma omp target teams distribute parallel for reduction(+:result) \
+          map(tofrom: result) num_teams(512)
   for(int i=0; i<n; ++i) {
     result += xcoefs[i] * xcoefs[i];
-  }
   }
 
 #ifdef HAVE_MPI

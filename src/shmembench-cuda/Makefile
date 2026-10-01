@@ -7,7 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
-LAUNCHER  =
+LAUNCHER  ?=
 
 
 #===============================================================================
@@ -50,7 +50,7 @@ $(program): main.o shmem_kernels.o
 main.o: main.cu shmem_kernels.h
 	$(CC) -c $(CFLAGS) $<
 
-shmem_kernels.o: shmem_kernels.cu
+shmem_kernels.o: shmem_kernels.cu reference.h
 	$(CC) -c $(CFLAGS) $<
 
 clean:

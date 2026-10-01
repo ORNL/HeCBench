@@ -8,7 +8,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 SP        = yes
 DEVICE    = gpu
-LAUNCHER  =
+LAUNCHER  ?=
 
 
 #===============================================================================

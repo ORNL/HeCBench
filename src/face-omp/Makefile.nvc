@@ -6,8 +6,8 @@
 CC        = nvc++
 OPTIMIZE  = yes
 DEBUG     = no
-SM        = cc70
-LAUNCHER  =
+SM        ?= cc70
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

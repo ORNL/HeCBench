@@ -6,7 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -67,7 +67,7 @@ cmd_arg_reader.o: cmd_arg_reader.cu cmd_arg_reader.h exception.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj) *.dat *.timing *.txt *.csv
+	rm -rf $(program) $(obj) *.dat *.timing oclTridiagonal.txt SdkConsoleLog.txt *.csv
 
 run: $(program)
 	$(LAUNCHER) ./$(program) -num_systems=524288

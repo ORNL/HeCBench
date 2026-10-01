@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: MIT
 // =============================================================
 
+#include <cstdio>
 #include <iomanip>
 #include <iostream>
 #include <chrono>
@@ -19,6 +20,28 @@ int main(int argc, char* argv[]) {
   const int height = atoi(argv[2]);
   const int block_size = atoi(argv[3]);
   const int repeat = atoi(argv[4]);
+
+  if (block_size <= 0) {
+    fprintf(stderr, "Error: block size must be positive (got %d)\n", block_size);
+    return 1;
+  }
+
+  // The average kernel time is divided by the repeat count.
+  if (repeat <= 0) {
+    fprintf(stderr, "Error: repeat count must be positive (got %d)\n", repeat);
+    return 1;
+  }
+
+  // A BMP header stores the file size in 32-bit fields, so reject images
+  // that cannot be represented before allocating anything.
+  if (!ImgFormat::BMP::fits(width, height)) {
+    fprintf(stderr,
+            "Error: an image of %d x %d pixels cannot be represented as a "
+            "BMP file (maximum size is %llu bytes)\n",
+            width, height,
+            static_cast<unsigned long long>(ImgFormat::BMP::maxByteSize));
+    return 1;
+  }
 
   Img<ImgFormat::BMP> image{width, height};
   ImgFractal fractal{width, height};
@@ -58,15 +81,27 @@ int main(int argc, char* argv[]) {
   auto pixel = image2.data();
   int image_size = image2.width() * image2.height(); 
 
-  #pragma omp target data map(from: pixel[0:image_size])
+  #pragma omp target data map(to: pixel[0:image_size])
   {
-    float total_time = 0.f;
+    #pragma omp target teams distribute parallel for thread_limit(block_size)
+    for (int i = 0; i < image_size; i++) {
+      // Lambda to process image with gamma = 2
+      const float v = (0.3f * pixel[i].r + 0.59f * pixel[i].g + 0.11f * pixel[i].b) / 255.f;
+      std::uint8_t gamma_pixel = static_cast<std::uint8_t>(255.f * v * v);
+      if (gamma_pixel > 255) gamma_pixel = 255;
+      pixel[i].set(gamma_pixel, gamma_pixel, gamma_pixel, gamma_pixel);
+    }
+    #pragma omp target update from (pixel[0:image_size])
 
+    // check correctness
+    if (check(image.begin(), image.end(), image2.begin())) {
+      std::cout << "PASS\n";
+    } else {
+      std::cout << "FAIL\n";
+    }
+
+    auto start = std::chrono::steady_clock::now();
     for (int i = 0; i < repeat; i++) {
-      #pragma omp target update to (pixel[0:image_size])
-
-      auto start = std::chrono::steady_clock::now();
-
       #pragma omp target teams distribute parallel for thread_limit(block_size)
       for (int i = 0; i < image_size; i++) {
         // Lambda to process image with gamma = 2
@@ -75,20 +110,12 @@ int main(int argc, char* argv[]) {
         if (gamma_pixel > 255) gamma_pixel = 255;
         pixel[i].set(gamma_pixel, gamma_pixel, gamma_pixel, gamma_pixel);
       }
-
-      auto end = std::chrono::steady_clock::now();
-      auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-      total_time += time;
     }
-    printf("Average kernel execution time %f (s)\n", (total_time * 1e-9f) / repeat);
+    auto end = std::chrono::steady_clock::now();
+    auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    printf("Average kernel execution time %f (s)\n", (time * 1e-9f) / repeat);
   }
 
-  // check correctness
-  if (check(image.begin(), image.end(), image2.begin())) {
-    std::cout << "PASS\n";
-  } else {
-    std::cout << "FAIL\n";
-  }
 
 #ifdef DEBUG
   image.write("fractal_gamma_parallel.bmp");

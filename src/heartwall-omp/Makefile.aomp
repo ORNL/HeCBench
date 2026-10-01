@@ -4,7 +4,7 @@ DEBUG     = no
 DUMP      = yes
 DEVICE    = gpu
 ARCH      = gfx906
-LAUNCHER  =
+LAUNCHER  ?=
 
 
 

@@ -7,7 +7,7 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -54,7 +54,7 @@ $(program): main.o shmem_kernels.o
 main.o: main.cpp shmem_kernels.h
 	$(CC) -c $(CFLAGS) $<
 
-shmem_kernels.o: shmem_kernels.cpp
+shmem_kernels.o: shmem_kernels.cpp ../shmembench-cuda/reference.h
 	$(CC) -c $(CFLAGS) $<
 
 clean:

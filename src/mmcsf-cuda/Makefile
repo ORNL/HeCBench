@@ -8,7 +8,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 BOOST     = $(HOME)/boost_1_76_0
 ARCH      = sm_60
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

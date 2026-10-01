@@ -14,13 +14,11 @@
 
 // Block-scaled MXFP4 GEMM test harness (SYCL + oneDNN).
 //
-// Mirrors the block-scaled FP4 path of blas-fp4gemm-cuda, but uses the OCP
-// microscaling (MX) FP4 format:
 //   D(M,N) = (A(M,K) * a_scale) @ (B(N,K) * b_scale)^T
 // A and B are FP4 (E2M1) packed two elements per byte along K.
 // Scales are E8M0 (UE8M0), one scale per 32-element block along K
 // (SCALE_BLOCK_SIZE = 32), matching the OCP MX format (mxfp4).
-// Output D is FP16.
+// Output D is BF16.
 //
 // The A / B elements and their block scales are supplied by the caller
 // (already quantized), which matches the oneDNN mxfp matmul example where the
@@ -56,7 +54,7 @@ struct Mxfp4TestBench {
         Bdev = sycl::malloc_device<uint8_t>(bBytes, q);
         AscaleDev = sycl::malloc_device<uint8_t>(aScaleBytes, q);
         BscaleDev = sycl::malloc_device<uint8_t>(bScaleBytes, q);
-        Ddev = sycl::malloc_device<sycl::half>(dElems, q);
+        Ddev = sycl::malloc_device<sycl::ext::oneapi::bfloat16>(dElems, q);
 
         fillData();
     }
@@ -100,8 +98,8 @@ struct Mxfp4TestBench {
     //   D = alpha * (A*a_scale) @ (B*b_scale)^T + beta * C
     // equals alpha * (a_elem*a_scale) * (b_elem*b_scale) * K (with beta = 0).
     bool verify(double relTol = 1e-2) {
-        std::vector<sycl::half> Dh(dElems);
-        q.memcpy(Dh.data(), Ddev, dElems * sizeof(sycl::half)).wait();
+        std::vector<sycl::ext::oneapi::bfloat16> Dh(dElems);
+        q.memcpy(Dh.data(), Ddev, dElems * sizeof(sycl::ext::oneapi::bfloat16)).wait();
 
         float aElem  = decodeE2M1(FP4_PACKED_FILL & 0xF);
         float bElem  = decodeE2M1(FP4_PACKED_FILL & 0xF);
@@ -130,5 +128,5 @@ struct Mxfp4TestBench {
 
     uint8_t *Adev = nullptr, *Bdev = nullptr;          // packed FP4 (E2M1)
     uint8_t *AscaleDev = nullptr, *BscaleDev = nullptr; // E8M0 block scales
-    sycl::half *Ddev = nullptr;                         // FP16 output
+    sycl::ext::oneapi::bfloat16 *Ddev = nullptr;        // BF16 output
 };

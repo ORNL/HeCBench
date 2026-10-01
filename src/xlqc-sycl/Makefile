@@ -6,16 +6,21 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
-GSL_INC   =-I/path/to/gsl/include
-GSL_LIB   =-L/path/to/gsl/lib -lgsl -lgslcblas 
-LAUNCHER  =
+EIGEN_INC ?= $(shell pkg-config --cflags eigen3 2>/dev/null)
+LAUNCHER  ?=
 
 GPU       = yes
 CUDA      = no
-CUDA_ARCH = sm_70
+CUDA_ARCH ?= sm_70
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+
+ifneq ($(MAKECMDGOALS),clean)
+ifeq ($(EIGEN_INC),)
+$(error Eigen not found; install libeigen3-dev or set EIGEN_INC=-I/path/to/eigen)
+endif
+endif
 
 #===============================================================================
 # Program name & source code list
@@ -31,7 +36,7 @@ obj=basis.o scf.o main.o crys.o cints.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -I../xlqc-cuda -I../xlqc-cuda/int_lib $(GSL_INC) \
+CFLAGS := $(EXTRA_CFLAGS) -I../xlqc-cuda -I../xlqc-cuda/int_lib $(EIGEN_INC) \
           --gcc-toolchain=$(GCC_TOOLCHAIN) \
           -std=c++17 -Wall -fsycl
 
@@ -41,7 +46,7 @@ ifeq ($(VENDOR), AdaptiveCpp)
 endif
 
 # Linker Flags
-LDFLAGS = $(GSL_LIB) 
+LDFLAGS =
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
@@ -92,6 +97,8 @@ cints.o: ../xlqc-cuda/int_lib/cints.cc
 clean:
 	rm -rf $(program) $(obj)
 
+#  ONEAPI_DEVICE_SELECTOR=level_zero:gpu
+#  ONEAPI_DEVICE_SELECTOR=level_zero:gpu OverrideDefaultFP64Settings=1 IGC_EnableDPEmulation=1
 run: $(program)
 	$(LAUNCHER) ./$(program) sp
 	$(LAUNCHER) ./$(program) dp

@@ -7,6 +7,20 @@
 #define NUM_BLOCKS(n, block_size) (((n) + (block_size) - 1) / (block_size))
 #define THREAD_PER_BLOCK 128
 
+#include <chrono>
+
+// Number of nanoseconds per second; timing consumers divide hrClock()
+// differences by this to obtain seconds.
+constexpr double NS_PER_SEC = 1e9;
+
+// Returns the number of nanoseconds elapsed since the first call.
+inline double hrClock() {
+    static const std::chrono::steady_clock::time_point t0 =
+        std::chrono::steady_clock::now();
+    return std::chrono::duration<double, std::nano>(
+               std::chrono::steady_clock::now() - t0).count();
+}
+
 // does not use uint64_t in cstdint since it's not supported by atomicCAS
 using uint64 = unsigned long long int;
 using uint32 = unsigned int;

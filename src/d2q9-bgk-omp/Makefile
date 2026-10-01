@@ -7,7 +7,7 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
-LAUNCHER  =
+LAUNCHER  ?=
 
 CheckSize ?= 256x256
 FINAL_STATE_FILE = ./final_state.dat

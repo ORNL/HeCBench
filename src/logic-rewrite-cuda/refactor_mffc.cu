@@ -601,7 +601,7 @@ reorder(int * vFanin0New, int * vFanin1New, int * pOuts,
     memset(vhLevels, -1, nBufferLen * sizeof(int));
 
     printf("Start reordering ...\n");
-    auto cpuSequentialStartTime = clock();
+    auto cpuSequentialStartTime = hrClock();
 
     // topo order to get level of each node. the redundant node does not contribute to level
     for (int i = 0; i <= nPIs; i++)
@@ -687,7 +687,7 @@ reorder(int * vFanin0New, int * vFanin1New, int * pOuts,
     }
     printf("Reordered network new nObjs: %d, original nObjs: %d\n", nObjsNew, nObjs);
     printf("Reordering complete!\n");
-    printf(" ** CPU sequential time: %.2lf sec\n", (clock() - cpuSequentialStartTime) / (double) CLOCKS_PER_SEC);
+    printf(" ** CPU sequential time: %.2lf sec\n", (hrClock() - cpuSequentialStartTime) / (double) NS_PER_SEC);
 
     cudaFreeHost(vhFanin0);
     cudaFreeHost(vhFanin1);
@@ -844,7 +844,7 @@ refactorMFFCPerform(bool fUseZeros, int cutSize,
 
     Aig::getElemTruthTable<<<1, 1>>>(vTruthElem, cutSize);
     cudaDeviceSynchronize();
-    auto startTruthTime = clock();
+    auto startTruthTime = hrClock();
     Aig::getCutTruthTableConsecutive<STACK_SIZE><<<NUM_BLOCKS(nResyn, THREAD_PER_BLOCK), THREAD_PER_BLOCK>>>(
         d_pFanin0, d_pFanin1, vNumSaved, vResynRoots, vCuts, vCutRanges, 
         vTruths, vTruthRanges, vTruthElem, nResyn, nPIs, cutSize, vNode2ConeResynIdx
@@ -853,7 +853,7 @@ refactorMFFCPerform(bool fUseZeros, int cutSize,
     gpuErrchk( cudaDeviceSynchronize() );
     thrust::transform(thrust::device, vTruths, vTruths + nTruthArrayLen, vTruthsNeg, bitwiseNot()); // get the negated truth table
     cudaDeviceSynchronize();
-    printf("Truth table computation time: %.2lf sec\n", (clock() - startTruthTime) / (double) CLOCKS_PER_SEC);
+    printf("Truth table computation time: %.2lf sec\n", (hrClock() - startTruthTime) / (double) NS_PER_SEC);
 
     // resynthesize cones
     
@@ -870,14 +870,14 @@ refactorMFFCPerform(bool fUseZeros, int cutSize,
     cudaMemcpy(pSubgTableNext, &nResynGraphs, sizeof(int), cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
 
-    auto startResynTime = clock();
+    auto startResynTime = hrClock();
     factorFromTruth<<<NUM_BLOCKS(nResynGraphs, THREAD_PER_BLOCK), THREAD_PER_BLOCK>>>(
         vCuts, vCutRanges, vSubgTable, vSubgLinks, vSubgLens, pSubgTableNext,
         vTruths, vTruthsNeg, vTruthRanges, vTruthElem, nResyn
     );
     gpuErrchk( cudaPeekAtLastError() );
     gpuErrchk( cudaDeviceSynchronize() );
-    printf("ISOP + factor time: %.2lf sec\n", (clock() - startResynTime) / (double) CLOCKS_PER_SEC);
+    printf("ISOP + factor time: %.2lf sec\n", (hrClock() - startResynTime) / (double) NS_PER_SEC);
 
     // create hashtable and evaluate number of added nodes for each cone
     HashTable<uint64, uint32> hashTable((int)(nObjs / (HT_LOAD_FACTOR * 1.5)));
@@ -938,11 +938,11 @@ refactorMFFCPerform(bool fUseZeros, int cutSize,
     );
     cudaDeviceSynchronize();
 
-    auto reorderStartTime = clock();
+    auto reorderStartTime = hrClock();
     auto [nObjsNew, vhFanin0New, vhFanin1New, vhOutsNew, nLevelsNew] = reorder(
         vFanin0New, vFanin1New, pOuts, nPIs, nPOs, nObjs, nBufferLen
     );
-    printf("Sequential reorder time: %.2lf secs\n", (clock() - reorderStartTime) / (double) CLOCKS_PER_SEC);
+    printf("Sequential reorder time: %.2lf secs\n", (hrClock() - reorderStartTime) / (double) NS_PER_SEC);
 
     cudaFree(vNodesIndices);
     cudaFree(vCutSizes);

@@ -751,7 +751,7 @@ long benchmark(
         q.submit([&] (sycl::handler &cgh) {
           cgh.parallel_for<class comm_manual_aosoa>(
             sycl::nd_range<1>(k16_gws, k16_lws), 
-            [=] (sycl::nd_item<1> item) [[vec_type_hint(real_vec_t)]] {
+            [=] (sycl::nd_item<1> item) {
 
             // number of package to process == get_global_id(0)
             #define package_id (item.get_global_id(0) * dim * dim * 2)
@@ -797,7 +797,7 @@ long benchmark(
         q.submit([&] (sycl::handler &cgh) {
           cgh.parallel_for<class comm_manual_aosoa_constants>(
             sycl::nd_range<1>(k17_gws, k17_lws), 
-            [=] (sycl::nd_item<1> item) [[vec_type_hint(real_vec_t)]] {
+            [=] (sycl::nd_item<1> item) {
 
             // number of package to process == get_global_id(0)
             #define package_id (item.get_global_id(0) * DIM * DIM * 2)
@@ -843,7 +843,7 @@ long benchmark(
         q.submit([&] (sycl::handler &cgh) {
           cgh.parallel_for<class comm_manual_aosoa_constants_perm>(
             sycl::nd_range<1>(k18_gws, k18_lws), 
-            [=] (sycl::nd_item<1> item) [[vec_type_hint(real_vec_t)]] {
+            [=] (sycl::nd_item<1> item) {
 
             // number of package to process == get_global_id(0)
             #define package_id (item.get_global_id(0) * DIM * DIM * 2)
@@ -903,7 +903,7 @@ long benchmark(
         q.submit([&] (sycl::handler &cgh) {
           cgh.parallel_for<class comm_manual_aosoa_constants_prefetch>(
             sycl::nd_range<1>(k19_gws, k19_lws), 
-            [=] (sycl::nd_item<1> item) [[vec_type_hint(real_vec_t)]] {
+            [=] (sycl::nd_item<1> item) {
 
             // number of package to process == get_global_id(0)
             #define package_id (item.get_global_id(0) * DIM * DIM * 2)
@@ -951,7 +951,7 @@ long benchmark(
         q.submit([&] (sycl::handler &cgh) {
           cgh.parallel_for<class comm_manual_aosoa_direct>(
             sycl::nd_range<1>(k20_gws, k20_lws), 
-            [=] (sycl::nd_item<1> item) [[vec_type_hint(real_vec_t)]] {
+            [=] (sycl::nd_item<1> item) {
             // number of package to process == get_global_id(0)
             #define package_id (item.get_global_id(0) * dim * dim * 2)
             
@@ -991,7 +991,7 @@ long benchmark(
         q.submit([&] (sycl::handler &cgh) {
           cgh.parallel_for<class comm_manual_aosoa_constants_direct>(
             sycl::nd_range<1>(k21_gws, k21_lws), 
-            [=] (sycl::nd_item<1> item) [[vec_type_hint(real_vec_t)]] {
+            [=] (sycl::nd_item<1> item) {
             // number of package to process == get_global_id(0)
             #define package_id (item.get_global_id(0) * DIM * DIM * 2)
             
@@ -1031,7 +1031,7 @@ long benchmark(
         q.submit([&] (sycl::handler &cgh) {
           cgh.parallel_for<class comm_manual_aosoa_constants_direct_prefetch>(
             sycl::nd_range<1>(k22_gws, k22_lws), 
-            [=] (sycl::nd_item<1> item) [[vec_type_hint(real_vec_t)]] {
+            [=] (sycl::nd_item<1> item) {
             // number of package to process == get_global_id(0)
             #define package_id (item.get_global_id(0) * DIM * DIM * 2)
             
@@ -1076,7 +1076,7 @@ long benchmark(
         q.submit([&] (sycl::handler &cgh) {
           cgh.parallel_for<class comm_manual_aosoa_constants_direct_perm>(
             sycl::nd_range<1>(k23_gws, k23_lws), 
-            [=] (sycl::nd_item<1> item) [[vec_type_hint(real_vec_t)]] {
+            [=] (sycl::nd_item<1> item) {
             // number of package to process == get_global_id(0)
             #define package_id (item.get_global_id(0) * DIM * DIM * 2)
             

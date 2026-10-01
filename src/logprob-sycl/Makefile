@@ -9,13 +9,13 @@ DEBUG     = no
 WAVEFRONT = 32
 # invoke sycl::reduce_over_group()
 SYCL_REDUCE = yes
-LAUNCHER    =
+LAUNCHER    ?=
 
 GPU       = yes
 CUDA      = no
-CUDA_ARCH = sm_70
+CUDA_ARCH ?= sm_70
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================

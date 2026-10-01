@@ -1594,7 +1594,7 @@ linearprobing:
 
 local-ht:
   categories: [bioinformatics]
-  models: [cuda]
+  models: [cuda, hip]
   # No test metadata available
 
 log2:
@@ -2413,7 +2413,7 @@ rsc:
 
 rsmt:
   categories: [algorithms]
-  models: [cuda, sycl]
+  models: [cuda, hip, sycl]
   # No test metadata available
 
 rtm8:

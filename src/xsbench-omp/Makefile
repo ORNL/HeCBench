@@ -9,7 +9,7 @@ DEBUG     = no
 PROFILE   = no
 MPI       = no
 DEVICE    = gpu
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

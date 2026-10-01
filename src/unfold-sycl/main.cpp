@@ -122,6 +122,7 @@ int main(int argc, char* argv[])
   q.memcpy(d_idx_dim, &h_idx_dim, sizeof(int64_t));
 
   d_grad_out = (scalar_t *)sycl::malloc_device(output_size_bytes, q);
+  q.memset(d_grad_out, 0, output_size_bytes);
 
   q.wait();
   auto start = std::chrono::steady_clock::now();

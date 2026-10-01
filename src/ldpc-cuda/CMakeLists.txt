@@ -3,6 +3,6 @@
 add_hecbench_benchmark(
     NAME ldpc
     MODEL cuda
-    SOURCES cpu.cu main.cu
+    SOURCES cpu.cpp main.cu
     CATEGORIES algorithms
 )

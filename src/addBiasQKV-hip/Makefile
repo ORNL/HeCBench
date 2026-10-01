@@ -6,7 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -23,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../addBiasQKV-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -45,7 +45,7 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu Makefile
+%.o: %.cu ../addBiasQKV-cuda/reference.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

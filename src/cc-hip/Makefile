@@ -6,7 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -54,5 +54,5 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	$(LAUNCHER) ulimit -s unlimited	
-	./$(program) ../cc-cuda/delaunay_n24.egr 100
+	ulimit -s unlimited
+	$(LAUNCHER) ./$(program) ../cc-cuda/delaunay_n24.egr 100

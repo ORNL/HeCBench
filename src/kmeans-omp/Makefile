@@ -7,7 +7,7 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
-LAUNCHER  =
+LAUNCHER  ?=
 
 
 

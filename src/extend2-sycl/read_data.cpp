@@ -29,36 +29,36 @@ int read_data(const char *fn, struct extend2_dat *d)
   }
 
   /* input */
-  assert( read_check(fd, (void*)&d->qlen, sizeof(int)) );
+  if (!read_check(fd, (void*)&d->qlen, sizeof(int))) { close(fd); return 0; }
   d->query = (uint8_t*)malloc(d->qlen);
-  assert( read_check(fd, d->query, d->qlen) );
-  assert( read_check(fd, (void*)&d->tlen, sizeof(int)) );
+  if (!read_check(fd, d->query, d->qlen)) { close(fd); return 0; }
+  if (!read_check(fd, (void*)&d->tlen, sizeof(int))) { close(fd); return 0; }
   d->target = (uint8_t*)malloc(d->tlen);
-  assert( read_check(fd, d->target, d->tlen) );
-  assert( read_check(fd, (void*)&d->m, sizeof(int)) );
-  assert( read_check(fd, (void*)d->mat, 25) );
-  assert( read_check(fd, (void*)&d->o_del, sizeof(int)) );
-  assert( read_check(fd, (void*)&d->e_del, sizeof(int)) );
-  assert( read_check(fd, (void*)&d->o_ins, sizeof(int)) );
-  assert( read_check(fd, (void*)&d->e_ins, sizeof(int)) );
-  assert( read_check(fd, (void*)&d->w, sizeof(int)) );
-  assert( read_check(fd, (void*)&d->end_bonus, sizeof(int)) );
-  assert( read_check(fd, (void*)&d->zdrop, sizeof(int)) );
-  assert( read_check(fd, (void*)&d->h0, sizeof(int)) );
+  if (!read_check(fd, d->target, d->tlen)) { close(fd); return 0; }
+  if (!read_check(fd, (void*)&d->m, sizeof(int))) { close(fd); return 0; }
+  if (!read_check(fd, (void*)d->mat, 25)) { close(fd); return 0; }
+  if (!read_check(fd, (void*)&d->o_del, sizeof(int))) { close(fd); return 0; }
+  if (!read_check(fd, (void*)&d->e_del, sizeof(int))) { close(fd); return 0; }
+  if (!read_check(fd, (void*)&d->o_ins, sizeof(int))) { close(fd); return 0; }
+  if (!read_check(fd, (void*)&d->e_ins, sizeof(int))) { close(fd); return 0; }
+  if (!read_check(fd, (void*)&d->w, sizeof(int))) { close(fd); return 0; }
+  if (!read_check(fd, (void*)&d->end_bonus, sizeof(int))) { close(fd); return 0; }
+  if (!read_check(fd, (void*)&d->zdrop, sizeof(int))) { close(fd); return 0; }
+  if (!read_check(fd, (void*)&d->h0, sizeof(int))) { close(fd); return 0; }
 
   /* results */
-  assert( read_check(fd, (void*)&d->qle, sizeof(int)) );
-  assert( read_check(fd, (void*)&d->tle, sizeof(int)) );
-  assert( read_check(fd, (void*)&d->gtle, sizeof(int)) );
-  assert( read_check(fd, (void*)&d->gscore, sizeof(int)) );
-  assert( read_check(fd, (void*)&d->max_off, sizeof(int)) );
+  if (!read_check(fd, (void*)&d->qle, sizeof(int))) { close(fd); return 0; }
+  if (!read_check(fd, (void*)&d->tle, sizeof(int))) { close(fd); return 0; }
+  if (!read_check(fd, (void*)&d->gtle, sizeof(int))) { close(fd); return 0; }
+  if (!read_check(fd, (void*)&d->gscore, sizeof(int))) { close(fd); return 0; }
+  if (!read_check(fd, (void*)&d->max_off, sizeof(int))) { close(fd); return 0; }
 
   /* return */
-  assert( read_check(fd, (void*)&d->score, sizeof(int)) );
+  if (!read_check(fd, (void*)&d->score, sizeof(int))) { close(fd); return 0; }
 
   /* time-to-solution in cycle */
-  assert( read_check(fd, (void*)&d->tsc, sizeof(uint64_t)) );
-  assert( read_check(fd, (void*)&d->sec, sizeof(double)) );
+  if (!read_check(fd, (void*)&d->tsc, sizeof(uint64_t))) { close(fd); return 0; }
+  if (!read_check(fd, (void*)&d->sec, sizeof(double))) { close(fd); return 0; }
 
   close(fd);
   return 1;

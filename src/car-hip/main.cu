@@ -154,10 +154,13 @@ int main(int argc, char* argv[]) {
 
   hipMemcpy(output, d_output, output_size_byte, hipMemcpyDeviceToHost);
 
+  const float tolerance = 1e-1f;
   float rmse = 0;
   for (size_t i = 0; i < output_size; i++)
     rmse += (output_ref[i] - output[i]) * (output_ref[i] - output[i]);
-  printf("RMSE: %f\n", sqrtf(rmse/output_size));
+  rmse = sqrtf(rmse / output_size);
+  printf("RMSE: %f\n", rmse);
+  printf("%s\n", (rmse <= tolerance) ? "PASS" : "FAIL");
 
   hipFree(d_img);
   hipFree(d_offsets_h);

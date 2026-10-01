@@ -7,7 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
-LAUNCHER  =
+LAUNCHER  ?=
 
 POINTS    = 97178
 DATAPARS  = -d ./data/small/Datapnts.1 -p $(POINTS)

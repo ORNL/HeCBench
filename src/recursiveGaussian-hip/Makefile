@@ -6,7 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -60,7 +60,7 @@ shrUtils.o : ../boxfilter-sycl/shrUtils.cpp ../boxfilter-sycl/shrUtils.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj) *.txt
+	rm -rf $(program) $(obj)
 
 run: $(program)
 	$(LAUNCHER) ./$(program) ../recursiveGaussian-cuda/StoneRGB.ppm 1000

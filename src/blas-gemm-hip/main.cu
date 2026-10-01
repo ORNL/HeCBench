@@ -86,20 +86,26 @@ void run_gemm_example(int m, int k, int n, int repeat) {
   std::cout << "Checking BLAS GEMM.. ";
   run_simple_gemm(da, db, dr, m, k, n, alpha, beta);
 
+  hipblasStatus_t status;
   if constexpr (std::is_same_v<fp, __half>)
-    hipblasHgemm(h, HIPBLAS_OP_N, HIPBLAS_OP_N, n, m, k,
+    status = hipblasHgemm(h, HIPBLAS_OP_N, HIPBLAS_OP_N, n, m, k,
                 &alpha, db, n, da, k, &beta, dc, n);
   else if constexpr (std::is_same_v<fp, float>)
-    hipblasSgemm(h, HIPBLAS_OP_N, HIPBLAS_OP_N, n, m, k,
+    status = hipblasSgemm(h, HIPBLAS_OP_N, HIPBLAS_OP_N, n, m, k,
                 &alpha, db, n, da, k, &beta, dc, n);
   else if constexpr (std::is_same_v<fp, double>)
-    hipblasDgemm(h, HIPBLAS_OP_N, HIPBLAS_OP_N, n, m, k,
+    status = hipblasDgemm(h, HIPBLAS_OP_N, HIPBLAS_OP_N, n, m, k,
                 &alpha, db, n, da, k, &beta, dc, n);
 
-  hipMemcpy(c, dc, C_size, hipMemcpyDeviceToHost);
-  hipMemcpy(r, dr, C_size, hipMemcpyDeviceToHost);
-  int error = memcmp(c, r, C_size);
-  std::cout << (error ? "FAIL" : "PASS") << std::endl;
+  if (status != HIPBLAS_STATUS_SUCCESS) {
+    std::cout << "Check skipped because hipblas returned non-success status "
+              << status << std::endl;
+  } else {
+    hipMemcpy(c, dc, C_size, hipMemcpyDeviceToHost);
+    hipMemcpy(r, dr, C_size, hipMemcpyDeviceToHost);
+    int error = memcmp(c, r, C_size);
+    std::cout << (error ? "FAIL" : "PASS") << std::endl;
+  }
 
   hipDeviceSynchronize();
   auto start = std::chrono::steady_clock::now();

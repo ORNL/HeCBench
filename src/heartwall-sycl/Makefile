@@ -4,7 +4,7 @@
 
 # Compiler can be set below, or via environment variable
 CC        = clang++
-LAUNCHER=
+LAUNCHER  ?=
 
 OPTIMIZE  = yes
 DEBUG     = no
@@ -12,9 +12,9 @@ DUMP      = yes
 
 GPU       = yes
 CUDA      = no
-CUDA_ARCH = sm_70
+CUDA_ARCH ?= sm_70
 HIP       = no
-HIP_ARCH  = gfx908
+HIP_ARCH  ?= gfx908
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================

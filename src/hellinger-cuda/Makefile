@@ -9,7 +9,7 @@ DEBUG     = no
 ARCH      = sm_60
 VERIFY    = yes
 FP64      = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

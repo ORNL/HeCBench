@@ -383,7 +383,14 @@ int main(int argc, char *argv[])
 
   if (argc == 3) {
     dim = atoi(argv[2]);
-    outsize = insize + 1 + (insize + 63) / 64;
+    // Worst-case output size the compressor can emit: a header word, one bitmap
+    // word per 64 inputs, and up to one residual word per thread. Each of the
+    // ceil(insize/TPB) chunks launches TPB threads, so the residual region can
+    // grow to chunks*TPB words. Small inputs still transpose full 64-word
+    // bit-planes from the padded tail, so sizing residuals by insize alone
+    // under-allocates and lets MPCcompress write past d_out.
+    const int chunks = (insize + TPB - 1) / TPB;
+    outsize = 1 + (insize + 63) / 64 + chunks * TPB;
   } else {
     assert(((input[0] >> 8) & 0xffffff) == 0x43504d);
     dim = (input[0] & 31) + 1;

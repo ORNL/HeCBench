@@ -6,7 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -45,7 +45,7 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu ../ntt-cuda/modP.h Makefile
+%.o: %.cu ../ntt-cuda/modP.h ../ntt-cuda/reference.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

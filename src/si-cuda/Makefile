@@ -3,7 +3,7 @@
 # matches the all/clean interface the rest of HeCBench expects.
 
 ARCH      = sm_60
-LAUNCHER  =
+LAUNCHER  ?=
 
 .PHONY: all clean run
 

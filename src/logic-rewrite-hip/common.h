@@ -8,9 +8,58 @@
 #define NUM_BLOCKS(n, block_size) (((n) + (block_size) - 1) / (block_size))
 #define THREAD_PER_BLOCK 128
 
+#include <chrono>
+
+// Number of nanoseconds per second; timing consumers divide hrClock()
+// differences by this to obtain seconds.
+constexpr double NS_PER_SEC = 1e9;
+
+// Returns the number of nanoseconds elapsed since the first call.
+inline double hrClock() {
+    static const std::chrono::steady_clock::time_point t0 =
+        std::chrono::steady_clock::now();
+    return std::chrono::duration<double, std::nano>(
+               std::chrono::steady_clock::now() - t0).count();
+}
+
 // does not use uint64_t in cstdint since it's not supported by atomicCAS
 using uint64 = unsigned long long int;
 using uint32 = unsigned int;
+
+// Ordered CAS/load helpers for the lock-free chained hash table in rewrite.cu.
+// Several call sites publish a node into a bucket chain by CAS-ing its "next"
+// pointer *after* having written the node's payload (.val) with a plain store.
+// The default atomicCAS is relaxed and acts as no memory fence, so on the
+// weakly-ordered AMDGPU a concurrent reader that follows the published "next"
+// link may still observe a stale payload. Pairing an acq_rel CAS on the writer
+// with an acquire load on the reader closes that reordering window.
+__device__ __forceinline__ int atomicCASAcqRel(int *addr, int expected, int desired) {
+    int expected_val = expected;
+    __hip_atomic_compare_exchange_strong(addr, &expected_val, desired,
+                                         __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE,
+                                         __HIP_MEMORY_SCOPE_AGENT);
+    // Mirrors atomicCAS: returns the value previously stored at addr.
+    return expected_val;
+}
+
+__device__ __forceinline__ int atomicLoadAcquire(const int *addr) {
+    return __hip_atomic_load(addr, __ATOMIC_ACQUIRE, __HIP_MEMORY_SCOPE_AGENT);
+}
+
+// ROCm 6.x does not ship a __syncwarp intrinsic (only the *_sync warp
+// builtins gated by HIP_ENABLE_WARP_SYNC_BUILTINS). truth.cuh needs it to make
+// a lane-0 shared-memory store visible to the rest of the warp. On AMDGPU
+// wavefront lanes execute in lockstep, so at this uniform program point a
+// workgroup-scope fence (LDS visibility) plus a wave reconvergence/scheduling
+// barrier is a correct stand-in.
+#ifndef __HIP_SYNCWARP_SHIM
+#define __HIP_SYNCWARP_SHIM
+__device__ __forceinline__ void __syncwarp(unsigned long long mask = ~0ull) {
+    (void)mask;
+    __threadfence_block();
+    __builtin_amdgcn_wave_barrier();
+}
+#endif
 
 // for static_assert false
 template <class... T>

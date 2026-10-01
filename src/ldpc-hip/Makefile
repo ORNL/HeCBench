@@ -6,7 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -14,9 +14,7 @@ LAUNCHER  =
 
 program = main
 
-source = main.cu cpu.cu
-
-obj = $(source:.cu=.o)
+obj = main.o cpu.o
 
 #===============================================================================
 # Sets Flags
@@ -47,7 +45,10 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu kernel.cu matrix.h LDPC.h
+main.o: main.cu kernel.cu matrix.h LDPC.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+cpu.o: ../ldpc-cuda/cpu.cpp ../ldpc-cuda/LDPC.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

@@ -162,20 +162,25 @@ void gemmBatched(
       auto elapsed = time * 1e-3;
 
       if(stat != HIPBLAS_STATUS_SUCCESS){
-	cerr << "hipblasSgemmBatched failed" << endl;
+        cerr << "Size " << size
+             << " skipped because hipblas returned non-success status " << stat
+             << endl;
         break;
       }
 
       if (rep != 0) sum += elapsed;
       
       if(verbose)
-	cout << "size " << size << ": " << elapsed << " us; " 
-	     << elapsed / num << " us per operation" << endl;
+        cout << "size " << size << ": " << elapsed << " us; " << elapsed / num
+             << " us per operation" << endl;
     }
-    cout << "size " << size << " average execution time: " << sum/reps << " us; "
-	 << sum / reps / num << " us per operation; "
-         << "floating-point operations per second: ";
-    performance(m, n, k, 1e3 * (sum / reps / num));
+
+    if (stat == HIPBLAS_STATUS_SUCCESS) {
+      cout << "size " << size << " average execution time: " << sum / reps
+           << " us; " << sum / reps / num << " us per operation; "
+           << "floating-point operations per second: ";
+      performance(m, n, k, 1e3 * (sum / reps / num));
+    }
 
     // verify double precision operations 
     if constexpr (std::is_same_v<T, double>) {

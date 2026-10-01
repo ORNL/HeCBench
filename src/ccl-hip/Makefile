@@ -6,8 +6,9 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-MPI_ROOT ?= /usr/lib/x86_64-linux-gnu/openmpi
-LAUNCHER ?= /usr/bin/mpirun -n 2
+MPI_ROOT  ?= /usr/lib/x86_64-linux-gnu/openmpi
+LAUNCHER  ?= /usr/bin/mpirun -n 2
+ROCM_PATH ?= /opt/rocm
 
 #===============================================================================
 # Program name & source code list
@@ -27,7 +28,8 @@ obj = $(source:.cu=.o)
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -I$(MPI_ROOT)/include -Wall
 
 # Linker Flags
-LDFLAGS = -L$(MPI_ROOT)/lib -lmpi -lrccl -L/opt/rocm/lib/ -lamdhip64
+LDFLAGS = -L$(MPI_ROOT)/lib -lmpi -L$(ROCM_PATH)/lib -lamdhip64 \
+          -L$(ROCM_PATH)/lib -lrccl
 
 # Debug Flags
 ifeq ($(DEBUG),yes)

@@ -1,0 +1,52 @@
+# Optimization Notes
+
+This benchmark contains a 512-point FFT/iFFT pair implemented in SYCL. The
+driver is kept in `main.cpp`, the readable baseline kernels are in `fft.cpp`,
+and the performance-oriented kernels are in `fft-opt.cpp`.
+
+## Source Layout
+
+- `main.cpp`: allocation, initialization, verification, timing, and calls into
+  the base and optimized kernel submit functions.
+- `fft.cpp`: base FFT/iFFT helper macros and base kernels. This version keeps
+  the original array-of-complex-data style, which is easier to read.
+- `fft-opt.cpp`: optimized FFT/iFFT helper macros and kernels. This version
+  keeps each complex component in scalar variables and uses vector loads/stores.
+- `reference.h`: host reference FFT used for correctness checks.
+
+## Main Optimizations
+
+### Scalarized FFT Data Path
+
+The base kernel stores each thread's eight complex values in a `T2 data[8]`
+array. Repeated `sycl::vec` element access can lower into many scalar loads,
+stores, and temporaries. The optimized kernel replaces the array with explicit
+scalar variables:
+
+```
+d0x, d0y, d1x, d1y, ..., d7x, d7y
+```
+
+This makes the dataflow visible to the compiler and reduces register pressure
+around the FFT stages and shared-memory transposes.
+
+### Load/Store Helpers
+
+`fft-opt.cpp` uses `FFT_LOAD_SC` and `FFT_STORE_SC` wrappers. 
+They use an aligned two-element vector type so a complex load or
+store can become a vector transaction.
+
+### Shorter Live Ranges
+
+The optimized kernels interleave twiddle multiplication and shared-memory stores
+so a value is stored soon after it is produced. This shortens live ranges across
+the expensive trigonometric code and gives the register allocator fewer values
+to keep alive at once.
+
+### Separate Trigonometric Calls
+
+The optimized kernel intentionally keeps separate `cos()` and `sin()` calls
+through `CMPLX_MUL_EXP_SC`. It does not use twiddle chaining or `sincos()`. This
+keeps the numerical structure close to the CUDA version while still allowing the
+compiler to optimize the scalar data path.
+

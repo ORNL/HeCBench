@@ -29,6 +29,7 @@
 //@HEADER
 
 #include <vector>
+#include "PinnedVector.hpp"
 
 namespace miniFE {
 
@@ -58,7 +59,7 @@ struct Vector {
 
   GlobalOrdinal startIndex;
   LocalOrdinal local_size;
-  std::vector<Scalar> coefs;
+  PinnedVector<Scalar> coefs;
 };
 
 

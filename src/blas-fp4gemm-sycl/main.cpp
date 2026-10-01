@@ -10,13 +10,13 @@ using namespace dnnl;
 // A and B are FP4 (f4_e2m1), packed two elements per byte along K.
 // The block scales are E8M0 (e8m0) with one scale per 32 elements along the K
 // dimension, expressed through per-argument scale attributes with group size 32
-// (matching the OCP microscaling MX FP4 format). Output D is FP16.
+// (matching the OCP microscaling MX FP4 format). Output D is BF16.
 //
 // This follows the oneDNN mxfp matmul example
 // (https://uxlfoundation.github.io/oneDNN/example_mxfp_matmul.cpp.html) and the
 // matmul developer guide
 // (https://uxlfoundation.github.io/oneDNN/dev_guide_matmul.html), but keeps the
-// FP16 output and the benchmark structure of blas-fp4gemm-cuda.
+// BF16 output and the benchmark structure of blas-fp4gemm-cuda.
 //
 // A is stored (M,K) row-major and B is stored (N,K) row-major. B is described
 // as {K,N} with strides {1,K} so that it is interpreted as B^T, producing
@@ -28,7 +28,7 @@ bool OnednnMxfp4Matmul(const int repeat, Mxfp4TestBench &tb) {
 
     auto a_md = memory::desc({m, k}, memory::data_type::f4_e2m1, memory::dims{k, 1});
     auto b_md = memory::desc({k, n}, memory::data_type::f4_e2m1, memory::dims{1, k});
-    auto c_md = memory::desc({m, n}, memory::data_type::f16,     memory::dims{n, 1});
+    auto c_md = memory::desc({m, n}, memory::data_type::bf16,    memory::dims{n, 1});
 
     // Per-argument E8M0 block scales along K (group size = SCALE_BLOCK_SIZE).
     // mask selects both dimensions so scales vary per row and per K-block.

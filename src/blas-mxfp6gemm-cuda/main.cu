@@ -19,7 +19,7 @@
 /// A and B are FP6 (CUDA_R_6F_E2M3) packed four elements per three bytes along K.
 /// The block scales are UE8M0 (CUDA_R_8F_UE8M0) with one scale per 32 elements
 /// along the K dimension (scale mode CUBLASLT_MATMUL_MATRIX_SCALE_VEC32_UE8M0).
-/// Output D is FP16.
+/// Output D is BF16.
 ///
 /// A is stored (M,K) row-major and B is stored (N,K) row-major. To compute
 /// A @ B^T on the column-major cuBLASLt we use transa = OP_T, transb = OP_N so
@@ -39,7 +39,7 @@ bool LtMxfp6Matmul(const int repeat,
                    const void *b_scale, /* device pointer, UE8M0 block scales */
                    const void *B,       /* device pointer, packed FP6 (N,K) */
                    int ldb,
-                   __half *D,           /* device pointer, FP16 (M,N) */
+                   __nv_bfloat16 *D,    /* device pointer, BF16 (M,N) */
                    int ldd,
                    void *workspace,
                    size_t workspaceSize) {
@@ -69,8 +69,8 @@ bool LtMxfp6Matmul(const int repeat,
     // Create matrix descriptors. FP6 dimensions are in elements (packed 4/3 bytes).
     checkCublasStatus(cublasLtMatrixLayoutCreate(&Adesc, CUDA_R_6F_E2M3, k, m, lda));
     checkCublasStatus(cublasLtMatrixLayoutCreate(&Bdesc, CUDA_R_6F_E2M3, k, n, ldb));
-    checkCublasStatus(cublasLtMatrixLayoutCreate(&Cdesc, CUDA_R_16F, m, n, ldd));
-    checkCublasStatus(cublasLtMatrixLayoutCreate(&Ddesc, CUDA_R_16F, m, n, ldd));
+    checkCublasStatus(cublasLtMatrixLayoutCreate(&Cdesc, CUDA_R_16BF, m, n, ldd));
+    checkCublasStatus(cublasLtMatrixLayoutCreate(&Ddesc, CUDA_R_16BF, m, n, ldd));
 
     checkCublasStatus(cublasLtMatmulPreferenceCreate(&preference));
     checkCublasStatus(cublasLtMatmulPreferenceSetAttribute(preference, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, &workspaceSize, sizeof(workspaceSize)));
@@ -95,6 +95,19 @@ bool LtMxfp6Matmul(const int repeat,
         if (operationDesc) cublasLtMatmulDescDestroy(operationDesc);
         return false;
     }
+
+    // Warm up
+    checkCublasStatus(cublasLtMatmul(ltHandle,
+                                     operationDesc,
+                                     alpha, A, Adesc,
+                                     B, Bdesc, beta,
+                                     D, Cdesc,
+                                     D, Ddesc,
+                                     &heuristicResult.algo,
+                                     workspace,
+                                     workspaceSize,
+                                     0));
+    cudaDeviceSynchronize();
 
     auto start = std::chrono::steady_clock::now();
 

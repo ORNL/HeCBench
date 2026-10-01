@@ -8,7 +8,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
 ARCH      = gfx906
-LAUNCHER  =
+LAUNCHER  ?=
 
 CheckSize ?= 256x256
 FINAL_STATE_FILE = ./final_state.dat

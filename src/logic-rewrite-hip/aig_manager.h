@@ -83,10 +83,10 @@ private:
     int aigCreated = 0; // indicator of whether the AIG is created or null
 
     // time recordings
-    clock_t prevAlgTime = 0;
-    clock_t totalAlgTime = 0;
-    clock_t prevFullTime = 0;
-    clock_t totalFullTime = 0;
+    double prevAlgTime = 0;
+    double totalAlgTime = 0;
+    double prevFullTime = 0;
+    double totalFullTime = 0;
 
     // rewrite dedicated data
     int prevCmdRewrite = 0;

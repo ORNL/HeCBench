@@ -2,7 +2,7 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
-LAUNCHER  = ZET_ENABLE_PROGRAM_DEBUGGING=1
+LAUNCHER  ?= ZET_ENABLE_PROGRAM_DEBUGGING=1
 
 #===============================================================================
 # Program name & source code list

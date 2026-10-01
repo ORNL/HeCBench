@@ -56,6 +56,20 @@ int main(int argc, char* argv[]) {
     auto start = std::chrono::steady_clock::now();
 
     for (int j = 0; j < count; j++) {
+#ifdef USE_ENQUEUE_FUNCTIONS
+      // Event-less submission avoids creating/recording/destroying a device
+      // event per kernel launch (sycl_ext_oneapi_enqueue_functions).
+      sycl::ext::oneapi::experimental::submit(q, [&](sycl::handler &cgh) {
+        sycl::local_accessor <int, 1> s (lws, cgh);
+        sycl::ext::oneapi::experimental::nd_launch(cgh,
+          sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item) {
+          int t = item.get_local_id(0);
+          s[t] = d_test[t];
+          item.barrier(sycl::access::fence_space::local_space);
+          d_test[t] = s[len-t-1];
+        });
+      });
+#else
       q.submit([&](sycl::handler &cgh) {
         sycl::local_accessor <int, 1> s (lws, cgh);
         cgh.parallel_for<class blockReverse>(
@@ -66,6 +80,7 @@ int main(int argc, char* argv[]) {
           d_test[t] = s[len-t-1];
         });
       });
+#endif
     }
 
     q.wait();

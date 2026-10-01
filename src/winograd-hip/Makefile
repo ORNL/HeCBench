@@ -7,7 +7,7 @@ CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 INPUT_SIZE = 1024
-LAUNCHER   =
+LAUNCHER   ?=
 
 #===============================================================================
 # Program name & source code list

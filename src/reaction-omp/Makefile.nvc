@@ -7,8 +7,8 @@ CC        = nvc++
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
-SM        = cc70
-LAUNCHER  =
+SM        ?= cc70
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list

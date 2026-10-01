@@ -6,7 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-LAUNCHER  =
+LAUNCHER  ?=
 
 CheckSize ?= 256x256
 FINAL_STATE_FILE = ./final_state.dat

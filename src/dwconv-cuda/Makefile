@@ -7,7 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -47,7 +47,7 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu ../tensorAccessor-cuda/tensorAccessor.h Makefile
+%.o: %.cu reference.h ../tensorAccessor-cuda/tensorAccessor.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

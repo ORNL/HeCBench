@@ -207,7 +207,7 @@ Aig::strash(const int * pFanin0, const int * pFanin1, const int * pOuts, int * p
     int nRemain, nReady;
 
     printf("GPU strash: start with nNodes = %d\n", nNodes);
-    auto startTime = clock();
+    auto startTime = hrClock();
 
     HashTable<uint64, uint32> hashTable(nObjs * 2);
     uint64 * htKeys = hashTable.get_keys_storage();
@@ -313,7 +313,7 @@ Aig::strash(const int * pFanin0, const int * pFanin1, const int * pOuts, int * p
     cudaFree(vValuesBuffer);
 
     printf("GPU strash: finish with nNodes = %d, time = %.2lf sec\n", nNodesNew,
-           (clock() - startTime) / (double) CLOCKS_PER_SEC);
+           (hrClock() - startTime) / (double) NS_PER_SEC);
 
     return {nObjsNew, vFanin0New, vFanin1New, vOutsNew, vNumFanoutsNew, levelCount};
 }
@@ -321,7 +321,7 @@ Aig::strash(const int * pFanin0, const int * pFanin1, const int * pOuts, int * p
 
 void AIGMan::strash(bool fCPU, bool fRecordTime) {
 
-clock_t startFullTime = clock();
+double startFullTime = hrClock();
     if (fCPU) {
         // CPU strash
         if (deviceAllocated) {
@@ -329,7 +329,7 @@ clock_t startFullTime = clock();
             clearDevice();
         }
 
-clock_t startAlgTime = clock();
+double startAlgTime = hrClock();
 
         int * pFanin0New, * pFanin1New, * pOutsNew, * pNumFanoutsNew;
         int * vDanglingMarks;
@@ -447,7 +447,7 @@ clock_t startAlgTime = clock();
             ++pNumFanoutsNew[AigNodeID(lit0)];
         }
 if (fRecordTime) {
-    prevAlgTime = clock() - startAlgTime;
+    prevAlgTime = hrClock() - startAlgTime;
     totalAlgTime += prevAlgTime;
 }
 
@@ -471,12 +471,12 @@ if (fRecordTime) {
         if (!deviceAllocated)
             toDevice();
 
-clock_t startAlgTime = clock();
+double startAlgTime = hrClock();
         auto [nObjsNew, vFanin0New, vFanin1New, vOutsNew, vNumFanoutsNew, levelCount] = Aig::strash(
             d_pFanin0, d_pFanin1, d_pOuts, d_pNumFanouts, nObjs, nPIs, nPOs
         );
 if (fRecordTime) {
-    prevAlgTime = clock() - startAlgTime;
+    prevAlgTime = hrClock() - startAlgTime;
     totalAlgTime += prevAlgTime;
 }
 
@@ -499,7 +499,7 @@ if (fRecordTime) {
     
     prevCmdRewrite = 0;
 if (fRecordTime) {
-    prevFullTime = clock() - startFullTime;
+    prevFullTime = hrClock() - startFullTime;
     totalFullTime += prevFullTime;
 }
 }

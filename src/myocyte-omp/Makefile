@@ -2,7 +2,7 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
-LAUNCHER  =
+LAUNCHER  ?=
 
 # Standard flags
 #CFLAGS := $(EXTRA_CFLAGS) -std=c++11 -Wall

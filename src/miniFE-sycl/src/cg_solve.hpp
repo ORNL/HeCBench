@@ -30,6 +30,8 @@
 
 #include <cmath>
 #include <limits>
+#include <chrono>
+#include <iostream>
 
 #include <Vector_functions.hpp>
 #include <mytimer.hpp>
@@ -40,8 +42,8 @@
 
 namespace miniFE {
 
-template<typename Scalar>
-void print_vec(const std::vector<Scalar>& vec, const std::string& name)
+template<typename VecType>
+void print_vec(const VecType& vec, const std::string& name)
 {
   for(size_t i=0; i<vec.size(); ++i) {
     std::cout << name << "["<<i<<"]: " << vec[i] << std::endl;
@@ -54,7 +56,8 @@ bool breakdown(typename VectorType::ScalarType inner,
                const VectorType& w,
       sycl::queue &q,
       typename VectorType::ScalarType *d_v,
-      typename VectorType::ScalarType *d_w)
+      typename VectorType::ScalarType *d_w,
+      typename VectorType::ScalarType *d_dot)
 {
   typedef typename VectorType::ScalarType Scalar;
   typedef typename TypeTraits<Scalar>::magnitude_type magnitude;
@@ -66,8 +69,8 @@ bool breakdown(typename VectorType::ScalarType inner,
 //v and w are considered orthogonal if
 //  |inner| < 100 * ||v||_2 * ||w||_2 * epsilon
 
-  magnitude vnorm = std::sqrt(dot(v,v, q, d_v, d_v));
-  magnitude wnorm = std::sqrt(dot(w,w, q, d_w, d_w));
+  magnitude vnorm = std::sqrt(dot(v,v, q, d_v, d_v, d_dot));
+  magnitude wnorm = std::sqrt(dot(w,w, q, d_w, d_w, d_dot));
   return std::abs(inner) <= 100*vnorm*wnorm*std::numeric_limits<magnitude>::epsilon();
 }
 
@@ -133,10 +136,14 @@ cg_solve(OperatorType& A,
   const MINIFE_GLOBAL_ORDINAL* MINIFE_RESTRICT const Acols	= &A.packed_cols[0];
   const MINIFE_SCALAR* MINIFE_RESTRICT const Acoefs             = &A.packed_coefs[0];
 
-#ifdef USE_GPU
-  sycl::queue q(sycl::gpu_selector_v, sycl::property::queue::in_order());
-#else
-  sycl::queue q(sycl::cpu_selector_v, sycl::property::queue::in_order());
+  // Use the same process-wide in-order queue that backs the pinned host
+  // allocations (see PinnedVector.hpp), so the host->device copies below see
+  // r/p/.../matrix coefs as genuine host USM and run at full PCIe bandwidth.
+  sycl::queue &q = minife_pinned_queue();
+
+#ifdef MINIFE_TIME_H2D
+  q.wait();
+  auto _h2d_t0 = std::chrono::steady_clock::now();
 #endif
 
   MINIFE_SCALAR *d_r = sycl::malloc_device<MINIFE_SCALAR>(r.coefs.size(), q);
@@ -163,6 +170,22 @@ cg_solve(OperatorType& A,
   MINIFE_SCALAR *d_Acoefs = sycl::malloc_device<MINIFE_SCALAR>(A.packed_coefs.size(), q);
   q.memcpy(d_Acoefs, Acoefs, sizeof(MINIFE_SCALAR) * A.packed_coefs.size());
 
+#ifdef MINIFE_TIME_H2D
+  q.wait();
+  auto _h2d_t1 = std::chrono::steady_clock::now();
+  double _h2d_ms = std::chrono::duration_cast<std::chrono::duration<double,std::milli>>(_h2d_t1 - _h2d_t0).count();
+  double _h2d_bytes = sizeof(MINIFE_SCALAR)*(r.coefs.size()+p.coefs.size()+Ap.coefs.size()+x.coefs.size()+b.coefs.size()+A.packed_coefs.size())
+                    + sizeof(LocalOrdinalType)*A.row_offsets.size() + sizeof(GlobalOrdinalType)*A.packed_cols.size();
+  std::cout << "[H2D] setup copies: " << _h2d_ms << " ms, " << _h2d_bytes/1e6 << " MB, "
+            << (_h2d_bytes/1e9)/(_h2d_ms/1e3) << " GB/s" << std::endl;
+#endif
+
+  // Persistent scratch/result buffer for the dot-product reductions, allocated
+  // once here (MAX_NUM_BLOCKS elements) instead of on every dot/dot_r2 call
+  // inside the CG loop.
+  const int DOT_MAX_NUM_BLOCKS = 256;
+  MINIFE_SCALAR *d_dot = sycl::malloc_device<MINIFE_SCALAR>(DOT_MAX_NUM_BLOCKS, q);
+
   TICK(); waxpby(one, x, zero, x, p, q, d_x, d_x, d_p); TOCK(tWAXPY);
 
 #ifdef MINIFE_DEBUG
@@ -177,7 +200,7 @@ cg_solve(OperatorType& A,
   waxpby(one, b, -one, Ap, r, q, d_b, d_Ap, d_r);
   TOCK(tWAXPY);
 
-  TICK(); rtrans = dot_r2(r, q, d_r); TOCK(tDOT);
+  TICK(); rtrans = dot_r2(r, q, d_r, d_dot); TOCK(tDOT);
 
 #ifdef MINIFE_DEBUG
 std::cout << "rtrans="<<rtrans<<std::endl;
@@ -206,7 +229,7 @@ std::cout << "rtrans="<<rtrans<<std::endl;
     }
     else {
       oldrtrans = rtrans;
-      TICK(); rtrans = dot_r2(r, q, d_r); TOCK(tDOT);
+      TICK(); rtrans = dot_r2(r, q, d_r, d_dot); TOCK(tDOT);
       magnitude_type beta = rtrans/oldrtrans;
       TICK();
       daxpby(one, r, beta, p, q, d_r, d_p);
@@ -226,14 +249,14 @@ std::cout << "rtrans="<<rtrans<<std::endl;
     matvec(A, p, Ap, q, d_Arowoffsets, d_Acols, d_Acoefs, d_p, d_Ap);
     TOCK(tMATVEC);
 
-    TICK(); p_ap_dot = dot(Ap, p, q, d_Ap, d_p); TOCK(tDOT);
+    TICK(); p_ap_dot = dot(Ap, p, q, d_Ap, d_p, d_dot); TOCK(tDOT);
 
 #ifdef MINIFE_DEBUG
     os << "iter " << k << ", p_ap_dot = " << p_ap_dot;
     os.flush();
 #endif
     if (p_ap_dot < brkdown_tol) {
-      if (p_ap_dot < 0 || breakdown(p_ap_dot, Ap, p, q, d_Ap, d_p)) {
+      if (p_ap_dot < 0 || breakdown(p_ap_dot, Ap, p, q, d_Ap, d_p, d_dot)) {
         std::cerr << "miniFE::cg_solve ERROR, numerical breakdown!"<<std::endl;
 #ifdef MINIFE_DEBUG
         os << "ERROR, numerical breakdown!"<<std::endl;
@@ -276,6 +299,7 @@ std::cout << "rtrans="<<rtrans<<std::endl;
   sycl::free(d_Arowoffsets, q);
   sycl::free(d_Acols, q);
   sycl::free(d_Acoefs, q);
+  sycl::free(d_dot, q);
 }
 
 }//namespace miniFE

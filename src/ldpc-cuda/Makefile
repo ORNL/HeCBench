@@ -7,7 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -15,9 +15,7 @@ LAUNCHER  =
 
 program = main
 
-source = main.cu cpu.cu
-
-obj = $(source:.cu=.o)
+obj = main.o cpu.o
 
 #===============================================================================
 # Sets Flags
@@ -48,7 +46,10 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu kernel.cu matrix.h LDPC.h
+main.o: main.cu kernel.cu matrix.h LDPC.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+cpu.o: cpu.cpp LDPC.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

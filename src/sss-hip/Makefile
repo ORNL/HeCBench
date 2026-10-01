@@ -6,8 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-GSL       = /path/to/GSL
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -24,10 +23,10 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I$(GSL)/include
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../sss-cuda
 
 # Linker Flags
-LDFLAGS = -L$(GSL)/lib -lgsl
+LDFLAGS =
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
@@ -46,12 +45,16 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu DPmixGGM.cpp  DPmixGGM_Lists.cpp  DPmixGGM_SSSmoves.cpp  \
-           kernels.cu graph.cpp  gwish.cpp  utilities.cpp Makefile
+SHARED_SRC = ../sss-cuda/DPmixGGM.cpp ../sss-cuda/DPmixGGM_Lists.cpp \
+             ../sss-cuda/graph.cpp ../sss-cuda/gwish.cpp \
+             ../sss-cuda/utilities.cpp ../sss-cuda/graph.h \
+             ../sss-cuda/gsl_compat.h ../sss-cuda/kernels.cu
+
+%.o: %.cu DPmixGGM_SSSmoves.cpp $(SHARED_SRC) Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj) RES/f9_n150_p50_modes_GPU.txt
 
 run: $(program)
-	$(LAUNCHER) GSL_RNG_SEED=123 ./$(program) f9_n150_p50
+	$(LAUNCHER) ./$(program) f9_n150_p50

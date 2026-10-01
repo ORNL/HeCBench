@@ -7,7 +7,7 @@ CC          = hipcc
 OPTIMIZE    = yes
 DEBUG       = no
 DMND_PATH   = ../diamond-sycl
-LAUNCHER    =
+LAUNCHER    ?=
 
 #===============================================================================
 # Program name & source code list

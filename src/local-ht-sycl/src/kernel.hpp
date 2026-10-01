@@ -31,18 +31,12 @@ inline T atomicAdd(T *addr, T val) {
   return atm.fetch_add(val);
 }
 
-inline int atomicCAS(int *addr, int expected, int desired) {
-  sycl::atomic_ref<int, sycl::memory_order::relaxed, sycl::memory_scope::device,
-                   sycl::access::address_space::generic_space> atm(*addr);
-  atm.compare_exchange_strong(expected, desired);
-  return expected;
-}
-
 // Claim a hash slot by atomically installing a pointer into an empty (null) slot.
 // Returns the previous pointer value (null if the claim succeeded).
-inline uintptr_t atomicCAS_ptr(char **addr, uintptr_t expected, uintptr_t desired) {
+inline uintptr_t atomicCAS(char **addr, uintptr_t expected, uintptr_t desired) {
   auto *word = reinterpret_cast<uintptr_t *>(addr);
-  sycl::atomic_ref<uintptr_t, sycl::memory_order::relaxed, sycl::memory_scope::device,
+  sycl::atomic_ref<uintptr_t, sycl::memory_order::relaxed,
+                   sycl::memory_scope::device,
                    sycl::access::address_space::generic_space> atm(*word);
   atm.compare_exchange_strong(expected, desired);
   return expected;
@@ -228,8 +222,8 @@ inline loc_ht& ht_get_atomic(loc_ht* thread_ht, cstr_type kmer_key, uint32_t max
   unsigned hash_val = MurmurHashAligned2(kmer_key, max_size);
   unsigned orig_hash = hash_val;
   while(true){
-    uintptr_t prev = atomicCAS_ptr(&thread_ht[hash_val].key.start_ptr,
-                                   (uintptr_t)0, (uintptr_t)kmer_key.start_ptr);
+    uintptr_t prev = atomicCAS(&thread_ht[hash_val].key.start_ptr,
+                               (uintptr_t)0, (uintptr_t)kmer_key.start_ptr);
     if(prev == 0){ // we claimed an empty slot
       thread_ht[hash_val].key.length = kmer_key.length;
       return thread_ht[hash_val];

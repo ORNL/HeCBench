@@ -9,7 +9,8 @@
 #include <vector>
 
 #include <cublasLt.h>
-#include <cuda_fp16.h>
+//#include <cuda_fp16.h>
+#include <cuda_bf16.h>
 #include <cuda_fp8.h>
 #include <cuda_runtime_api.h>
 
@@ -34,7 +35,7 @@ inline void checkCublasStatus(cublasStatus_t status) {
 // A and B are FP8 (E4M3), one byte per element along K (not packed).
 // Scales are E8M0 (UE8M0), one scale per 32-element block along K
 // (SCALE_BLOCK_SIZE = 32), matching the OCP microscaling (MX) format.
-// Output D is FP16.
+// Output D is BF16.
 struct Mxfp8TestBench {
     // SCALE_BLOCK_SIZE = 32 for mxfp8 (one UE8M0 scale per 32 FP8 elements along K)
     static constexpr int SCALE_BLOCK_SIZE = 32;
@@ -57,7 +58,7 @@ struct Mxfp8TestBench {
         checkCudaStatus(cudaMalloc(&Bdev, bBytes));
         checkCudaStatus(cudaMalloc(&AscaleDev, aScaleBytes));
         checkCudaStatus(cudaMalloc(&BscaleDev, bScaleBytes));
-        checkCudaStatus(cudaMalloc(reinterpret_cast<void**>(&Ddev), dElems * sizeof(__half)));
+        checkCudaStatus(cudaMalloc(reinterpret_cast<void**>(&Ddev), dElems * sizeof(__nv_bfloat16)));
         checkCudaStatus(cudaMalloc(&workspace, workspaceSize));
         checkCudaStatus(cudaStreamCreate(&stream));
 
@@ -110,8 +111,8 @@ struct Mxfp8TestBench {
     //   D = alpha * (A*a_scale) @ (B*b_scale)^T + beta * C
     // equals alpha * (a_elem*a_scale) * (b_elem*b_scale) * K (with beta = 0).
     bool verify(double relTol = 1e-2) {
-        std::vector<__half> Dh(dElems);
-        checkCudaStatus(cudaMemcpy(Dh.data(), Ddev, dElems * sizeof(__half), cudaMemcpyDeviceToHost));
+        std::vector<__nv_bfloat16> Dh(dElems);
+        checkCudaStatus(cudaMemcpy(Dh.data(), Ddev, dElems * sizeof(__nv_bfloat16), cudaMemcpyDeviceToHost));
 
         float aElem  = decodeE4M3(FP8_FILL);
         float bElem  = decodeE4M3(FP8_FILL);
@@ -122,7 +123,7 @@ struct Mxfp8TestBench {
 
         double maxErr = 0.0;
         for (size_t i = 0; i < dElems; i++) {
-            double got = (double)__half2float(Dh[i]);
+            double got = (double)__bfloat162float(Dh[i]);
             maxErr = std::max(maxErr, std::fabs(got - expected));
         }
         bool ok = maxErr <= relTol * (std::fabs(expected) + 1.0);
@@ -137,7 +138,7 @@ struct Mxfp8TestBench {
 
     void *Adev = nullptr, *Bdev = nullptr;           // FP8 (E4M3)
     void *AscaleDev = nullptr, *BscaleDev = nullptr;  // UE8M0 block scales
-    __half *Ddev = nullptr;                           // FP16 output
+    __nv_bfloat16 *Ddev = nullptr;                    // BF16 output
     void *workspace = nullptr;
     cudaStream_t stream;
     cublasLtHandle_t ltHandle;

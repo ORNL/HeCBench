@@ -133,6 +133,15 @@ void *read_problem_thread(void *argument)
 
     if(flag != 3)break;
 
+    // reject invalid node ids as early as possible; negative ids would
+    // later map to an out-of-bounds grid index.
+    if(u < 0 || v < 0)
+    {
+      fprintf(stderr, "invalid record %lld in %s: u=%d, v=%d\n",
+          idx, arg->path.c_str(), u, v);
+      exit(1);
+    }
+
     if(u + 1 > max_m)max_m = u + 1;
     if(v + 1 > max_n)max_n = v + 1;
 
@@ -190,7 +199,17 @@ mf_problem read_problem(string path)
       return prob;
     }
     fseek(fptr, 0L, SEEK_END);
-    prob.nnz = ftell(fptr)/12;
+    long file_size = ftell(fptr);
+    // each record is (int u, int v, float rate) = 12 bytes
+    if(file_size <= 0 || file_size % 12 != 0)
+    {
+      fprintf(stderr,
+          "file %s has invalid size %ld (must be a positive multiple of 12)\n",
+          path.c_str(), file_size);
+      fclose(fptr);
+      exit(1);
+    }
+    prob.nnz = file_size/12;
     printf("prob.nnz = %lld\n", prob.nnz);
 
     mf_node *R;
@@ -209,6 +228,15 @@ mf_problem read_problem(string path)
       flag += fread(&v, sizeof(int), 1, fptr); 
       flag += fread(&r, sizeof(float), 1, fptr); 
       if(flag != 3)break;
+
+      // reject invalid node ids as early as possible; negative ids would
+      // later map to an out-of-bounds grid index.
+      if(u < 0 || v < 0)
+      {
+        fprintf(stderr, "invalid record %lld in %s: u=%d, v=%d\n",
+            idx, path.c_str(), u, v);
+        exit(1);
+      }
 
       if(u + 1 > prob.m)prob.m = u + 1;
       if(v + 1 > prob.n)prob.n = v + 1;
@@ -246,6 +274,7 @@ mf_problem read_problem(string path)
     }
 
     //get offset_list
+    offset_list[0] = 0;
     for(int i = 1;i < num_files;i++)
     {
       offset_list[i] = offset_list[i-1] + size_list[i-1];
@@ -320,6 +349,15 @@ void grid_problem(mf_problem* prob)
   {
     int tmp_u = prob->R[i].u;
     int tmp_v = prob->R[i].v;
+    // guard against out-of-bounds indexing: negative or out-of-range
+    // node ids would map to an invalid grid id and corrupt memory.
+    if(tmp_u < 0 || tmp_u >= prob->m || tmp_v < 0 || tmp_v >= prob->n)
+    {
+      fprintf(stderr,
+          "invalid record %lld: u=%d (m=%d), v=%d (n=%d)\n",
+          i, tmp_u, prob->m, tmp_v, prob->n);
+      exit(1);
+    }
     gridSize[get_grid_id(tmp_u, tmp_v)] ++;
   }
 

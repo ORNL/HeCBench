@@ -49,9 +49,11 @@ void ptrChasingKernel(struct LatencyNode *data,
     p = p->next;
   }
 
-  // avoid compiler optimization
+  // Avoid compiler optimization: the store is never reached, but the compiler
+  // cannot prove it and therefore has to keep the pointer chase above. An
+  // assert() would not do, as it is compiled out when NDEBUG is defined.
   if (p == nullptr) {
-    assert(0); //__trap();
+    data[0].next = nullptr;
   }
 }
 

@@ -7,7 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -52,7 +52,7 @@ $(program): $(obj) iso2dfd.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj) *.bin *.txt
+	rm -rf $(program) $(obj) *.bin error_diff.txt
 
 run: $(program)
 	$(LAUNCHER) ./$(program) 2048 2048 1000

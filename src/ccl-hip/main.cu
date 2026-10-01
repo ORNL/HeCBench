@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include <hip/hip_runtime.h>
+#include <hip/hip_bf16.h>
 #include <rccl/rccl.h>
 #include <mpi.h>
 
@@ -36,6 +37,87 @@
   }                                                 \
 } while(0)
 
+
+// map a host/device data type to its NCCL descriptor
+template <typename T> struct ccl_traits;
+
+template <> struct ccl_traits<float> {
+  static constexpr ncclDataType_t dtype = ncclFloat;
+  static const char* name() { return "float32"; }
+  static float to_float(float v) { return v; }
+  static float from_float(float v) { return v; }
+};
+
+template <> struct ccl_traits<__hip_bfloat16> {
+  static constexpr ncclDataType_t dtype = ncclBfloat16;
+  static const char* name() { return "bfloat16"; }
+  static float to_float(__hip_bfloat16 v) { return __bfloat162float(v); }
+  static __hip_bfloat16 from_float(float v) { return __float2bfloat16(v); }
+};
+
+template <typename T>
+void run(ncclComm_t comm, hipStream_t s, int mpi_rank, int mpi_size, int repeat)
+{
+  if (mpi_rank == 0)
+    printf("\n=== Data type: %s ===\n", ccl_traits<T>::name());
+
+  T *sendbuff, *recvbuff;
+  T *h_sendbuff, *h_recvbuff;
+  double start_time, stop_time, elapsed_time;
+
+  for (int size = 1024*1024; size <= 1000 * 1024 * 1024; size = size * 10) {
+
+    h_sendbuff = (T*) malloc (size * sizeof(T));
+    for (int i = 0; i < size; i++) h_sendbuff[i] = ccl_traits<T>::from_float(1.f);
+
+    h_recvbuff = (T*) malloc (size * sizeof(T));
+
+    GPUCHECK(hipMalloc(&sendbuff, size * sizeof(T)));
+    GPUCHECK(hipMemcpy(sendbuff, h_sendbuff, size * sizeof(T), hipMemcpyHostToDevice));
+    GPUCHECK(hipMalloc(&recvbuff, size * sizeof(T)));
+
+    start_time = MPI_Wtime();
+
+    //communicating using NCCL
+    for (int i = 0; i < repeat; i++) {
+      NCCLCHECK(ncclAllReduce((const void*)sendbuff, (void*)recvbuff, size,
+                              ccl_traits<T>::dtype, ncclSum, comm, s));
+    }
+
+    //completing NCCL operation by synchronizing on the HIP stream
+    GPUCHECK(hipStreamSynchronize(s));
+    stop_time = MPI_Wtime();
+    elapsed_time = stop_time - start_time;
+
+    if (mpi_rank == 0) {
+      long int num_B = sizeof(T) * size * mpi_size;
+      long int B_in_GB = 1 << 30;
+      double num_GB = (double)num_B / (double)B_in_GB;
+      double avg_time_per_transfer = elapsed_time / repeat;
+
+      printf("Transfer size (B): %10li, Average Transfer Time (s): %15.9f, Bandwidth (GB/s): %15.9f\n",
+             num_B, avg_time_per_transfer, num_GB/avg_time_per_transfer );
+    }
+
+    GPUCHECK(hipMemcpy(h_recvbuff, recvbuff, size * sizeof(T), hipMemcpyDeviceToHost));
+
+    // HIP cleanup
+    GPUCHECK(hipFree(sendbuff));
+    GPUCHECK(hipFree(recvbuff));
+
+    bool ok = true;
+    for (int i = 0; i < size; i++) {
+      if (ccl_traits<T>::to_float(h_recvbuff[i]) != float(mpi_size)) {
+         ok = false;
+         break;
+      }
+    }
+    free(h_sendbuff);
+    free(h_recvbuff);
+
+    printf("MPI Rank %d: %s\n", mpi_rank, ok ? "PASS" : "FAIL");
+  }
+}
 
 int main(int argc, char* argv[])
 {
@@ -90,62 +172,8 @@ int main(int argc, char* argv[])
   // each process joins the distributed NCCL communicator
   NCCLCHECK(ncclCommInitRank(&comm, mpi_size, id, mpi_rank));
 
-  float *sendbuff, *recvbuff;
-  float *h_sendbuff, *h_recvbuff;
-  double start_time, stop_time, elapsed_time;
-
-  for (int size = 1024*1024; size <= 1000 * 1024 * 1024; size = size * 10) {
-
-    h_sendbuff = (float*) malloc (size * sizeof(float));
-    for (int i = 0; i < size; i++) h_sendbuff[i] = 1;
-
-    h_recvbuff = (float*) malloc (size * sizeof(float));
-
-    GPUCHECK(hipMalloc(&sendbuff, size * sizeof(float)));
-    GPUCHECK(hipMemcpy(sendbuff, h_sendbuff, size * sizeof(float), hipMemcpyHostToDevice));
-    GPUCHECK(hipMalloc(&recvbuff, size * sizeof(float)));
-
-    start_time = MPI_Wtime();
-
-    //communicating using NCCL
-    for (int i = 0; i < repeat; i++) {
-      NCCLCHECK(ncclAllReduce((const void*)sendbuff, (void*)recvbuff, size,
-                              ncclFloat, ncclSum, comm, s));
-    }
-
-    //completing NCCL operation by synchronizing on the HIP stream
-    GPUCHECK(hipStreamSynchronize(s));
-    stop_time = MPI_Wtime();
-    elapsed_time = stop_time - start_time;
-
-    if (mpi_rank == 0) {
-      long int num_B = sizeof(float) * size * mpi_size;
-      long int B_in_GB = 1 << 30;
-      double num_GB = (double)num_B / (double)B_in_GB;
-      double avg_time_per_transfer = elapsed_time / repeat;
-
-      printf("Transfer size (B): %10li, Average Transfer Time (s): %15.9f, Bandwidth (GB/s): %15.9f\n",
-             num_B, avg_time_per_transfer, num_GB/avg_time_per_transfer );
-    }
-
-    GPUCHECK(hipMemcpy(h_recvbuff, recvbuff, size * sizeof(float), hipMemcpyDeviceToHost));
-
-    // HIP cleanup
-    GPUCHECK(hipFree(sendbuff));
-    GPUCHECK(hipFree(recvbuff));
-
-    bool ok = true;
-    for (int i = 0; i < size; i++) {
-      if (h_recvbuff[i] != float(mpi_size)) {
-         ok = false;
-         break;
-      }
-    }
-    free(h_sendbuff);
-    free(h_recvbuff);
-
-    printf("MPI Rank %d: %s\n", mpi_rank, ok ? "PASS" : "FAIL");
-  }
+  run<float>(comm, s, mpi_rank, mpi_size, repeat);
+  run<__hip_bfloat16>(comm, s, mpi_rank, mpi_size, repeat);
 
   // NCCL cleanup
   NCCLCHECK(ncclCommFinalize(comm));

@@ -8,7 +8,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
 ARCH      = gfx906
-LAUNCHER  =
+LAUNCHER  ?=
 
 #===============================================================================
 # Program name & source code list
@@ -64,4 +64,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	$(LAUNCHER) ./$(program) ../inverse2kj-sycl/coord_in.txt 100000
+	$(LAUNCHER) ./$(program) ../inversek2j-sycl/coord_in.txt 100000

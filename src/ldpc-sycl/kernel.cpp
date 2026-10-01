@@ -19,7 +19,26 @@ Revision:  08/01/2013
 #include "LDPC.h"
 
 
+// phi(x) = log((e^x + 1) / (e^x - 1)) = log1p(2 / (e^x - 1)).
+// phi is its own inverse, so the log-SPA check-node magnitude is
+// |R_i| = phi(sum over j != i of phi(|Q_j|)). Clamping the argument away from
+// zero keeps phi(0) from returning infinity and caps |R| at about 14.5.
+inline float phi(float x)
+{
+  return sycl::log1p(2.0f / sycl::expm1(sycl::fmax(x, 1e-6f)));
+}
+
+// MinSum selects the check-node update rule: normalized min-sum when true,
+// log-SPA when false. It is a template parameter rather than a macro so that
+// both rules are compiled into the same binary and can be run in turn.
+//
+// The log-SPA branch needs every phi(|Q_j|) again in the second recursion and
+// so holds them in a small private array. Its loops are bounded by a
+// compile-time constant rather than by s, which is what keeps that array in
+// registers; with a runtime bound the index forces it into local memory.
+
 // Kernel 1
+template <bool MinSum>
 void ldpc_cnp_kernel_1st_iter(
     const float * dev_llr,
     float * dev_dt,
@@ -52,24 +71,30 @@ void ldpc_cnp_kernel_1st_iter(
   int size_R_CW = ROW * BLK_COL;  // size of one R/dt CW block
   int shift_t;
 
-  // For 2-min algorithm.
   char Q_sign = 0;
   char sq;
   float Q, Q_abs;
   float R_temp;
 
   float sign = 1.0f;
+
+  // For 2-min algorithm.
   float rmin1 = 1000.0f;
   float rmin2 = 1000.0f;
   char idx_min = 0;
+
+  // For log-SPA.
+  float phi_sum = 0.0f;
+  float phi_q[NON_EMPTY_ELMENT];
 
   h_element h_element_t;
   int s = dev_h_element_count1[iBlkRow];
   offsetR = size_R_CW * iCurrentCW + iBlkRow * Z + iSubRow;
 
   // The 1st recursion
-  for(int i = 0; i < s; i++) // loop through all the ZxZ sub-blocks in a row
+  for(int i = 0; i < (MinSum ? s : NON_EMPTY_ELMENT); i++) // loop through all the ZxZ sub-blocks in a row
   {
+    if (i >= s) break;
     h_element_t = dev_h_compact1[i * H_COMPACT1_ROW + iBlkRow];
 
     iBlkCol = h_element_t.y;
@@ -88,23 +113,35 @@ void ldpc_cnp_kernel_1st_iter(
     sign = sign * (1 - sq * 2);
     Q_sign |= sq << i;
 
-    if (Q_abs < rmin1)
+    if constexpr (MinSum)
     {
-      rmin2 = rmin1;
-      rmin1 = Q_abs;
-      idx_min = i;
-    } else if (Q_abs < rmin2)
+      if (Q_abs < rmin1)
+      {
+        rmin2 = rmin1;
+        rmin1 = Q_abs;
+        idx_min = i;
+      } else if (Q_abs < rmin2)
+      {
+        rmin2 = Q_abs;
+      }
+    }
+    else
     {
-      rmin2 = Q_abs;
+      phi_q[i] = phi(Q_abs);
+      phi_sum += phi_q[i];
     }
   }
 
   // The 2nd recursion
-  for(int i = 0; i < s; i ++)
+  for(int i = 0; i < (MinSum ? s : NON_EMPTY_ELMENT); i ++)
   {
-    // v0: Best performance so far. 0.75f is the value of alpha.
+    if (i >= s) break;
     sq = 1 - 2 * ((Q_sign >> i) & 0x01);
-    R_temp = 0.75f * sign * sq * (i != idx_min ? rmin1 : rmin2);
+    if constexpr (MinSum)
+      // v0: Best performance so far. 0.75f is the value of alpha.
+      R_temp = 0.75f * sign * sq * (i != idx_min ? rmin1 : rmin2);
+    else
+      R_temp = sign * sq * phi(phi_sum - phi_q[i]);
 
     // write results to global memory
     h_element_t = dev_h_compact1[i * H_COMPACT1_ROW + iBlkRow];
@@ -115,6 +152,7 @@ void ldpc_cnp_kernel_1st_iter(
 }
 
 // Kernel_1
+template <bool MinSum>
 void ldpc_cnp_kernel(
     const float * dev_llr,
     float * dev_dt,
@@ -154,16 +192,21 @@ void ldpc_cnp_kernel(
   //float R1[NON_EMPTY_ELMENT];
   int shift_t;
 
-  // For 2-min algorithm.
   char Q_sign = 0;
   char sq;
   float Q, Q_abs;
   float R_temp;
 
   float sign = 1.0f;
+
+  // For 2-min algorithm.
   float rmin1 = 1000.0f;
   float rmin2 = 1000.0f;
   char idx_min = 0;
+
+  // For log-SPA.
+  float phi_sum = 0.0f;
+  float phi_q[NON_EMPTY_ELMENT];
 
   h_element h_element_t;
   int s = dev_h_element_count1[iBlkRow];
@@ -171,8 +214,9 @@ void ldpc_cnp_kernel(
 
   // The 1st recursion
   // TODO: Is s always the same? If so we can unroll the loop with #pragma unroll
-  for(int i = 0; i < s; i++) // loop through all the ZxZ sub-blocks in a row
+  for(int i = 0; i < (MinSum ? s : NON_EMPTY_ELMENT); i++) // loop through all the ZxZ sub-blocks in a row
   {
+    if (i >= s) break;
     h_element_t = dev_h_compact1[i * H_COMPACT1_ROW + iBlkRow];
 
     iBlkCol = h_element_t.y;
@@ -194,14 +238,22 @@ void ldpc_cnp_kernel(
     sign = sign * (1 - sq * 2);
     Q_sign |= sq << i;
 
-    if (Q_abs < rmin1)
+    if constexpr (MinSum)
     {
-      rmin2 = rmin1;
-      rmin1 = Q_abs;
-      idx_min = i;
-    } else if (Q_abs < rmin2)
+      if (Q_abs < rmin1)
+      {
+        rmin2 = rmin1;
+        rmin1 = Q_abs;
+        idx_min = i;
+      } else if (Q_abs < rmin2)
+      {
+        rmin2 = Q_abs;
+      }
+    }
+    else
     {
-      rmin2 = Q_abs;
+      phi_q[i] = phi(Q_abs);
+      phi_sum += phi_q[i];
     }
   }
 
@@ -209,10 +261,14 @@ void ldpc_cnp_kernel(
 
   // The 2nd recursion
   //#pragma unroll
-  for(int i = 0; i < s; i ++)
+  for(int i = 0; i < (MinSum ? s : NON_EMPTY_ELMENT); i ++)
   {
+    if (i >= s) break;
     sq = 1 - 2 * ((Q_sign >> i) & 0x01);
-    R_temp = 0.75f * sign * sq * (i != idx_min ? rmin1 : rmin2);
+    if constexpr (MinSum)
+      R_temp = 0.75f * sign * sq * (i != idx_min ? rmin1 : rmin2);
+    else
+      R_temp = sign * sq * phi(phi_sum - phi_q[i]);
 
     // write results to global memory
     h_element_t = dev_h_compact1[i * H_COMPACT1_ROW + iBlkRow];

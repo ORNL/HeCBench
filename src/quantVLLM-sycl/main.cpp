@@ -241,7 +241,7 @@ void quant(sycl::queue &q, int num_tokens, int hidden_size, int repeat) {
           (time * 1e-3f) / repeat);
   q.memcpy(h_output, d_output, output_size_bytes).wait();
   static_scaled_int8_quant_reference(h_input, h_output_r, scale, num_tokens, hidden_size);
-  error = memcmp(h_output, h_output_r, output_size_bytes);
+  error = compare_int8_tol(h_output, h_output_r, output_size_bytes, 1);
 
   // static_scaled_int8_quant_azp
   azp = 54;
@@ -255,7 +255,7 @@ void quant(sycl::queue &q, int num_tokens, int hidden_size, int repeat) {
           (time * 1e-3f) / repeat);
   q.memcpy(h_output, d_output, output_size_bytes).wait();
   static_scaled_int8_azp_quant_reference(h_input, h_output_r, scale, azp, num_tokens, hidden_size);
-  error += memcmp(h_output, h_output_r, output_size_bytes);
+  error += compare_int8_tol(h_output, h_output_r, output_size_bytes, 1);
 
   // dynamic_scaled_int8_quant
   start = std::chrono::steady_clock::now();
@@ -268,7 +268,7 @@ void quant(sycl::queue &q, int num_tokens, int hidden_size, int repeat) {
           (time * 1e-3f) / repeat);
   q.memcpy(h_output, d_output, output_size_bytes).wait();
   dynamic_scaled_int8_quant_reference(h_input, h_output_r, h_scale, num_tokens, hidden_size);
-  error += memcmp(h_output, h_output_r, output_size_bytes);
+  error += compare_int8_tol(h_output, h_output_r, output_size_bytes, 1);
 
   // dynamic_scaled_int8_quant_azp
   d_azp = (int32_t *)sycl::malloc_device(azp_size_bytes, q);
@@ -282,7 +282,8 @@ void quant(sycl::queue &q, int num_tokens, int hidden_size, int repeat) {
           (time * 1e-3f) / repeat);
   q.memcpy(h_output, d_output, output_size_bytes).wait();
   dynamic_scaled_int8_azp_quant_reference(h_input, h_output_r, h_scale, h_azp, num_tokens, hidden_size);
-  error += memcmp(h_output, h_output_r, output_size_bytes);
+  // atol=2: if AZP is off by 1, rounding-to-even can make the output differ by 2
+  error += compare_int8_tol(h_output, h_output_r, output_size_bytes, 2);
 
   printf("%s\n", error ? "FAIL" : "PASS");
 

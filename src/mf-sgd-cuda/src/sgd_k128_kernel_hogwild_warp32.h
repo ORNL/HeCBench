@@ -38,7 +38,7 @@ __global__ void sgd_k128_kernel_hogwild_warp32_lrate(
         long long origin = (long long)(LCG_random(state+wid)*nnz);
         start_id = origin%nnz;
       }
-      start_id = __shfl(start_id, 0);
+      start_id = __shfl_sync(0xffffffff, start_id, 0);
 
       for(int i = 0;i < update_vector_size;i++)
       {
@@ -67,12 +67,12 @@ __global__ void sgd_k128_kernel_hogwild_warp32_lrate(
         float tmp_product = tmp_p1*tmp_q1 + tmp_p2*tmp_q2 + tmp_p3*tmp_q3 + tmp_p4*tmp_q4;
 
         //get dot product.
-        tmp_product += __shfl_down(tmp_product, 16);
-        tmp_product += __shfl_down(tmp_product, 8);
-        tmp_product += __shfl_down(tmp_product, 4);
-        tmp_product += __shfl_down(tmp_product, 2);
-        tmp_product += __shfl_down(tmp_product, 1);
-        tmp_product = __shfl(tmp_product,0);
+        tmp_product += __shfl_down_sync(0xffffffff, tmp_product, 16);
+        tmp_product += __shfl_down_sync(0xffffffff, tmp_product, 8);
+        tmp_product += __shfl_down_sync(0xffffffff, tmp_product, 4);
+        tmp_product += __shfl_down_sync(0xffffffff, tmp_product, 2);
+        tmp_product += __shfl_down_sync(0xffffffff, tmp_product, 1);
+        tmp_product = __shfl_sync(0xffffffff, tmp_product,0);
 
         float ruv = r - tmp_product;
 

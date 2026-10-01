@@ -65,7 +65,7 @@ void write_vector(const std::string& filename,
 
   typedef typename VectorType::ScalarType ScalarType;
 
-  const std::vector<ScalarType>& coefs = vec.coefs;
+  const auto& coefs = vec.coefs;
   for(int p=0; p<numprocs; ++p) {
     if (p == myproc) {
       if (p == 0) {
@@ -95,7 +95,7 @@ void sum_into_vector(size_t num_indices,
   GlobalOrdinal first = vec.startIndex;
   GlobalOrdinal last = first + vec.local_size - 1;
 
-  std::vector<Scalar>& vec_coefs = vec.coefs;
+  auto& vec_coefs = vec.coefs;
 
   for(size_t i=0; i<num_indices; ++i) {
     if (indices[i] < first || indices[i] > last) continue;

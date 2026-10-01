@@ -29,13 +29,18 @@
 #pragma once
 
 #include <cstdio>
+#include <cstdint>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
 #include <stdexcept>
 #include <vector>
 #include <functional>
 
 #include <cublasLt.h>
 #include <cuda_fp8.h>
-#include <cuda_fp16.h>
+//#include <cuda_fp16.h>
+#include <cuda_bf16.h>
 #include <cuda_runtime_api.h>
 
 inline void checkCudaStatus(cudaError_t status) {
@@ -50,6 +55,19 @@ inline void checkCublasStatus(cublasStatus_t status) {
         printf("cuBLAS API failed with status %d", status);
         throw std::logic_error("cuBLAS API failed");
     }
+}
+
+// Encode a float into an 8-bit E4M3 code (NVIDIA uses the OCP-style E4M3).
+inline uint8_t encodeE4M3(float v) {
+    __nv_fp8_e4m3 t(v);
+    return (uint8_t)t.__x;
+}
+
+// Decode an 8-bit E4M3 code back to float.
+inline float decodeE4M3(uint8_t b) {
+    __nv_fp8_e4m3 t(0.0f);
+    t.__x = (__nv_fp8_storage_t)b;
+    return float(t);
 }
 
 template <typename InType, typename CType, typename OutType, typename ComputeType>
@@ -103,10 +121,34 @@ struct TestBench {
         checkCudaStatus(cudaStreamDestroy(stream));
     }
 
+    // Uniform value used for the FP8 A and B inputs so the exact GEMM result is
+    // known. 1.0 is exactly representable in E4M3; with all scales = 1 and
+    // beta = 0 every output element equals FILL_VALUE^2 * K, which the BF16
+    // output represents exactly for every benchmark shape.
+    static constexpr float FILL_VALUE = 1.0f;
+
     void fillData() {
-        for (int i = 0; i < m * k * N; i++) Ahost[i] = InType(i);
-        for (int i = 0; i < n * k * N; i++) Bhost[i] = InType(i);
-        for (int i = 0; i < m * n * N; i++) Chost[i] = CType(-i);
+        uint8_t aByte = encodeE4M3(FILL_VALUE);
+        uint8_t *ap = reinterpret_cast<uint8_t*>(Ahost.data());
+        uint8_t *bp = reinterpret_cast<uint8_t*>(Bhost.data());
+        for (int i = 0; i < m * k * N; i++) ap[i] = aByte;
+        for (int i = 0; i < n * k * N; i++) bp[i] = aByte;
+        // beta = 0, so C is unused; keep it zeroed.
+        for (int i = 0; i < m * n * N; i++) Chost[i] = CType(0.0f);
+    }
+
+    // CPU reference check. With uniform inputs, alpha = 1, beta = 0 and all
+    // per-tensor input scales = 1, every output element equals FILL_VALUE^2 * K.
+    // The output D is BF16.
+    bool verify(double relTol = 1e-2) {
+        double expected = (double)FILL_VALUE * (double)FILL_VALUE * (double)k;
+        double maxErr = 0.0;
+        for (int i = 0; i < m * n * N; i++)
+            maxErr = std::max(maxErr, std::fabs((double)__bfloat162float(Dhost[i]) - expected));
+        bool ok = maxErr <= relTol * (std::fabs(expected) + 1.0);
+        printf("Verification: expected %.6g, max abs error %.4g -> %s\n",
+               expected, maxErr, ok ? "PASS" : "FAIL");
+        return ok;
     }
 
     void copyDataToDevice() {
@@ -155,17 +197,3 @@ struct TestBench {
     ComputeType AscaleHost, BscaleHost, CscaleHost, DscaleHost, DamaxHost;
     ComputeType *AscaleDev, *BscaleDev, *CscaleDev, *DscaleDev, *DamaxDev;
 };
-
-template <>
-inline void TestBench<__half, __half,  __half, float>::fillData() {
-    for (int i = 0; i < m * k * N; i++) Ahost[i] = __float2half_rn(i);
-    for (int i = 0; i < n * k * N; i++) Bhost[i] = __float2half_rn(i);
-    for (int i = 0; i < n * k * N; i++) Chost[i] = __float2half_rn(-i);
-}
-
-template <>
-inline void TestBench<__half, __half, __half, cuComplex>::fillData() {
-    for (int i = 0; i < m * k * N; i++) Ahost[i] = __float2half_rn(i/100.);
-    for (int i = 0; i < n * k * N; i++) Bhost[i] = __float2half_rn(i/100.);
-    for (int i = 0; i < n * k * N; i++) Chost[i] = __float2half_rn(-i/100.);
-}

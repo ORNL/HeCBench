@@ -728,7 +728,7 @@ choiceReorder(int * vFanin0New, int * vFanin1New, int * vResynInd, int * vChoice
     //     }
     // }
 
-    auto cpuSequentialStartTime = clock();
+    auto cpuSequentialStartTime = hrClock();
 
     // initialize the new nodes as deleted
     for (int i = nObjs; i < nBufferLen; i++)
@@ -959,7 +959,7 @@ choiceReorder(int * vFanin0New, int * vFanin1New, int * vResynInd, int * vChoice
         vhOutsNew[i] = lit;
     }
     printf("Reordered network new nObjs: %d, original nObjs: %d\n", nObjsNew, nObjs);
-    printf(" ** CPU sequential time: %.2lf sec\n", (clock() - cpuSequentialStartTime) / (double) CLOCKS_PER_SEC);
+    printf(" ** CPU sequential time: %.2lf sec\n", (hrClock() - cpuSequentialStartTime) / (double) NS_PER_SEC);
 
     // free(vhFanin0);
     // free(vhFanin1);
@@ -992,7 +992,7 @@ refactorPerform(bool fUseZeros, int cutSize,
                 const int * d_pFanin0, const int * d_pFanin1, const int * d_pOuts, 
                 const int * d_pNumFanouts, const int * d_pLevel, 
                 int * pOuts, int * pNumFanouts) {
-    auto startTime = clock();
+    auto startTime = hrClock();
 
     int * vCutTable, * vCutSizes, * vNumSaved;
     int * vIdxSeq;
@@ -1024,10 +1024,10 @@ refactorPerform(bool fUseZeros, int cutSize,
     );
     gpuErrchk( hipPeekAtLastError() );
     gpuErrchk( hipDeviceSynchronize() );
-    // auto printTimeStart = clock();
+    // auto printTimeStart = hrClock();
     // printMffc<<<1, 1>>>(vCutTable, vCutSizes, vNumSaved, d_pFanin0, d_pFanin1, nNodes, nPIs, nPOs);
     // hipDeviceSynchronize();
-    // auto printTime = clock() - printTimeStart;
+    // auto printTime = hrClock() - printTimeStart;
 
     // filter out cones with too small size
     thrust::sequence(thrust::device, vIdxSeq, vIdxSeq + nObjs);
@@ -1080,10 +1080,10 @@ refactorPerform(bool fUseZeros, int cutSize,
         );
         gpuErrchk( hipPeekAtLastError() );
         gpuErrchk( hipDeviceSynchronize() );
-        // printTimeStart = clock();
+        // printTimeStart = hrClock();
         // printMffc<<<1, 1>>>(vCutTable, vCutSizes, vNumSaved, d_pFanin0, d_pFanin1, nNodes, nPIs, nPOs);
         // hipDeviceSynchronize();
-        // printTime += clock() - printTimeStart;
+        // printTime += hrClock() - printTimeStart;
     }
     
     // allocate truth table for cuts to be resynthesized
@@ -1103,11 +1103,11 @@ refactorPerform(bool fUseZeros, int cutSize,
     hipMalloc(&vTruthElem, cutSize * dUtils::TruthWordNum(cutSize) * sizeof(unsigned));
 
     // hipDeviceSynchronize();
-    // printTimeStart = clock();
+    // printTimeStart = hrClock();
     // printMffc<<<1, 1>>>(vCutTable, vCutSizes, vNumSaved, d_pFanin0, d_pFanin1, nNodes, nPIs, nPOs);
     // hipDeviceSynchronize();
-    // printTime += clock() - printTimeStart;
-    // printf("******print time = %.2lf\n", printTime / (double) CLOCKS_PER_SEC);
+    // printTime += hrClock() - printTimeStart;
+    // printf("******print time = %.2lf\n", printTime / (double) NS_PER_SEC);
 
     // gather all internal nodes in the cone (post order), and compute truth table
     Aig::getElemTruthTable<<<1, 1>>>(vTruthElem, cutSize);
@@ -1148,7 +1148,7 @@ refactorPerform(bool fUseZeros, int cutSize,
 
     // isop & algebraic factoring
     printf("Start resyn\n");
-    auto resynStartTime = clock();
+    auto resynStartTime = hrClock();
     // resynCut<<<1, 1>>>(
     resynCut<<<NUM_BLOCKS(nResyn, THREAD_PER_BLOCK), THREAD_PER_BLOCK>>>(
         vResynInd, vCutTable, vCutSizes, vNumSaved, 
@@ -1158,7 +1158,7 @@ refactorPerform(bool fUseZeros, int cutSize,
     );
     gpuChkStackOverflow( hipPeekAtLastError() );
     gpuErrchk( hipDeviceSynchronize() );
-    printf("Finished resyn, time = %.2lf secs\n", (clock() - resynStartTime) / (double) CLOCKS_PER_SEC);
+    printf("Finished resyn, time = %.2lf secs\n", (hrClock() - resynStartTime) / (double) NS_PER_SEC);
 
 
     // // replace scheme
@@ -1167,7 +1167,7 @@ refactorPerform(bool fUseZeros, int cutSize,
     // 3. for unmatched nodes, add them into the hash table (do not overlap this with 2);
     //    retreive immediately and update matching status if value is not the same (i.e. node created in other subgraphs)
     printf("Starting insert chioce graphs ...\n");
-    auto insertSubgStartTime = clock();
+    auto insertSubgStartTime = hrClock();
     nNewObjs = nObjs;
     hipMalloc(&vChoicesLit, nResyn * sizeof(int));
     hipMemset(vChoicesLit, -1, nResyn * sizeof(int));
@@ -1179,7 +1179,7 @@ refactorPerform(bool fUseZeros, int cutSize,
     gpuErrchk( hipPeekAtLastError() );
     gpuErrchk( hipDeviceSynchronize() );
     printf("Finished insert chioce graphs, obj counter increased to %d, time = %.2lf secs\n", nNewObjs, 
-           (clock() - insertSubgStartTime) / (double) CLOCKS_PER_SEC);
+           (hrClock() - insertSubgStartTime) / (double) NS_PER_SEC);
     
     // 4. retrieve all with sorted values (ids)
     hipFree(vTruth);
@@ -1204,7 +1204,7 @@ refactorPerform(bool fUseZeros, int cutSize,
     
     // nNewObjs is updated to be the exact number of objs in the hashtable
     int nBufferLen = nNewObjs;
-    auto dumpHashtableStartTime = clock();
+    auto dumpHashtableStartTime = hrClock();
     nNewObjs = hashTable.retrieve_all(vReconstructedKeys, vReconstructedIds, nNewObjs, 1);
     gpuErrchk( hipPeekAtLastError() );
     gpuErrchk( hipDeviceSynchronize() );
@@ -1219,17 +1219,17 @@ refactorPerform(bool fUseZeros, int cutSize,
     gpuErrchk( hipPeekAtLastError() );
     gpuErrchk( hipDeviceSynchronize() );
     printf("Finished dumping hashtable and unbind keys, time = %.2lf secs\n", 
-           (clock() - dumpHashtableStartTime) / (double) CLOCKS_PER_SEC);
+           (hrClock() - dumpHashtableStartTime) / (double) NS_PER_SEC);
 
 
     // perform choice and remove deleted nodes sequentially
     printf("Start sequential choice and reorder\n");
-    auto reorderStartTime = clock();
+    auto reorderStartTime = hrClock();
     auto [nObjsNew, vhFanin0New, vhFanin1New, vhOutsNew, nLevelsNew] = choiceReorder(
         vFanin0New, vFanin1New, vResynInd, vChoicesLit, vCutTable, vCutSizes, 
         pNumFanouts, pOuts, nPIs, nPOs, nObjs, nBufferLen, nResyn, fUseZeros
     );
-    printf("Finished sequential choice and reorder, time = %.2lf secs\n", (clock() - reorderStartTime) / (double) CLOCKS_PER_SEC);
+    printf("Finished sequential choice and reorder, time = %.2lf secs\n", (hrClock() - reorderStartTime) / (double) NS_PER_SEC);
 
     hipFree(vCutTable);
     hipFree(vCutSizes);
@@ -1243,7 +1243,7 @@ refactorPerform(bool fUseZeros, int cutSize,
     hipFree(vReconstructedKeys);
     hipFree(vReconstructedIds);
 
-    printf("-- Overall runtime: %.2lf secs\n", (clock() - startTime) / (double) CLOCKS_PER_SEC);
+    printf("-- Overall runtime: %.2lf secs\n", (hrClock() - startTime) / (double) NS_PER_SEC);
 
     return {nObjsNew, vhFanin0New, vhFanin1New, vhOutsNew, nLevelsNew};
 }
@@ -1283,7 +1283,7 @@ void AIGMan::refactor(bool fAlgMFFC, bool fUseZeros, int cutSize) {
         return;
     }
 
-clock_t startFullTime = clock();
+double startFullTime = hrClock();
 
     // make sure data is on host since we need to compute level info
     if (deviceAllocated) {
@@ -1309,7 +1309,7 @@ clock_t startFullTime = clock();
 
     int nObjsNew, nLevelsNew;
     int * vhFanin0New, * vhFanin1New, * vhOutsNew;
-clock_t startAlgTime = clock();
+double startAlgTime = hrClock();
     if (fAlgMFFC) {
         std::tie(nObjsNew, vhFanin0New, vhFanin1New, vhOutsNew, nLevelsNew) = refactorMFFCPerform(
             fUseZeros, cutSize, nObjs, nPIs, nPOs, nNodes, 
@@ -1320,7 +1320,7 @@ clock_t startAlgTime = clock();
             d_pFanin0, d_pFanin1, d_pOuts, d_pNumFanouts, d_pLevel, pOuts, pNumFanouts);
     }
     nLevels = nLevelsNew;
-prevAlgTime = clock() - startAlgTime;
+prevAlgTime = hrClock() - startAlgTime;
 totalAlgTime += prevAlgTime;
 
 
@@ -1391,6 +1391,6 @@ totalAlgTime += prevAlgTime;
     }
 
     prevCmdRewrite = 0;
-prevFullTime = clock() - startFullTime;
+prevFullTime = hrClock() - startFullTime;
 totalFullTime += prevFullTime;
 }

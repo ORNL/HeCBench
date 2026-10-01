@@ -101,6 +101,60 @@ void Usage(int argc, char**argv){
   fprintf(stderr,"Usage: %s <input_file>\n", argv[0]);
 }
 
+// Returns true if the graph is valid, false otherwise.
+bool check_graph(int no_of_nodes, const Node *h_graph_nodes, int edge_list_size,
+    const int *h_graph_edges, int source)
+{
+  if (no_of_nodes <= 0) {
+    fprintf(stderr, "Invalid graph: no_of_nodes (%d) must be positive\n", no_of_nodes);
+    return false;
+  }
+  if (edge_list_size <= 0) {
+    fprintf(stderr, "Invalid graph: edge_list_size (%d) must be positive\n", edge_list_size);
+    return false;
+  }
+  if (source < 0 || source >= no_of_nodes) {
+    fprintf(stderr, "Invalid graph: source (%d) out of range [0, %d)\n", source, no_of_nodes);
+    return false;
+  }
+
+  // Each node's edge range must lie within the edge list.
+  long total_edges = 0;
+  for (int i = 0; i < no_of_nodes; i++) {
+    int starting = h_graph_nodes[i].starting;
+    int num_edges = h_graph_nodes[i].no_of_edges;
+    if (num_edges < 0) {
+      fprintf(stderr, "Invalid graph: node %d has negative edge count (%d)\n", i, num_edges);
+      return false;
+    }
+    if (starting < 0 || starting > edge_list_size) {
+      fprintf(stderr, "Invalid graph: node %d starting offset (%d) out of range [0, %d]\n",
+          i, starting, edge_list_size);
+      return false;
+    }
+    if ((long)starting + num_edges > edge_list_size) {
+      fprintf(stderr, "Invalid graph: node %d edge range [%d, %ld) exceeds edge_list_size (%d)\n",
+          i, starting, (long)starting + num_edges, edge_list_size);
+      return false;
+    }
+    total_edges += num_edges;
+  }
+
+  // Every edge must reference a valid node id.
+  for (int i = 0; i < edge_list_size; i++) {
+    int id = h_graph_edges[i];
+    if (id < 0 || id >= no_of_nodes) {
+      fprintf(stderr, "Invalid graph: edge %d references node id (%d) out of range [0, %d)\n",
+          i, id, no_of_nodes);
+      return false;
+    }
+  }
+
+  printf("Graph check passed (#nodes = %d, #edges in list = %d, edges referenced = %ld)\n",
+      no_of_nodes, edge_list_size, total_edges);
+  return true;
+}
+
 //Apply BFS on a Graph
 void run_bfs_gpu(int no_of_nodes, Node *h_graph_nodes, int edge_list_size,
     int *h_graph_edges, char *h_graph_mask, char *h_updating_graph_mask,
@@ -146,9 +200,9 @@ void run_bfs_gpu(int no_of_nodes, Node *h_graph_nodes, int edge_list_size,
 
     auto start = std::chrono::steady_clock::now();
 
-    hipLaunchKernelGGL(Kernel, grid, threads , 0, 0, d_graph_nodes, d_graph_edges, d_graph_mask, d_updating_graph_mask, 
-                                d_graph_visited, d_cost, no_of_nodes);
-    hipLaunchKernelGGL(Kernel2, grid, threads , 0, 0, d_graph_mask, d_updating_graph_mask, d_graph_visited, d_over, no_of_nodes);
+    Kernel<<<grid, threads>>>(d_graph_nodes, d_graph_edges, d_graph_mask, d_updating_graph_mask, 
+             d_graph_visited, d_cost, no_of_nodes);
+    Kernel2<<<grid, threads>>>(d_graph_mask, d_updating_graph_mask, d_graph_visited, d_over, no_of_nodes);
 
     hipDeviceSynchronize();
     auto end = std::chrono::steady_clock::now();
@@ -234,6 +288,18 @@ int main(int argc, char * argv[])
   }
 
   if(fp) fclose(fp);    
+
+  // validate the graph before running BFS
+  if(!check_graph(no_of_nodes, h_graph_nodes, edge_list_size, h_graph_edges, source)){
+    fprintf(stderr, "Graph check failed. Aborting.\n");
+    free(h_graph_nodes);
+    free(h_graph_mask);
+    free(h_updating_graph_mask);
+    free(h_graph_visited);
+    free(h_graph_edges);
+    return 1;
+  }
+
   // allocate mem for the result on host side
   int *h_cost = (int*) malloc(sizeof(int)*no_of_nodes);
   int *h_cost_ref = (int*)malloc(sizeof(int)*no_of_nodes);
