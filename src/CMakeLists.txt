@@ -218,6 +218,7 @@ set(HECBENCH_POC_BENCHMARKS
     kmeans
     kurtosis
     lanczos
+    laghos-force
     langevin
     langford
     laplace
