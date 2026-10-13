@@ -565,6 +565,7 @@ set(HECBENCH_POC_BENCHMARKS
     topk
     upsample
     vadd
+    vdi
     wenofv
 )
 
