@@ -50,6 +50,7 @@ int main(int argc, char* argv[]) {
   }
   const int length = atoi(argv[1]);
   const int repeat = atoi(argv[2]);
+  const int warmup = 100;
 
   int size = length * sizeof(int);
   int pad_size = (length + RADIUS) * sizeof(int);
@@ -72,12 +73,14 @@ int main(int argc, char* argv[]) {
   dim3 grids (length/BLOCK_SIZE);
   dim3 blocks (BLOCK_SIZE);
 
-  cudaDeviceSynchronize();
-  auto start = std::chrono::steady_clock::now();
-
-  // Launch kernel on GPU
-  for (int i = 0; i < repeat; i++)
+  std::chrono::steady_clock::time_point start;
+  for (int iter = 0; iter < repeat + warmup; iter++) {
+    if (iter == warmup) {
+      cudaDeviceSynchronize();
+      start = std::chrono::steady_clock::now();
+    }
     stencil_1d <<< grids, blocks >>> (d_a, d_b);
+  }
 
   cudaDeviceSynchronize();
   auto end = std::chrono::steady_clock::now();
