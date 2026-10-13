@@ -22,9 +22,6 @@ void fwtBatchGPU(float *d_Data, int M, int log2N)
     const int sN = N;
     const int sM = M;
 
-    // both versions should pass the final verification
-    // 256 is the thread block size
-#if 1
     for (; log2N > ELEMENTARY_LOG2SIZE; log2N -= 2, N >>= 2, M <<= 2)
     {
       const int stride = N/4;
@@ -60,132 +57,97 @@ void fwtBatchGPU(float *d_Data, int M, int log2N)
         }
       }
     }
-#else  
-    const int teamX = N/(4*256);
-    const int teamY = M;
-    const int numTeams = teamX * teamY;
-
-    for (; log2N > ELEMENTARY_LOG2SIZE; log2N -= 2, N >>= 2, M <<= 2)
-    {
-      const int stride = N/4;
-      #pragma omp target teams num_teams(numTeams) thread_limit(256)
-      {
-        #pragma omp parallel
-        {
-          const int blockIdx_x = omp_get_team_num() % teamX;
-          const int threadIdx_x = omp_get_thread_num();
-          const int blockDim_x = 256;
-          const int gridDim_x = teamX;
-          const int blockIdx_y = omp_get_team_num() / teamX;
-          const int pos = blockIdx_x * blockDim_x + threadIdx_x;
-          const int   N = blockDim_x * gridDim_x * 4;
-
-          const float *d_Src = d_Data  + blockIdx_y * N;
-          float *d_Dst = d_Data + blockIdx_y * N;
-          int lo = pos & (stride - 1);
-          int i0 = ((pos - lo) << 2) + lo;
-          int i1 = i0 + stride;
-          int i2 = i1 + stride;
-          int i3 = i2 + stride;
-
-          float D0 = d_Src[i0];
-          float D1 = d_Src[i1];
-          float D2 = d_Src[i2];
-          float D3 = d_Src[i3];
-
-          float T;
-          T = D0;
-          D0        = D0 + D2;
-          D2        = T - D2;
-          T = D1;
-          D1        = D1 + D3;
-          D3        = T - D3;
-          T = D0;
-          d_Dst[i0] = D0 + D1;
-          d_Dst[i1] = T - D1;
-          T = D2;
-          d_Dst[i2] = D2 + D3;
-          d_Dst[i3] = T - D3;
-        }
-      }
-    }
-#endif
 
     #pragma omp target teams num_teams(M) thread_limit(N/4)
     {
+      // Team-shared scratch, fixed because OpenMP has no dynamic shared
+      // allocation. 2048 == 1 << ELEMENTARY_LOG2SIZE: the loop above leaves
+      // log2N <= 11, so N <= 2048. 2048 floats is 8KB, the same cap as the
+      // CUDA kernel (maximum s_data[] size for G80). Raise this if that
+      // cutoff grows.
       float s_data[2048];
       #pragma omp parallel 
       {
         int lid = omp_get_thread_num();
-        int gid = omp_get_team_num();
-        int gsz = omp_get_num_threads(); 
+        int team = omp_get_team_num();
+        int nteams = omp_get_num_teams();
+        int gsz = omp_get_num_threads();
 
         // Handle to thread block group
         const int    N = 1 << log2N;
-        const int base = gid << log2N;
 
-        const float *d_Src = d_Data + base;
-        float *d_Dst = d_Data + base;
-
-        for (int pos = lid; pos < N; pos += gsz)
+        // num_teams and thread_limit are upper bounds. Walk every batch and
+        // butterfly; both loops run once when the runtime matches the request.
+        for (int gid = team; gid < M; gid += nteams)
         {
-            s_data[pos] = d_Src[pos];
-        }
+          const int base = gid << log2N;
 
-        //Main radix-4 stages
-        const int pos = lid;
+          const float *d_Src = d_Data + base;
+          float *d_Dst = d_Data + base;
 
-        for (int stride = N >> 2; stride > 0; stride >>= 2)
-        {
-            int lo = pos & (stride - 1);
-            int i0 = ((pos - lo) << 2) + lo;
-            int i1 = i0 + stride;
-            int i2 = i1 + stride;
-            int i3 = i2 + stride;
+          for (int pos = lid; pos < N; pos += gsz)
+          {
+              s_data[pos] = d_Src[pos];
+          }
 
-            #pragma omp barrier
-            float D0 = s_data[i0];
-            float D1 = s_data[i1];
-            float D2 = s_data[i2];
-            float D3 = s_data[i3];
+          // Main radix-4 stages. A matching team has one butterfly per thread.
+          for (int stride = N >> 2; stride > 0; stride >>= 2)
+          {
+              #pragma omp barrier
+              for (int pos = lid; pos < N / 4; pos += gsz)
+              {
+              int lo = pos & (stride - 1);
+              int i0 = ((pos - lo) << 2) + lo;
+              int i1 = i0 + stride;
+              int i2 = i1 + stride;
+              int i3 = i2 + stride;
 
-            float T;
-            T = D0;
-            D0         = D0 + D2;
-            D2         = T - D2;
-            T = D1;
-            D1         = D1 + D3;
-            D3         = T - D3;
-            T = D0;
-            s_data[i0] = D0 + D1;
-            s_data[i1] = T - D1;
-            T = D2;
-            s_data[i2] = D2 + D3;
-            s_data[i3] = T - D3;
-        }
+              float D0 = s_data[i0];
+              float D1 = s_data[i1];
+              float D2 = s_data[i2];
+              float D3 = s_data[i3];
 
-        //Do single radix-2 stage for odd power of two
-        if (log2N & 1)
-        {
-            #pragma omp barrier
+              float T;
+              T = D0;
+              D0         = D0 + D2;
+              D2         = T - D2;
+              T = D1;
+              D1         = D1 + D3;
+              D3         = T - D3;
+              T = D0;
+              s_data[i0] = D0 + D1;
+              s_data[i1] = T - D1;
+              T = D2;
+              s_data[i2] = D2 + D3;
+              s_data[i3] = T - D3;
+              }
+          }
 
-            for (int pos = lid; pos < N / 2; pos += gsz)
-            {
-                int i0 = pos << 1;
-                int i1 = i0 + 1;
+          //Do single radix-2 stage for odd power of two
+          if (log2N & 1)
+          {
+              #pragma omp barrier
 
-                float D0 = s_data[i0];
-                float D1 = s_data[i1];
-                s_data[i0] = D0 + D1;
-                s_data[i1] = D0 - D1;
-            }
-        }
+              for (int pos = lid; pos < N / 2; pos += gsz)
+              {
+                  int i0 = pos << 1;
+                  int i1 = i0 + 1;
 
-        #pragma omp barrier
+                  float D0 = s_data[i0];
+                  float D1 = s_data[i1];
+                  s_data[i0] = D0 + D1;
+                  s_data[i1] = D0 - D1;
+              }
+          }
 
-        for (int pos = lid; pos < N; pos += gsz)
-        {
-            d_Dst[pos] = s_data[pos];
+          #pragma omp barrier
+
+          for (int pos = lid; pos < N; pos += gsz)
+          {
+              d_Dst[pos] = s_data[pos];
+          }
+
+          #pragma omp barrier
         }
       }
     }
