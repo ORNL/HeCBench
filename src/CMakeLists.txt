@@ -346,6 +346,7 @@ set(HECBENCH_POC_BENCHMARKS
     reaction
     recursiveGaussian
     relu
+    reshapeKVCache
     resize
     resnet-kernels
     reverse
