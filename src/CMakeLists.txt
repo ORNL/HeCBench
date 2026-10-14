@@ -233,6 +233,7 @@ set(HECBENCH_POC_BENCHMARKS
     lid-driven-cavity
     lif
     linearprobing
+    local-ht
     logan
     log2
     logic-rewrite
