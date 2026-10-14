@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <chrono>
 #include <omp.h>
 #include "util.h"
 #include "image.h"
 #include "kernel.h"
+
+// 16-byte zero used by the device memset. One store covers four pixels.
+struct alignas(16) uint4 { unsigned int x, y, z, w; };
 
 int main(int argc, char* argv[]) 
 {
@@ -43,10 +45,22 @@ int main(int argc, char* argv[])
   {
     auto start = std::chrono::steady_clock::now();
 
+    // Device memset: 16-byte stores, plus a short tail when numPix is not a multiple of 4.
+    uint4 *out4 = reinterpret_cast<uint4 *>(output);
+    unsigned int *out32 = reinterpret_cast<unsigned int *>(output);
+    const int nvec = numPix / 4;
+    const int tail = numPix % 4;
+
     //this version takes a tile (z=1) and each tile job does 4 line median sorts
     for (int i = 0; i < repeat; i++) {
-      memset(output, 0, output_image_size);
-      #pragma omp target update to(output[0:4*numPix])
+      #pragma omp target teams distribute parallel for
+      for (int p = 0; p < nvec; p++)
+        out4[p] = uint4{0, 0, 0, 0};
+      if (tail) {
+        #pragma omp target teams distribute parallel for
+        for (int p = nvec * 4; p < numPix; p++)
+          out32[p] = 0;
+      }
       malvar_he_cutler_demosaic (
         teamX, teamY,
         height, width, 
