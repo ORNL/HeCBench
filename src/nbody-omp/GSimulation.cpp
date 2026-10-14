@@ -102,11 +102,14 @@ void GSimulation::Start() {
   Particle *p = particles_.data();
   RealType *e = energy.data();
 
-  TimeInterval t0;
   int nsteps = get_nsteps();
 
   #pragma omp target data map (to: p[0:n]) map(alloc: e[0:n])
   {
+    // Particles are already on the device. Match CUDA, which starts the
+    // total timer after the host-to-device copies.
+    TimeInterval t0;
+
     // Looping across integration steps
     for (int s = 1; s <= nsteps; ++s) {
       TimeInterval ts0;
@@ -194,8 +197,8 @@ void GSimulation::Start() {
         }
       }
     }  // end of the time step loop
+    total_time_ = t0.Elapsed();
   }
-  total_time_ = t0.Elapsed();
   total_flops_ = gflops * get_nsteps();
   av /= (double)(nf - 2);
   // when nf = 3, deviation is 0 (N/A)

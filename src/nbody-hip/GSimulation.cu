@@ -103,17 +103,18 @@ void GSimulation::Start() {
 
   Particle *p;
   hipMalloc((void**)&p, sizeof(Particle) * n);
-  hipMemcpyAsync(p, particles_.data(), sizeof(Particle) * n, hipMemcpyHostToDevice, 0);
+  hipMemcpy(p, particles_.data(), sizeof(Particle) * n, hipMemcpyHostToDevice);
 
   RealType *e;
   hipMalloc((void**)&e, sizeof(RealType) * n);
-  hipMemcpyAsync(e, energy.data(), sizeof(RealType) * n, hipMemcpyHostToDevice, 0);
+  hipMemcpy(e, energy.data(), sizeof(RealType) * n, hipMemcpyHostToDevice);
 
   dim3 grids((n+255)/256);
   dim3 threads(256);
 
-  TimeInterval t0;
   int nsteps = get_nsteps();
+
+  TimeInterval t0;
   // Looping across integration steps
   for (int s = 1; s <= nsteps; ++s) {
     TimeInterval ts0;
