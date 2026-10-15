@@ -567,6 +567,7 @@ set(HECBENCH_POC_BENCHMARKS
     axpby
     f8cast
     minimap2
+    tgvnn
     threadcpy
     tridiagonal
     topk
