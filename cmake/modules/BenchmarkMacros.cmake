@@ -307,6 +307,9 @@ function(add_hecbench_benchmark)
         set(TEST_CMD
             ${Python3_EXECUTABLE}
             ${HECBENCH_TEST_RUNNER}
+            --regex "${BENCH_TEST_REGEX}"
+            --timeout ${BENCH_TEST_TIMEOUT}
+            --working-dir "${CMAKE_CURRENT_SOURCE_DIR}"
             $<TARGET_FILE:${TARGET_NAME}>
         )
 
@@ -314,11 +317,6 @@ function(add_hecbench_benchmark)
         if(BENCH_TEST_ARGS)
             list(APPEND TEST_CMD ${BENCH_TEST_ARGS})
         endif()
-
-        # Add the regex pattern
-        list(APPEND TEST_CMD --regex "${BENCH_TEST_REGEX}")
-        list(APPEND TEST_CMD --timeout ${BENCH_TEST_TIMEOUT})
-        list(APPEND TEST_CMD --working-dir "${CMAKE_CURRENT_SOURCE_DIR}")
 
         # Register the test
         add_test(

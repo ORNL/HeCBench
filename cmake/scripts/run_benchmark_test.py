@@ -6,7 +6,7 @@ This script runs a benchmark and validates its output against expected patterns.
 It's designed to be called by CTest.
 
 Usage:
-    run_benchmark_test.py <binary> [args...] --regex <pattern> [--timeout <secs>]
+    run_benchmark_test.py --regex <pattern> [--timeout <secs>] <binary> [args...]
 
 Exit codes:
     0 - Success (output matched regex)
@@ -23,16 +23,15 @@ import time
 
 def main():
     parser = argparse.ArgumentParser(description='Run HeCBench benchmark test')
-    parser.add_argument('binary', help='Path to benchmark binary')
-    parser.add_argument('args', nargs='*', help='Arguments to pass to benchmark')
     parser.add_argument('--regex', required=True, help='Regex pattern to match in output')
     parser.add_argument('--timeout', type=int, default=300, help='Timeout in seconds')
     parser.add_argument('--working-dir', help='Working directory for the benchmark')
     parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
+    parser.add_argument('cmd', nargs=argparse.REMAINDER, help='Benchmark binary followed by its arguments')
 
     args = parser.parse_args()
 
-    cmd = [args.binary] + args.args
+    cmd = args.cmd
 
     if args.verbose:
         print(f"Running: {' '.join(cmd)}")
