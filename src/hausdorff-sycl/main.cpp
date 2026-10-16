@@ -55,22 +55,36 @@ int main(int argc, char* argv[]) {
   const int num_Apoints = atoi(argv[1]);
   const int num_Bpoints = atoi(argv[2]);
   const int repeat = atoi(argv[3]);
+  if (repeat < 2) {
+    printf("repeat must be at least 2\n");
+    return 1;
+  }
 
   const size_t num_Apoints_bytes = sizeof(float2) * num_Apoints;
   const size_t num_Bpoints_bytes = sizeof(float2) * num_Bpoints;
 
-  float2 *h_Apoints = (float2*) malloc (num_Apoints_bytes);
-  float2 *h_Bpoints = (float2*) malloc (num_Bpoints_bytes);
-  
-  srand(123);
-  for (int i = 0; i < num_Apoints; i++) {
-    h_Apoints[i].x() = (float)rand() / (float)RAND_MAX;
-    h_Apoints[i].y() = (float)rand() / (float)RAND_MAX;
+  float2 *h_A[2], *h_B[2];
+  for (int b = 0; b < 2; b++) {
+    h_A[b] = (float2*) malloc(num_Apoints_bytes);
+    h_B[b] = (float2*) malloc(num_Bpoints_bytes);
   }
-  
-  for (int i = 0; i < num_Bpoints; i++) {
-    h_Bpoints[i].x() = (float)rand() / (float)RAND_MAX;
-    h_Bpoints[i].y() = (float)rand() / (float)RAND_MAX;
+
+  srand(123);
+  for (int b = 0; b < 2; b++) {
+    for (int i = 0; i < num_Apoints; i++) {
+      h_A[b][i].x() = (float)rand() / (float)RAND_MAX;
+      h_A[b][i].y() = (float)rand() / (float)RAND_MAX;
+    }
+    for (int i = 0; i < num_Bpoints; i++) {
+      h_B[b][i].x() = (float)rand() / (float)RAND_MAX;
+      h_B[b][i].y() = (float)rand() / (float)RAND_MAX;
+      // Slot 0 is shifted so its distance stays above slot 1 for any point
+      // count. Iteration 1 then keeps slot 0 whenever -1 was uploaded once.
+      if (b == 0) {
+        h_B[b][i].x() += 10.f;
+        h_B[b][i].y() += 10.f;
+      }
+    }
   }
 
 #ifdef USE_GPU
@@ -79,11 +93,13 @@ int main(int argc, char* argv[]) {
   sycl::queue q(sycl::cpu_selector_v, sycl::property::queue::in_order());
 #endif
 
-  float2 *d_Apoints = sycl::malloc_device<float2>(num_Apoints, q);
-  q.memcpy(d_Apoints, h_Apoints, num_Apoints_bytes);
-
-  float2 *d_Bpoints = sycl::malloc_device<float2>(num_Bpoints, q);
-  q.memcpy(d_Bpoints, h_Bpoints, num_Bpoints_bytes);
+  float2 *d_A[2], *d_B[2];
+  for (int b = 0; b < 2; b++) {
+    d_A[b] = sycl::malloc_device<float2>(num_Apoints, q);
+    q.memcpy(d_A[b], h_A[b], num_Apoints_bytes);
+    d_B[b] = sycl::malloc_device<float2>(num_Bpoints, q);
+    q.memcpy(d_B[b], h_B[b], num_Bpoints_bytes);
+  }
 
   float *d_distance = sycl::malloc_device<float>(2, q);
 
@@ -91,19 +107,28 @@ int main(int argc, char* argv[]) {
   sycl::range<1> gwsB ((num_Bpoints + 255) / 256 * 256);
   sycl::range<1> lws (256);
 
-  float h_distance[2] = {-1.f, -1.f}; 
+  // The atomic max keeps the value already at this address. A single
+  // upload of -1 therefore leaves the larger slot in place after iteration 0.
+  float h_distance[2] = {-1.f, -1.f};
+  float got[2];
 
   double time = 0.0;
 
   for (int i = 0; i < repeat; i++) {
+    const int slot = i & 1;
+
+    h_distance[0] = h_distance[1] = -1.f;
     q.memcpy(d_distance, h_distance, 2 * sizeof(float)).wait();
+
+    const float2 *A = d_A[slot];
+    const float2 *B = d_B[slot];
 
     auto start = std::chrono::steady_clock::now();
 
     q.submit([&] (sycl::handler &cgh) {
       cgh.parallel_for<class distanceAB>(
         sycl::nd_range<1>(gwsA, lws), [=] (sycl::nd_item<1> item) {
-        computeDistance(item, d_Apoints, d_Bpoints, d_distance,
+        computeDistance(item, A, B, d_distance,
                         num_Apoints, num_Bpoints);
       });
     });
@@ -111,7 +136,7 @@ int main(int argc, char* argv[]) {
     q.submit([&] (sycl::handler &cgh) {
       cgh.parallel_for<class distanceBA>(
         sycl::nd_range<1>(gwsB, lws), [=] (sycl::nd_item<1> item) {
-        computeDistance(item, d_Bpoints, d_Apoints, d_distance + 1,
+        computeDistance(item, B, A, d_distance + 1,
                         num_Bpoints, num_Apoints);
       });
     });
@@ -119,22 +144,30 @@ int main(int argc, char* argv[]) {
     q.wait();
     auto end = std::chrono::steady_clock::now();
     time += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+
+    // The two slots are fully covered by the first two iterations.
+    if (i < 2) {
+      q.memcpy(h_distance, d_distance, 2 * sizeof(float)).wait();
+      got[i] = std::max(h_distance[0], h_distance[1]);
+    }
   }
   printf("Average execution time of kernels: %f (ms)\n", (time * 1e-6f) / repeat);
 
-  q.memcpy(h_distance, d_distance, 2 * sizeof(float)).wait();
-
   printf("Verifying the result may take a while..\n");
-  float r_distance = hausdorff_distance(h_Apoints, h_Bpoints, num_Apoints, num_Bpoints);
-  float t_distance = std::max(h_distance[0], h_distance[1]);
-
-  bool error = (fabsf(t_distance - r_distance)) > 1e-3f;
+  bool error = false;
+  for (int s = 0; s < 2; s++) {
+    float r_distance = hausdorff_distance(h_A[s], h_B[s], num_Apoints, num_Bpoints);
+    if (fabsf(got[s] - r_distance) > 1e-3f * r_distance)
+      error = true;
+  }
   printf("%s\n", error ? "FAIL" : "PASS");
 
-  free(h_Apoints);
-  free(h_Bpoints);
+  for (int b = 0; b < 2; b++) {
+    free(h_A[b]);
+    free(h_B[b]);
+    sycl::free(d_A[b], q);
+    sycl::free(d_B[b], q);
+  }
   sycl::free(d_distance, q);
-  sycl::free(d_Apoints, q);
-  sycl::free(d_Bpoints, q);
   return 0;
 }
