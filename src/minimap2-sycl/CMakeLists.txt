@@ -6,6 +6,7 @@ add_hecbench_benchmark(
     NAME minimap2
     MODEL sycl
     SOURCES
+        device/device_kernel_wrapper.cpp
         src/host_data_io.cpp
         src/host_kernel.cpp
         src/main.cpp
