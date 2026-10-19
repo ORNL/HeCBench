@@ -188,8 +188,8 @@ int main (void) {
       Real norm_L2 = ZERO;
   
       #pragma omp target teams distribute parallel for collapse(2) num_threads(BLOCK_SIZE)
-      for (int row = 1; row <= NUM/2; row++) {
-        for (int col = 1; col <= NUM; col++) {
+      for (int col = 1; col <= NUM; col++) {
+        for (int row = 1; row <= NUM/2; row++) {
           int ind_red = col * ((NUM >> 1) + 2) + row;  					// local (red) index
           int ind = 2 * row - (col & 1) - 1 + NUM * (col - 1);	// global index
   
@@ -215,8 +215,8 @@ int main (void) {
       }
   
       #pragma omp target teams distribute parallel for collapse(2) num_threads(BLOCK_SIZE)
-      for (int row = 1; row <= NUM/2; row++) {
-        for (int col = 1; col <= NUM; col++) {
+      for (int col = 1; col <= NUM; col++) {
+        for (int row = 1; row <= NUM/2; row++) {
           int ind_black = col * ((NUM >> 1) + 2) + row; // local (black) index
           int ind = 2 * row - ((col + 1) & 1) - 1 + NUM * (col - 1); // global index
   
