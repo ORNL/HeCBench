@@ -260,7 +260,7 @@ void computeKernel_ref(
     // Enumerate all tasks.
     for (int task = 0; task < total; task++)
     {
-        int parent[5];
+        int parent[5] = {-1};
         int parN = 0;
 
         H_findComb(parent, task, posN-1);
