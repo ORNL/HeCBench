@@ -105,7 +105,7 @@ void computeKernel(const int taskperthr,
   int posN=1,i,index,t,tmp;
   int pre[NODE_N]={0};
   int parN=0;
-  int bestparent[4]={0},parent[5]={-1};
+  int bestparent[4]={0},parent[5]={-1,-1,-1,-1,-1};
   float bestls=-999999999999999.f,ls;
 
   for(i=0;i<NODE_N;i++){
