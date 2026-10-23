@@ -61,7 +61,7 @@ extern	int set_err_flag(int flag);         /* for different ways of handling
                                                 errors, returns old value */
 extern  int count_errs(int true_false);     /* to avoid "too many errors" */
 extern  int err_list_attach(int list_num, int list_len,
-	       char **err_ptr,int warn);  /* for attaching a list of errors */
+	       const char **err_ptr,int warn);  /* for attaching a list of errors */
 extern  int err_is_list_attached(int list_num);  /* checking if a list 
 						    is attached */
 extern  int err_list_free(int list_num);   /* freeing a list of errors */
