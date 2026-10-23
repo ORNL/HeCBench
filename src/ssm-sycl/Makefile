@@ -30,7 +30,7 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl \
+CFLAGS := $(EXTRA_CFLAGS) -std=c++20 -Wall -fsycl \
           --gcc-toolchain=$(GCC_TOOLCHAIN) \
           -I../ssm-cuda -I../blockScan-sycl/utils 
 
