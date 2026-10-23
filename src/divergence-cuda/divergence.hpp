@@ -2,27 +2,7 @@
 #ifndef _DIVERGENCE_HPP_
 #define _DIVERGENCE_HPP_
 
-#if defined(__INTEL_COMPILER)
-#define NOVECDEP _Pragma("ivdep")
-#define ALWAYSVECTORIZE _Pragma("vector always")
-#define ALIGN(vardec) __declspec(align) vardec
-#define ALIGNTO(vardec, boundary) \
-  __declspec(align(boundary)) vardec
-#elif defined(__GNUG__)
-#if(__GNUG__ == 4 && __GNUC_MINOR__ >= 9) || __GNUG__ > 4
-#define NOVECDEP _Pragma("GCC ivdep")
-#define ALWAYSVECTORIZE _Pragma("GCC vector always")
-#else
-#pragma message( \
-    "G++ <4.9 Does not support vectorization pragmas")
-#define NOVECDEP
-#define ALWAYSVECTORIZE
-#endif
-
-#define ALIGN(vardec) __attribute__((aligned)) vardec
-#define ALIGNTO(vardec, boundary) \
-  __attribute__((aligned(boundary))) vardec
-#endif
+#include "divergence_pragmas.hpp"
 
 #include <cuda.h>
 #define BLOCK_SIZE 16
