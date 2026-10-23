@@ -227,7 +227,7 @@ private:
 			it->flush();
 		}
 		seedp_range range;
-		auto_ptr<sorted_list::buffered_iterator> it;
+		unique_ptr<sorted_list::buffered_iterator> it;
 	};
 
 	Limits limits_;

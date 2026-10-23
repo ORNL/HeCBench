@@ -20,9 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "../data/queries.h"
 
 using std::map;
-using std::auto_ptr;
+using std::unique_ptr;
 
-auto_ptr<Output_sink> Output_sink::instance;
+unique_ptr<Output_sink> Output_sink::instance;
 
 void Output_sink::push(size_t n, Text_buffer *buf)
 {

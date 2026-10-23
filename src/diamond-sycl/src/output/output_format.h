@@ -54,7 +54,7 @@ struct Output_format
 	enum { daa, blast_tab, blast_xml, sam, blast_pairwise, null, taxon };
 };
 
-extern auto_ptr<Output_format> output_format;
+extern unique_ptr<Output_format> output_format;
 
 struct Null_format : public Output_format
 {

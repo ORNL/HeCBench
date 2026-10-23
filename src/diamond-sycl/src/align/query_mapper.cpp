@@ -175,11 +175,11 @@ bool Query_mapper::generate_output(Text_buffer &buffer, Statistics &stat)
 	std::stable_sort(targets.begin(), targets.end(), Target::compare);
 
 	unsigned n_hsp = 0, n_target_seq = 0, hit_hsps = 0;
-	auto_ptr<Target_culling> target_culling(Target_culling::get(targets.empty() ? 0 : &targets[0]));
+	unique_ptr<Target_culling> target_culling(Target_culling::get(targets.empty() ? 0 : &targets[0]));
 	const unsigned query_len = (unsigned)query_seq(0).length();
 	size_t seek_pos = 0;
 	const char *query_title = query_ids::get()[query_id].c_str();
-	auto_ptr<Output_format> f(output_format->clone());
+	unique_ptr<Output_format> f(output_format->clone());
 
 	for (size_t i = 0; i < targets.size(); ++i) {
 		if ((config.min_bit_score == 0 && score_matrix.evalue(targets[i].filter_score, config.db_size, query_len) > config.max_evalue)

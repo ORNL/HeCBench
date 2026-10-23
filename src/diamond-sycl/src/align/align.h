@@ -28,7 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "align_struct.h"
 
 using std::vector;
-using std::auto_ptr;
+using std::unique_ptr;
 
 struct Output_writer
 {

@@ -255,7 +255,7 @@ void master_thread(Database_file &db_file, Timer &total_timer)
 	if(config.query_file.empty())
 		std::cerr << "Query file parameter (--query/-q) is missing. Input will be read from stdin." << endl;
 
-        auto_ptr<Input_stream> d_query_file(Compressed_istream::auto_detect(config.query_file));
+        unique_ptr<Input_stream> d_query_file(Compressed_istream::auto_detect(config.query_file));
         const Sequence_file_format *d_format_n(guess_format(*d_query_file));
 
         current_query_chunk = 0;
@@ -271,21 +271,21 @@ void master_thread(Database_file &db_file, Timer &total_timer)
         d_query_file->close();
 
 	task_timer timer("Opening the input file", true);
-	auto_ptr<Input_stream> query_file(Compressed_istream::auto_detect(config.query_file));
+	unique_ptr<Input_stream> query_file(Compressed_istream::auto_detect(config.query_file));
 	const Sequence_file_format *format_n(guess_format(*query_file));
 
 
 	current_query_chunk = 0;
 
 	timer.go("Opening the output file");
-	auto_ptr<Output_stream> master_out(config.compression == 1
+	unique_ptr<Output_stream> master_out(config.compression == 1
 		? new Compressed_ostream(config.output_file)
 		: new Output_stream(config.output_file));
 	if (*output_format == Output_format::daa)
 		init_daa(*master_out);
-	auto_ptr<Output_stream> unaligned_file;
+	unique_ptr<Output_stream> unaligned_file;
 	if (!config.unaligned.empty())
-		unaligned_file = auto_ptr<Output_stream>(new Output_stream(config.unaligned));
+		unaligned_file = unique_ptr<Output_stream>(new Output_stream(config.unaligned));
 	timer.finish();
 
 	for (;; ++current_query_chunk) {
