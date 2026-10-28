@@ -93,7 +93,7 @@ all-pairs-distance:
   categories: [bioinformatics]
   models: [cuda, hip, omp, sycl]
   test:
-    regex: '(?:Average kernel execution time \(w/o? shared memory\): )([0-9.+-e]+)(?: \(us\))'
+    regex: '(?:Average kernel execution time(?: \(w/o? shared memory\))?: )([0-9.+-e]+)(?: \(us\))'
     args: ["1000"]
     timeout: 300
 
@@ -116,7 +116,7 @@ aobench:
   categories: [algorithms]
   models: [cuda, hip, omp, sycl]
   test:
-    regex: '(?:Average render time: )([0-9.+-e]+)(?: sec)'
+    regex: '(?:Average kernel time: )([0-9.+-e]+)(?: usec)'
     args: ["1000"]
     timeout: 300
 
@@ -331,7 +331,7 @@ black-scholes:
   categories: [algorithms]
   models: [cuda, hip, omp, sycl]
   test:
-    regex: '(?:Processing time on GPU: )([0-9.+-e]+)(?: \(ms\))'
+    regex: '(?:Average kernel execution time on GPU: )([0-9.+-e]+)(?: \(ms\))'
     args: ["100"]
     timeout: 300
 
@@ -545,7 +545,7 @@ chi2:
   categories: [algorithms]
   models: [cuda, hip, omp, sycl]
   test:
-    regex: '(?:Average kernel execution time = )([0-9.+-e]+)(?: \(s\))'
+    regex: '(?:Average (?:chi_)?kernel execution time = )([0-9.+-e]+)(?: \(s\))'
     args: ["4000", "400000", "2000", "2000", "256", "1000"]
     timeout: 300
 
@@ -1141,7 +1141,7 @@ gelu:
   categories: [algorithms]
   models: [cuda, hip, sycl]
   test:
-    regex: '(?:Average kernel execution time )([0-9.+-e]+)(?: \(ms\))'
+    regex: '(?:Average execution time of vectorized kernel )([0-9.+-e]+)(?: \(ms\))'
     args: ["512", "8192", "512", "100"]
     timeout: 300
 
@@ -1469,7 +1469,7 @@ knn:
   categories: [algorithms]
   models: [cuda, hip, omp, sycl]
   test:
-    regex: '(?:100 iterations \()([0-9.+-e]+)(?: s by iteration\))'
+    regex: '(?:on GPU: \s+done in )([0-9.+-e]+)(?: s)'
     args: ["100"]
     timeout: 300
 
