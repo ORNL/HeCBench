@@ -34,7 +34,7 @@ struct Align_fetcher
 	{
 		it_ = begin;
 		end_ = end;
-		queue_ = auto_ptr<Queue>(new Queue(qbegin, qend));
+		queue_ = unique_ptr<Queue>(new Queue(qbegin, qend));
 	}
 	void operator()(size_t query)
 	{
@@ -57,10 +57,10 @@ struct Align_fetcher
 	vector<hit>::iterator begin, end;
 private:	
 	static vector<hit>::iterator it_, end_;
-	static auto_ptr<Queue> queue_;
+	static unique_ptr<Queue> queue_;
 };
 
-auto_ptr<Queue> Align_fetcher::queue_;
+unique_ptr<Queue> Align_fetcher::queue_;
 vector<hit>::iterator Align_fetcher::it_;
 vector<hit>::iterator Align_fetcher::end_;
 
@@ -121,7 +121,7 @@ void align_queries(Trace_pt_buffer &trace_pts, Output_stream* output_file)
 		v->init();
 		timer.go("Computing alignments");
 		Align_fetcher::init(query_range.first, query_range.second, v->begin(), v->end());
-		Output_sink::instance = auto_ptr<Output_sink>(new Output_sink(query_range.first, output_file));
+		Output_sink::instance = unique_ptr<Output_sink>(new Output_sink(query_range.first, output_file));
 		#if not defined(_OPENMP)
 		Thread_pool threads;
 		if (config.verbosity >= 3)

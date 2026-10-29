@@ -137,6 +137,9 @@ size_t Output_stream::tell()
 #endif
 }
 
+Input_stream::~Input_stream()
+{ }
+
 Input_stream::Input_stream(const string &file_name) :
 	file_name(file_name),
 	line_count(0),

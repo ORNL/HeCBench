@@ -344,7 +344,7 @@ Config::Config(int argc, const char **argv)
 		}
 		message_stream << "Scoring parameters: " << score_matrix << endl;
 		if (masking == 1)
-			Masking::instance = auto_ptr<Masking>(new Masking(score_matrix));
+			Masking::instance = unique_ptr<Masking>(new Masking(score_matrix));
 	}
 
 	if (command == Config::blastp || command == Config::blastx || command == Config::benchmark || command == Config::model_sim || command == Config::opt

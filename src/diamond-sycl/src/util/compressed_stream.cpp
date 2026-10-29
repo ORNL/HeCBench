@@ -31,7 +31,8 @@ Compressed_istream::Compressed_istream(const string &file_name):
 	out(new char[chunk_size]),
 	read_(0),
 	total_(0),
-	eos_(false)
+	eos_(false),
+	z_open_(false)
 {
 	strm.zalloc = Z_NULL;
 	strm.zfree = Z_NULL;
@@ -43,6 +44,15 @@ Compressed_istream::Compressed_istream(const string &file_name):
 	int ret = inflateInit2(&strm, 15 + 32);
 	if (ret != Z_OK)
 		throw std::runtime_error("Error opening compressed file (inflateInit): " + file_name);
+	z_open_ = true;
+}
+
+Compressed_istream::~Compressed_istream()
+{
+	if (z_open_) {
+		inflateEnd(&strm);
+		z_open_ = false;
+	}
 }
 
 size_t Compressed_istream::read_bytes(char *ptr, size_t count)
@@ -71,9 +81,12 @@ size_t Compressed_istream::read_bytes(char *ptr, size_t count)
 
 		int ret = inflate(&strm, Z_NO_FLUSH);
 		if (ret == Z_STREAM_END) {
+			inflateEnd(&strm);
+			z_open_ = false;
 			int ret = inflateInit2(&strm, 15 + 32);
 			if (ret != Z_OK)
 				throw std::runtime_error("Error initializing compressed stream (inflateInit): " + file_name);
+			z_open_ = true;
 		}
 		else if (ret != Z_OK)
 			throw std::runtime_error("Inflate error.");
@@ -85,7 +98,10 @@ size_t Compressed_istream::read_bytes(char *ptr, size_t count)
 
 void Compressed_istream::close()
 {
-	inflateEnd(&strm);
+	if (z_open_) {
+		inflateEnd(&strm);
+		z_open_ = false;
+	}
 	Input_stream::close();
 }
 
@@ -122,13 +138,27 @@ Input_stream *Compressed_istream::auto_detect(const string &file_name)
 
 Compressed_ostream::Compressed_ostream(const string &file_name):
 	Output_stream(file_name),
-	out(new char[chunk_size])
+	out(new char[chunk_size]),
+	z_open_(false)
 {
 	strm.zalloc = Z_NULL;
 	strm.zfree = Z_NULL;
 	strm.opaque = Z_NULL;
 	if (deflateInit2(&strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY) != Z_OK)
 		throw std::runtime_error("deflateInit error");
+	z_open_ = true;
+}
+
+Compressed_ostream::~Compressed_ostream()
+{
+	if (z_open_) {
+		deflateEnd(&strm);
+		z_open_ = false;
+	}
+	if (f_ && f_ != stdout) {
+		fclose(f_);
+		f_ = 0;
+	}
 }
 
 void Compressed_ostream::deflate_loop(const char * ptr, size_t count, int flush)
@@ -152,6 +182,10 @@ void Compressed_ostream::write_raw(const char * ptr, size_t count)
 
 void Compressed_ostream::close()
 {
-	deflate_loop(0, 0, Z_FINISH);
-	deflateEnd(&strm);
+	if (z_open_) {
+		deflate_loop(0, 0, Z_FINISH);
+		deflateEnd(&strm);
+		z_open_ = false;
+	}
+	Output_stream::close();
 }
