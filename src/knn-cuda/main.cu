@@ -452,7 +452,7 @@ int main(int argc, char* argv[]) {
   }
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-  printf(" done in %f s for %d iterations (%f s by iteration)\n", time * 1e-9,
+  printf(" done in %f s for %d iterations (%f s per iteration)\n", time * 1e-9,
          c_iterations, time * 1e-9 / (c_iterations));
 
   printf("on GPU: \n");
@@ -462,7 +462,7 @@ int main(int argc, char* argv[]) {
   }
   end = std::chrono::steady_clock::now();
   time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-  printf(" done in %f s for %d iterations (%f s by iteration)\n", time * 1e-9,
+  printf(" done in %f s for %d iterations (%f s per iteration)\n", time * 1e-9,
          iterations, time * 1e-9 / iterations);
 
   for (int i = 0; i < query_nb * k; ++i) {

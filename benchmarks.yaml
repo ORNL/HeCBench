@@ -1469,7 +1469,7 @@ knn:
   categories: [algorithms]
   models: [cuda, hip, omp, sycl]
   test:
-    regex: '(?:on GPU:\s+done in [0-9.+-e]+ s for [0-9]+ iterations \()([0-9.+-e]+)(?: s by iteration\))'
+    regex: '(?:on GPU:\s+done in [0-9.+-e]+ s for [0-9]+ iterations \()([0-9.+-e]+)(?: s per iteration\))'
     args: ["100"]
     timeout: 300
 
