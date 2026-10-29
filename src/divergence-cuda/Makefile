@@ -45,7 +45,7 @@ endif
 $(program): divergence.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
-divergence.o: divergence.cu divergence.hpp Makefile
+divergence.o: divergence.cu divergence.hpp divergence_pragmas.hpp Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 
