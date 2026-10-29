@@ -142,8 +142,8 @@ void DPmixGGM::RandomStart(myInt L_start, Real edgeInclusionProb) {
   for (i = 0; i < L; i++) {
     delete graphlist[i];
   };
-  delete graphlist;
-  delete pll;
+  delete[] graphlist;
+  delete[] pll;
   L = L_start;
   graphlist = new LPGraph[L];
   for (i = 0; i < L; i++) {
@@ -272,6 +272,7 @@ void DPmixGGM::CopyState(State a) {
     xi[i] = a->xi[i];
   };
   if (L != a->L) {
+    delete[] pll;
     L = a->L;
     pll = new Real[L];
     for (i = 0; i < oldL; i++) {
