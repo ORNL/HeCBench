@@ -430,7 +430,8 @@ set(HECBENCH_POC_BENCHMARKS
     svd3x3
     svt
     sw4ck
-    # Batch 14: T-Z benchmarks (33 benchmarks)
+    # Batch 14: T-Z benchmarks (34 benchmarks)
+    tbe
     tensorAccessor
     tensorT
     testSNAP
