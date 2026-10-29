@@ -21,7 +21,7 @@ void geglu_gpu(scalar_t *out, const scalar_t *x_and_gate, int64_t n, int dim_las
     for (int d = 0; d < dim_last; d++) {
       scalar_t ux = x_and_gate[(i*2 + 0) * dim_last + d];
       scalar_t ug = x_and_gate[(i*2 + 1) * dim_last + d];
-      out[i * dim_last + d] = ux * gelu_reference(ug);
+      out[i * dim_last + d] = ux * gelu(ug);
     }
   }
 }
