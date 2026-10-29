@@ -18,16 +18,14 @@ void malvar_he_cutler_demosaic (
   const uint tile_row_blocksize = tile_rows;
   const uint tile_col_block = omp_get_team_num() % teamX;
   const uint tile_row_block = omp_get_team_num() / teamX;
-  const uint tile_col = omp_get_thread_num() % tile_cols;
-  const uint tile_row = omp_get_thread_num() / tile_cols;
-  const uint g_c = tile_col_blocksize * tile_col_block + tile_col;
-  const uint g_r = tile_row_blocksize * tile_row_block + tile_row;
-  const bool valid_pixel_task = (g_r < height) & (g_c < width);
+  const int tid = omp_get_thread_num();
+  const int nthreads = omp_get_num_threads();
 
-  const uint tile_flat_id = tile_row * tile_cols + tile_col;
-  for(uint apron_fill_task_id = tile_flat_id; apron_fill_task_id < n_apron_fill_tasks; apron_fill_task_id += n_tile_pixels){
-    const uint apron_read_row = apron_fill_task_id / apron_cols;
-    const uint apron_read_col = apron_fill_task_id % apron_cols;
+  // The launched team can be smaller than one thread per tile pixel.
+  // Stride by the actual team size so every apron sample and pixel is covered.
+  for (int apron_fill_task_id = tid; apron_fill_task_id < (int)n_apron_fill_tasks; apron_fill_task_id += nthreads) {
+    const uint apron_read_row = (uint)apron_fill_task_id / apron_cols;
+    const uint apron_read_col = (uint)apron_fill_task_id % apron_cols;
     const int ag_c = ((int)(apron_read_col + tile_col_block * tile_col_blocksize)) - shalf_ksize;
     const int ag_r = ((int)(apron_read_row + tile_row_block * tile_row_blocksize)) - shalf_ksize;
 
@@ -35,6 +33,13 @@ void malvar_he_cutler_demosaic (
   }
 
   #pragma omp barrier
+
+  for (int tile_flat_id = tid; tile_flat_id < (int)n_tile_pixels; tile_flat_id += nthreads) {
+  const uint tile_col = (uint)tile_flat_id % tile_cols;
+  const uint tile_row = (uint)tile_flat_id / tile_cols;
+  const uint g_c = tile_col_blocksize * tile_col_block + tile_col;
+  const uint g_r = tile_row_blocksize * tile_row_block + tile_row;
+  const bool valid_pixel_task = (g_r < height) & (g_c < width);
 
   //valid tasks read from [half_ksize, (tile_rows|tile_cols) + kernel_size - 1)
   const uint a_c = tile_col + half_ksize;
@@ -142,5 +147,5 @@ void malvar_he_cutler_demosaic (
   }
   }
   }
+  }
 }
-
