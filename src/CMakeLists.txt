@@ -365,7 +365,7 @@ set(HECBENCH_POC_BENCHMARKS
     rsmt
     rtm8
     rushlarsen
-    # Batch 13: S benchmarks (59 benchmarks)
+    # Batch 13: S benchmarks (60 benchmarks)
     s3d
     s8n
     sa
@@ -379,6 +379,7 @@ set(HECBENCH_POC_BENCHMARKS
     schur-complement
     score
     sddmm-batch
+    sdma
     seam-carving
     secp256k1
     segment-reduce
