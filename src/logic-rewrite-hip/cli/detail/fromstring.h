@@ -131,9 +131,11 @@ inline T signed_from_string(std::string s)
     {
         s = s.substr(1);
         const U val = unsigned_digits_from_string<U>(s);
-        if ( val > static_cast<U>( - std::numeric_limits<T>::min() ) )
+        if ( val > static_cast<U>(std::numeric_limits<T>::max()) + 1 )
             throw bad_conversion();
-        return (- static_cast<T>(val));
+        return val == static_cast<U>(std::numeric_limits<T>::max()) + 1
+                   ? std::numeric_limits<T>::min()
+                   : -static_cast<T>(val);
     }
     else if (s[0] == '+')
     {
