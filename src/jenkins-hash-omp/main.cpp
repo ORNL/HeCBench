@@ -218,10 +218,10 @@ int main(int argc, char** argv) {
     initvals[i] = i%2;
   }
 
-  auto start = std::chrono::steady_clock::now();
-
   #pragma omp target data map(to: keys[0:N*16], lens[0:N], initvals[0:N]) map(from: out[0:N])
   {
+    auto start = std::chrono::steady_clock::now();
+
     for (int n = 0; n < repeat; n++) {
       #pragma omp target teams distribute parallel for thread_limit(block_size)
       for (unsigned long id = 0; id < N; id++) {
@@ -260,11 +260,11 @@ int main(int argc, char** argv) {
         out[id] = mixRemainder(a, b, c, r0, r1, r2, length);
       }
     }
-  }
 
-  auto end = std::chrono::steady_clock::now();
-  auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-  printf("Average kernel execution time : %f (s)\n", (time * 1e-9f) / repeat);
+    auto end = std::chrono::steady_clock::now();
+    auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    printf("Average kernel execution time : %f (s)\n", (time * 1e-9f) / repeat);
+  }
 
   printf("Verify the results computed on the device..\n");
   bool error = false;
