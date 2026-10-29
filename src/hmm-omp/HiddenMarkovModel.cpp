@@ -48,7 +48,7 @@ int main(int argc, const char **argv)
     initHMM(initProb, mtState, mtEmit, nState, nEmit);
 
     // define observational sequence
-    int nObs = 500; // size of observational sequence
+    int nObs = 250; // size of observational sequence
     int **obs = (int**)malloc(nDevice*sizeof(int*));
     int **viterbiPathCPU = (int**)malloc(nDevice*sizeof(int*));
     int **viterbiPathGPU = (int**)malloc(nDevice*sizeof(int*));
