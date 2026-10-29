@@ -563,6 +563,7 @@ set(HECBENCH_POC_BENCHMARKS
     swiglu-oai
     sundials
     ssm
+    ssm2
     storeKVCache
     axpby
     f8cast
