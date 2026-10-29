@@ -148,7 +148,7 @@ FOO_2 *f;
 
 
 
-char *foo_type_name[] = {
+const char *foo_type_name[] = {
    "nothing",
    "FOO_1",
    "FOO_2"

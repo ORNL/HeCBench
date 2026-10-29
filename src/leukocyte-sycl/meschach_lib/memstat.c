@@ -53,7 +53,7 @@ typedef struct {
   void	**var;	/* for &A, where A is a pointer */
   int	type;	/* type of A */
   int	mark;	/* what mark is chosen */
-  char	*fname;	/* source file name where last registered */
+  const char	*fname;	/* source file name where last registered */
   int	line;	/* line # of file where last registered */
 } MEM_STAT_STRUCT;
 
@@ -162,11 +162,11 @@ static int mem_lookup(void **var)
 int mem_stat_reg_list(var,type,list,fname,line)
 void	**var;
 int	type,list;
-char	*fname;
+const char	*fname;
 int	line;
 #else
 int mem_stat_reg_list(void **var, int type, int list,
-		      char *fname, int line)
+		      const char *fname, int line)
 #endif
 {
    int n;
@@ -368,7 +368,7 @@ int mem_stat_show_mark()
      (of course they must be of the same type)
 */
 
-int mem_stat_reg_vars(int list,int type,char *fname,int line, ...)
+int mem_stat_reg_vars(int list,int type,const char *fname,int line, ...)
 {
    va_list ap;
    int i=0;

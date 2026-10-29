@@ -19,16 +19,18 @@ FOREACH(MESCH_TARGET ${MESCHACH_TARGETS})
     LIST(APPEND MESCHACH_LIB "${CMAKE_CURRENT_LIST_DIR}/meschach_lib/${MESCH_TARGET}")
 ENDFOREACH()
 
-add_library(meschach_cuda STATIC ${MESCHACH_LIB})
-
-FOREACH(MESCH_TARGET ${MESCHACH_LIB})
-    set_source_files_properties("${MESCH_TARGET}" PROPERTIES LANGUAGE CXX)
-    set_source_files_properties("${MESCH_TARGET}" PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_CURRENT_LIST_DIR}/meschach_lib")
-ENDFOREACH()
-
-set_target_properties(meschach_cuda PROPERTIES LANGUAGE CXX)
-target_compile_options(meschach_cuda BEFORE PUBLIC "-DHAVE_CONFIG_H" "-DANSI_C")
-target_link_options(meschach_cuda BEFORE PRIVATE "-lm")
+# Leukocyte compiles its .c files as C++/CUDA, so this C library is compiled
+# as C++ to match that linkage. Create it only when this model is enabled;
+# add_hecbench_benchmark returns before linking otherwise.
+if(HECBENCH_ENABLE_CUDA)
+    add_library(meschach_cuda STATIC ${MESCHACH_LIB})
+    set_source_files_properties(${MESCHACH_LIB} PROPERTIES
+        LANGUAGE CXX
+        INCLUDE_DIRECTORIES "${CMAKE_CURRENT_LIST_DIR}/meschach_lib")
+    set_target_properties(meschach_cuda PROPERTIES LANGUAGE CXX)
+    target_compile_options(meschach_cuda BEFORE PUBLIC "-DHAVE_CONFIG_H" "-DANSI_C")
+    target_link_options(meschach_cuda BEFORE PRIVATE "-lm")
+endif()
 
 add_hecbench_benchmark(
     NAME leukocyte
