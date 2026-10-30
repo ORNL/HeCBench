@@ -41,26 +41,41 @@ void threads_copy_kernel(const T *in, T *out, const size_t n, const unsigned num
 }
 
 template <int vec_size, typename scalar_t>
-void test_threads_copy(size_t n, int repeat) {
-    auto in = new scalar_t[n];
-    auto out = new scalar_t[n];
-    for (size_t i = 0; i < n; i++)
-        in[i] = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
-
+bool test_threads_copy(size_t n, int repeat) {
     const int block_size = 256;
     const int block_work_size = block_size * vec_size;
 
     unsigned numTeams = ((n + block_work_size - 1) / block_work_size);
 
-    #pragma omp target data map(to: in[0:n]) map(alloc: out[0:n])
+    // Pad the buffers to the whole launch grid so that a store past n lands
+    // in the padding, where it is detected, instead of outside the allocation.
+    const size_t alloc_n = static_cast<size_t>(numTeams) * block_work_size;
+
+    auto in = new scalar_t[alloc_n];
+    auto out = new scalar_t[alloc_n];
+    for (size_t i = 0; i < n; i++)
+        in[i] = static_cast<scalar_t>(rand() % 127);
+    for (size_t i = n; i < alloc_n; i++)
+        in[i] = static_cast<scalar_t>(127);
+    for (size_t i = 0; i < alloc_n; i++)
+        out[i] = static_cast<scalar_t>(-1);
+
+    bool ok;
+    #pragma omp target data map(to: in[0:alloc_n], out[0:alloc_n])
     {
       // warmup and verify
       for (int i = 0; i < 100; i++)
           threads_copy_kernel<scalar_t, vec_size>(in, out, n, numTeams);
-      #pragma omp target update from (out[0:n]) 
+      #pragma omp target update from (out[0:alloc_n])
 
-      int s = memcmp(out, in, sizeof(scalar_t) * n);
-      std::cout << (s ? "FAIL" : "PASS") << std::endl;
+      ok = memcmp(out, in, sizeof(scalar_t) * n) == 0;
+      for (size_t i = n; i < alloc_n; i++) {
+          if (out[i] != static_cast<scalar_t>(-1)) {
+              ok = false;
+              break;
+          }
+      }
+      std::cout << (ok ? "PASS" : "FAIL") << std::endl;
 
       auto start = std::chrono::steady_clock::now();
 
@@ -90,6 +105,7 @@ void test_threads_copy(size_t n, int repeat) {
 
     delete[] in;
     delete[] out;
+    return ok;
 }
 
 int main(int argc, char* argv[])
@@ -99,42 +115,43 @@ int main(int argc, char* argv[])
       return 1;
     }
     const int repeat = atoi(argv[1]);
+    bool ok = true;
 
     std::cout << "1GB threads copy test ..." << std::endl;
     const size_t numel = 1024 * 1024 * 256 + 2;
     srand(19937);
 
     std::cout << "int1: ";
-    test_threads_copy<1, int>(numel, repeat);
+    ok &= test_threads_copy<1, int>(numel, repeat);
     std::cout << "int2: ";
-    test_threads_copy<2, int>(numel, repeat);
+    ok &= test_threads_copy<2, int>(numel, repeat);
     std::cout << "int4: ";
-    test_threads_copy<4, int>(numel, repeat);
+    ok &= test_threads_copy<4, int>(numel, repeat);
     std::cout << "int8: ";
-    test_threads_copy<8, int>(numel, repeat);
+    ok &= test_threads_copy<8, int>(numel, repeat);
     std::cout << "int16: ";
-    test_threads_copy<16, int>(numel, repeat);
+    ok &= test_threads_copy<16, int>(numel, repeat);
 
     std::cout << "short1: ";
-    test_threads_copy<1, short>(numel * 2, repeat);
+    ok &= test_threads_copy<1, short>(numel * 2, repeat);
     std::cout << "short2: ";
-    test_threads_copy<2, short>(numel * 2, repeat);
+    ok &= test_threads_copy<2, short>(numel * 2, repeat);
     std::cout << "short4: ";
-    test_threads_copy<4, short>(numel * 2, repeat);
+    ok &= test_threads_copy<4, short>(numel * 2, repeat);
     std::cout << "short8: ";
-    test_threads_copy<8, short>(numel * 2, repeat);
+    ok &= test_threads_copy<8, short>(numel * 2, repeat);
     std::cout << "short16: ";
-    test_threads_copy<16, short>(numel * 2, repeat);
+    ok &= test_threads_copy<16, short>(numel * 2, repeat);
 
     std::cout << "char1: ";
-    test_threads_copy<1, char>(numel * 4, repeat);
+    ok &= test_threads_copy<1, char>(numel * 4, repeat);
     std::cout << "char2: ";
-    test_threads_copy<2, char>(numel * 4, repeat);
+    ok &= test_threads_copy<2, char>(numel * 4, repeat);
     std::cout << "char4: ";
-    test_threads_copy<4, char>(numel * 4, repeat);
+    ok &= test_threads_copy<4, char>(numel * 4, repeat);
     std::cout << "char8: ";
-    test_threads_copy<8, char>(numel * 4, repeat);
+    ok &= test_threads_copy<8, char>(numel * 4, repeat);
     std::cout << "char16: ";
-    test_threads_copy<16, char>(numel * 4, repeat);
-    return 0;
+    ok &= test_threads_copy<16, char>(numel * 4, repeat);
+    return ok ? 0 : 1;
 }

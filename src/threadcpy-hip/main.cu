@@ -36,30 +36,44 @@ __global__ void threads_copy_kernel(const T *in, T *out, const size_t n) {
 }
 
 template <int vec_size, typename scalar_t>
-void test_threads_copy(size_t n, int repeat) {
-    auto in_h = new scalar_t[n];
-    auto out_h = new scalar_t[n];
-    for (size_t i = 0; i < n; i++)
-        in_h[i] = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
-
-    scalar_t *in_d, *out_d;
-    GPU_CHECK(hipMalloc(&in_d, n * sizeof(scalar_t)));
-    GPU_CHECK(hipMalloc(&out_d, n * sizeof(scalar_t)));
-    GPU_CHECK(hipMemcpy(in_d, in_h, n * sizeof(scalar_t), hipMemcpyHostToDevice));
-
+bool test_threads_copy(size_t n, int repeat) {
     const int block_size = 256;
     const int block_work_size = block_size * vec_size;
+    const size_t num_blocks = (n + block_work_size - 1) / block_work_size;
+
+    // Pad the buffers to the whole launch grid so that a store past n lands
+    // in the padding, where it is detected, instead of outside the allocation.
+    const size_t alloc_n = num_blocks * block_work_size;
+
+    auto in_h = new scalar_t[alloc_n];
+    auto out_h = new scalar_t[alloc_n];
+    for (size_t i = 0; i < n; i++)
+        in_h[i] = static_cast<scalar_t>(rand() % 127);
+    for (size_t i = n; i < alloc_n; i++)
+        in_h[i] = static_cast<scalar_t>(127);
+
+    scalar_t *in_d, *out_d;
+    GPU_CHECK(hipMalloc(&in_d, alloc_n * sizeof(scalar_t)));
+    GPU_CHECK(hipMalloc(&out_d, alloc_n * sizeof(scalar_t)));
+    GPU_CHECK(hipMemcpy(in_d, in_h, alloc_n * sizeof(scalar_t), hipMemcpyHostToDevice));
+    GPU_CHECK(hipMemset(out_d, 0xFF, alloc_n * sizeof(scalar_t)));
 
     dim3 threadsPerBlock(block_size);
-    dim3 numBlocks((n + block_work_size - 1) / block_work_size);
+    dim3 numBlocks(num_blocks);
 
     // warmup and verify
     for (int i = 0; i < 100; i++)
         threads_copy_kernel<scalar_t, vec_size><<<numBlocks, threadsPerBlock>>>(in_d, out_d, n);
-    GPU_CHECK(hipMemcpy(out_h, out_d, n * sizeof(scalar_t), hipMemcpyDeviceToHost));
+    GPU_CHECK(hipMemcpy(out_h, out_d, alloc_n * sizeof(scalar_t), hipMemcpyDeviceToHost));
 
-    int s = memcmp(out_h, in_h, sizeof(scalar_t) * n);
-    std::cout << (s ? "FAIL" : "PASS") << std::endl;
+    bool ok = memcmp(out_h, in_h, sizeof(scalar_t) * n) == 0;
+    for (size_t i = n; i < alloc_n; i++) {
+        if (out_h[i] != static_cast<scalar_t>(-1)) {
+            ok = false;
+            break;
+        }
+    }
+    std::cout << (ok ? "PASS" : "FAIL") << std::endl;
 
     auto start = std::chrono::steady_clock::now();
 
@@ -80,6 +94,7 @@ void test_threads_copy(size_t n, int repeat) {
     GPU_CHECK(hipFree(out_d));
     delete[] in_h;
     delete[] out_h;
+    return ok;
 }
 
 int main(int argc, char* argv[])
@@ -89,42 +104,43 @@ int main(int argc, char* argv[])
       return 1;
     }
     const int repeat = atoi(argv[1]);
+    bool ok = true;
 
     std::cout << "1GB threads copy test ..." << std::endl;
     const size_t numel = 1024 * 1024 * 256 + 2;
     srand(19937);
 
     std::cout << "int1: ";
-    test_threads_copy<1, int>(numel, repeat);
+    ok &= test_threads_copy<1, int>(numel, repeat);
     std::cout << "int2: ";
-    test_threads_copy<2, int>(numel, repeat);
+    ok &= test_threads_copy<2, int>(numel, repeat);
     std::cout << "int4: ";
-    test_threads_copy<4, int>(numel, repeat);
+    ok &= test_threads_copy<4, int>(numel, repeat);
     std::cout << "int8: ";
-    test_threads_copy<8, int>(numel, repeat);
+    ok &= test_threads_copy<8, int>(numel, repeat);
     std::cout << "int16: ";
-    test_threads_copy<16, int>(numel, repeat);
+    ok &= test_threads_copy<16, int>(numel, repeat);
 
     std::cout << "short1: ";
-    test_threads_copy<1, short>(numel * 2, repeat);
+    ok &= test_threads_copy<1, short>(numel * 2, repeat);
     std::cout << "short2: ";
-    test_threads_copy<2, short>(numel * 2, repeat);
+    ok &= test_threads_copy<2, short>(numel * 2, repeat);
     std::cout << "short4: ";
-    test_threads_copy<4, short>(numel * 2, repeat);
+    ok &= test_threads_copy<4, short>(numel * 2, repeat);
     std::cout << "short8: ";
-    test_threads_copy<8, short>(numel * 2, repeat);
+    ok &= test_threads_copy<8, short>(numel * 2, repeat);
     std::cout << "short16: ";
-    test_threads_copy<16, short>(numel * 2, repeat);
+    ok &= test_threads_copy<16, short>(numel * 2, repeat);
 
     std::cout << "char1: ";
-    test_threads_copy<1, char>(numel * 4, repeat);
+    ok &= test_threads_copy<1, char>(numel * 4, repeat);
     std::cout << "char2: ";
-    test_threads_copy<2, char>(numel * 4, repeat);
+    ok &= test_threads_copy<2, char>(numel * 4, repeat);
     std::cout << "char4: ";
-    test_threads_copy<4, char>(numel * 4, repeat);
+    ok &= test_threads_copy<4, char>(numel * 4, repeat);
     std::cout << "char8: ";
-    test_threads_copy<8, char>(numel * 4, repeat);
+    ok &= test_threads_copy<8, char>(numel * 4, repeat);
     std::cout << "char16: ";
-    test_threads_copy<16, char>(numel * 4, repeat);
-    return 0;
+    ok &= test_threads_copy<16, char>(numel * 4, repeat);
+    return ok ? 0 : 1;
 }
