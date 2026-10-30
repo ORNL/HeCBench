@@ -25,8 +25,8 @@ void compute_sad_array(
   auto kbegin = std::chrono::steady_clock::now();
 
   #pragma omp target teams distribute parallel for collapse(2) thread_limit(BLOCK_SIZE)
-  for (int row = 0; row < image_height; row++) {
-    for (int col = 0; col < image_width; col++) {
+  for (int row = 0; row <= image_height - kernel_height; row++) {
+    for (int col = 0; col <= image_width - kernel_width; col++) {
       int sad_result = 0;
       const int overlap_width = min(image_width - col, kernel_width);
       const int overlap_height = min(image_height - row, kernel_height);
@@ -49,7 +49,7 @@ void compute_sad_array(
 
       int norm_sad = (int)(sad_result / (float)kernel_size);
 
-      int my_index_in_sad_array = row * image_width + col;
+      int my_index_in_sad_array = row * (image_width - kernel_width + 1) + col;
       if (my_index_in_sad_array < sad_array_size) {
         sad_array[my_index_in_sad_array] = norm_sad;
       }

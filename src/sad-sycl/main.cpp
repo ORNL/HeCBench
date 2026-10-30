@@ -28,7 +28,7 @@ void compute_sad_array(
   int row = item.get_global_id(0);
   int sad_result = 0;
 
-  if (row < image_height && col < image_width) {
+  if (row <= image_height - kernel_height && col <= image_width - kernel_width) {
     const int overlap_width = min(image_width - col, kernel_width);
     const int overlap_height = min(image_height - row, kernel_height);
     #pragma unroll 4
@@ -50,7 +50,7 @@ void compute_sad_array(
 
     int norm_sad = (int)(sad_result / (float)kernel_size);
 
-    int my_index_in_sad_array = row * image_width + col;
+    int my_index_in_sad_array = row * (image_width - kernel_width + 1) + col;
     if (my_index_in_sad_array < sad_array_size) {
       sad_array[my_index_in_sad_array] = norm_sad;
     }
