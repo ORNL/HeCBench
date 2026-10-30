@@ -21,9 +21,10 @@ template <typename T, int vec_size>
 void threads_copy_kernel(const T *in, T *out, const size_t n, const unsigned numTeams) {
   const int block_work_size = 256 * vec_size;
   #pragma omp target teams distribute parallel for collapse(2)
-  for (auto n = 0; n < numTeams; n++) {
+  for (unsigned b = 0; b < numTeams; b++) {
     for (auto t = 0; t < 256; t++) {
-      auto index = static_cast<size_t>(n) * block_work_size + t * vec_size;
+      auto index = static_cast<size_t>(b) * block_work_size + t * vec_size;
+      if (index >= n) continue;
       auto remaining = n - index;
       if (remaining < vec_size) {
           for (auto i = index; i < n; i++) {

@@ -21,6 +21,7 @@ template <typename T, int vec_size>
 __global__ void threads_copy_kernel(const T *in, T *out, const size_t n) {
     const int block_work_size = blockDim.x * vec_size;
     auto index = static_cast<size_t>(blockIdx.x) * block_work_size + threadIdx.x * vec_size;
+    if (index >= n) return;
     auto remaining = n - index;
     if (remaining < vec_size) {
         for (auto i = index; i < n; i++) {

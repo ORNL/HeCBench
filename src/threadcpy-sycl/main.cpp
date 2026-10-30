@@ -14,6 +14,7 @@ void threads_copy_kernel(sycl::nd_item<3> &item, const T *in, T *out, const size
     // get_group(dim) returns size_t
     auto index = item.get_group(2) * block_work_size +
                  item.get_local_id(2) * vec_size;
+    if (index >= n) return;
     auto remaining = n - index;
     if (remaining < vec_size) {
         for (auto i = index; i < n; i++) {
