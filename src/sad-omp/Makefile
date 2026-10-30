@@ -58,7 +58,7 @@ DATA_HDR := $(DATA_DIR)/bitmap_image.hpp
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp $(DATA_HDR)
+%.o: %.cpp $(DATA_HDR) $(DATA_DIR)/reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(DATA_HDR): $(wildcard $(DATA_TGZ))

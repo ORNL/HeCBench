@@ -19,6 +19,8 @@
 #define FOUND_MIN     5000
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
+#include "reference.h"
+
 __global__ void compute_sad_array(
                     int*__restrict__ sad_array,
     const unsigned char*__restrict__ image,
@@ -187,6 +189,7 @@ int main(int argc, char* argv[]) {
   check(hipMalloc((void **)&d_sad_array, sad_array_size * sizeof(int)));
   check(hipMalloc((void **)&d_min_mse, sizeof(int)));
   check(hipMalloc((void **)&d_num_occurances, sizeof(int)));
+  check(hipMemset(d_sad_array, 0xFF, sad_array_size * sizeof(int)));
 
   dim3 grids((unsigned int)ceilf((float)main_width / BLOCK_SIZE_X),
              (unsigned int)ceilf((float)main_height / BLOCK_SIZE_Y));
@@ -235,6 +238,8 @@ int main(int argc, char* argv[]) {
   auto end = std::chrono::steady_clock::now();
   float elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds> (end - begin).count();
 
+  check(hipMemcpy(h_sad_array, d_sad_array, sad_array_size * sizeof(int), hipMemcpyDeviceToHost));
+
   std::cout << "Parallel Computation Results: " << std::endl;
   std::cout << "Kernel time in msec: " << kernel_time << std::endl; 
   std::cout << "Elapsed time in msec: " << elapsed_time << std::endl; 
@@ -242,6 +247,11 @@ int main(int argc, char* argv[]) {
   std::cout << "Template Image Dimensions: " << template_width << "*" << template_height << std::endl;
   std::cout << "Found Minimum: " << h_min_mse << std::endl;
   std::cout << "Number of Occurances: " << h_num_occurances << std::endl;
+
+  bool ok = reference(h_sad_array, h_main_image, h_template_image, sad_array_size,
+                      main_width, main_height, template_width, template_height,
+                      THRESHOLD, h_min_mse, h_num_occurances);
+  std::cout << (ok ? "PASS" : "FAIL") << std::endl;
 
   check(hipFree(d_main_image));
   check(hipFree(d_template_image));
@@ -251,5 +261,5 @@ int main(int argc, char* argv[]) {
   delete[] h_main_image;
   delete[] h_template_image;
   delete[] h_sad_array;
-  return 0;
+  return ok ? 0 : 1;
 }
