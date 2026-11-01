@@ -46,7 +46,7 @@ struct derivative {
   real_scalar<np, real> Dvv;
 };
 
-using real = float;
+using real = double;
 
 __global__ void 
 div_kernel (real* gv, 
