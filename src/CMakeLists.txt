@@ -556,6 +556,7 @@ set(HECBENCH_POC_BENCHMARKS
     pointerchase
     rmsnorm
     rmsnorm-quant
+    rmsnorm-rope
     saxpy-ompt
     silu
     softmax-fused

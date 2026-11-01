@@ -2373,6 +2373,15 @@ rle:
   models: [cuda, hip]
   # No test metadata available
 
+rmsnorm-rope:
+  categories: [ml]
+  description: Fused Ideogram v4 per-head QK RMSNorm and interleaved MRoPE
+  models: [cuda, hip, omp, sycl]
+  test:
+    regex: '(?:Average kernel execution time: )([0-9.+-e]+)(?: \(ms\))'
+    args: ["32", "4", "256", "24", "20", "20", "2"]
+    timeout: 300
+
 rng-wallace:
   categories: [algorithms]
   models: [cuda, hip, omp, sycl]
