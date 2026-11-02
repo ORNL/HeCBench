@@ -163,7 +163,7 @@ set(HECBENCH_POC_BENCHMARKS
     frna
     fsm
     fwt
-    # Batch 8: G-I benchmarks (39 benchmarks)
+    # Batch 8: G-I benchmarks (40 benchmarks)
     ga
     gabor
     gamma-correction
@@ -175,6 +175,7 @@ set(HECBENCH_POC_BENCHMARKS
     gelu
     gemv
     ge-spmm
+    gis
     gibbs
     goulash
     gpp
