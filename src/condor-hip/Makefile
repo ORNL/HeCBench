@@ -29,13 +29,13 @@ obj = $(source:.cu=.o)
 # Sets Flags
 #===============================================================================
 
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fopenmp -I../condor-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../condor-cuda
 
 ifneq ($(ARCH),)
   CFLAGS += --offload-arch=$(ARCH)
 endif
 
-LDFLAGS = -fopenmp
+LDFLAGS =
 
 ifeq ($(DEBUG),yes)
   CFLAGS += -g

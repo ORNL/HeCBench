@@ -29,8 +29,7 @@ obj = $(source:.cu=.o)
 # Sets Flags
 #===============================================================================
 
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Xcompiler -Wall \
-          -Xcompiler -fopenmp -arch=$(ARCH)
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Xcompiler -Wall -arch=$(ARCH)
 
 LDFLAGS =
 

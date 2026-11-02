@@ -1,5 +1,3 @@
-// Standalone extraction of Condor::impl::Calc::T_host.
-//
 // Source: ORNL/Condor commit ca3c4baecbfb04876270b9bb6b180b742eb4a948
 //   include/impl/Calc/Temperature.cpp
 //   include/impl/Utility/Grid.hpp
@@ -57,10 +55,8 @@ FloatType temperature(const Nodes& nodes, const Grid& grid, const FloatType t_in
     const FloatType expmod = nodes.expmod[node];
     const FloatType dtau = nodes.dtau[node];
 
-    const FloatType phi =
-        std::exp(-static_cast<FloatType>(3.0) *
-                     ((dx * dx * phix) + (dy * dy * phiy) + (dz * dz * phiz)) +
-                 expmod);
+    const FloatType phi = std::exp(-static_cast<FloatType>(3.0) *
+      ((dx * dx * phix) + (dy * dy * phiy) + (dz * dz * phiz)) + expmod);
     const FloatType dT_seg = dtau * phi;
     dT += dT_seg;
   }

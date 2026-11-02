@@ -99,6 +99,12 @@ inline int parse_int(const char* text, const char* name, bool allow_zero) {
 // 2e9, leaving room for npoints + block - 1 when the block size is at most 1024.
 constexpr int kMaxPoints = 2000000000;
 
+// Node indices are signed ints. The widest stride is two sub-group widths
+// (SYCL steps by Wave * 2, and Wave can be 64). nnodes stays this far below
+// INT_MAX so node + stride cannot overflow.
+constexpr int kMaxNodeStride = 128;
+constexpr int kMaxNodes = INT_MAX - kMaxNodeStride;
+
 // True when an axis or the point count exceeds kMaxPoints. The divisions reject
 // a product that does not fit in a signed int without multiplying the axes first.
 inline bool grid_exceeds_points(int nx, int ny, int nz) {
@@ -146,6 +152,10 @@ inline BenchConfig parse_options(int argc, char** argv) {
   }
   if (grid_exceeds_points(cfg.nx, cfg.ny, cfg.nz)) {
     fprintf(stderr, "grid is too large\n");
+    std::exit(EXIT_FAILURE);
+  }
+  if (cfg.nnodes > kMaxNodes) {
+    fprintf(stderr, "node count is too large\n");
     std::exit(EXIT_FAILURE);
   }
   return cfg;
@@ -245,9 +255,6 @@ inline bool compare_temperature(const std::vector<double>& device_T, const Nodes
   max_rel = 0.0;
   int failed = 0;
 
-#ifdef _OPENMP
-#pragma omp parallel for reduction(max : max_abs, max_rel) reduction(max : failed)
-#endif
   for (int p = 0; p < npoints; ++p) {
     const double reference = condor_reference::temperature(nodes, grid, t_init, p);
     const double got = device_T[static_cast<size_t>(p)];
@@ -258,6 +265,7 @@ inline bool compare_temperature(const std::vector<double>& device_T, const Nodes
     max_rel = std::max(max_rel, rel_err);
     if (!(abs_err <= kAbsTol || rel_err <= kRelTol)) {
       failed = 1;
+      break;
     }
   }
   return failed == 0;

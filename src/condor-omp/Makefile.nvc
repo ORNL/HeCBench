@@ -46,7 +46,7 @@ endif
 ifeq ($(DEVICE),gpu)
   CFLAGS +=-Minfo -mp=gpu -gpu=$(SM)
 else
-  CFLAGS += -fopenmp
+  CFLAGS += -mp=multicore
 endif
 
 #===============================================================================
