@@ -126,7 +126,7 @@ struct Output_sink
 	{
 		return next_;
 	}
-	static auto_ptr<Output_sink> instance;
+	static unique_ptr<Output_sink> instance;
 private:
 	void flush(Text_buffer *buf);
 	tthread::mutex mtx_;

@@ -369,35 +369,37 @@ selective_scan_vllm_kernel(SSMParamsBase params)
 static constexpr int kNT = 128;
 static constexpr int kNI = 4;
 
+// Function template keeps this in C++17. A templated lambda
+// (auto f = [&]<bool...>()) is a C++20 feature.
+template <bool HZ, bool SP, bool EL>
+static void dispatch_vllm_kernel(SSMParamsBase& p, cudaStream_t stream)
+{
+    using Traits = SSMFwdKernelTraits<kNT, kNI, kDstate, HZ, SP, EL>;
+    int smem = Traits::kSmemSize;
+    // Ensure the kernel can use this much shared memory
+    GPU_CHECK(cudaFuncSetAttribute(
+        selective_scan_vllm_kernel<Traits>,
+        cudaFuncAttributeMaxDynamicSharedMemorySize, smem));
+    dim3 grid(p.batch * p.dim, p.n_chunks);
+    selective_scan_vllm_kernel<Traits>
+        <<<grid, kNT, smem, stream>>>(p);
+}
+
 void launch_kernel(SSMParamsBase& p, bool has_z, bool softplus,
                    bool even_len, float* d_carry_a, float* d_carry_b,
                    cudaStream_t stream = 0)
 {
     p.running_prefix_a = d_carry_a;
     p.running_prefix_b = d_carry_b;
-    // Instantiate all compile-time specialisations via nested lambdas,
-    // mirroring vLLM's BOOL_SWITCH pattern.
-    auto dispatch = [&]<bool HZ, bool SP, bool EL>() {
-        using Traits = SSMFwdKernelTraits<kNT, kNI, kDstate, HZ, SP, EL>;
-        int smem = Traits::kSmemSize;
-        // Ensure the kernel can use this much shared memory
-        GPU_CHECK(cudaFuncSetAttribute(
-            selective_scan_vllm_kernel<Traits>,
-            cudaFuncAttributeMaxDynamicSharedMemorySize, smem));
-        dim3 grid(p.batch * p.dim, p.n_chunks);
-        selective_scan_vllm_kernel<Traits>
-            <<<grid, kNT, smem, stream>>>(p);
-    };
-
-    // Dispatch (8 instantiations)
-    if ( has_z &&  softplus &&  even_len) dispatch.operator()<true,  true,  true >();
-    if ( has_z &&  softplus && !even_len) dispatch.operator()<true,  true,  false>();
-    if ( has_z && !softplus &&  even_len) dispatch.operator()<true,  false, true >();
-    if ( has_z && !softplus && !even_len) dispatch.operator()<true,  false, false>();
-    if (!has_z &&  softplus &&  even_len) dispatch.operator()<false, true,  true >();
-    if (!has_z &&  softplus && !even_len) dispatch.operator()<false, true,  false>();
-    if (!has_z && !softplus &&  even_len) dispatch.operator()<false, false, true >();
-    if (!has_z && !softplus && !even_len) dispatch.operator()<false, false, false>();
+    // Dispatch (8 instantiations), mirroring vLLM's BOOL_SWITCH pattern.
+    if ( has_z &&  softplus &&  even_len) dispatch_vllm_kernel<true,  true,  true >(p, stream);
+    if ( has_z &&  softplus && !even_len) dispatch_vllm_kernel<true,  true,  false>(p, stream);
+    if ( has_z && !softplus &&  even_len) dispatch_vllm_kernel<true,  false, true >(p, stream);
+    if ( has_z && !softplus && !even_len) dispatch_vllm_kernel<true,  false, false>(p, stream);
+    if (!has_z &&  softplus &&  even_len) dispatch_vllm_kernel<false, true,  true >(p, stream);
+    if (!has_z &&  softplus && !even_len) dispatch_vllm_kernel<false, true,  false>(p, stream);
+    if (!has_z && !softplus &&  even_len) dispatch_vllm_kernel<false, false, true >(p, stream);
+    if (!has_z && !softplus && !even_len) dispatch_vllm_kernel<false, false, false>(p, stream);
 }
 
 static void fill_rand(float* buf, int n, float lo, float hi) {

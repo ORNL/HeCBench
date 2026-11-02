@@ -53,7 +53,7 @@ endif
 $(program): divergence.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
-divergence.o: divergence.cpp divergence.hpp Makefile.aomp
+divergence.o: divergence.cpp divergence.hpp ../divergence-cuda/divergence_pragmas.hpp Makefile.aomp
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

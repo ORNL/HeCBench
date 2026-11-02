@@ -127,7 +127,7 @@ long benchmark(
         #define sigma_imag(i, j) (sigma_id + 2 * ((i) * dim + (j)) + 1)
         
         #define ham_real(i, j) (2 * ((i) * dim + (j)))
-        #define ham_imag(i, j) (2 * ((i) * dim + (k)) + 1)
+        #define ham_imag(i, j) (2 * ((i) * dim + (j)) + 1)
 
         const real_t* __restrict sigma_in = (real_t*)sin;
               real_t* __restrict sigma_out = (real_t*)sout;
@@ -157,6 +157,11 @@ long benchmark(
             }
           }
         }
+
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -165,7 +170,7 @@ long benchmark(
         #define sigma_real(i, j) (sigma_id + 2 * ((i) * dim + (j)))
         #define sigma_imag(i, j) (sigma_id + 2 * ((i) * dim + (j)) + 1)
         #define ham_real(i, j) (2 * ((i) * dim + (j)))
-        #define ham_imag(i, j) (2 * ((i) * dim + (k)) + 1)
+        #define ham_imag(i, j) (2 * ((i) * dim + (j)) + 1)
 
         const real_t* __restrict sigma_in = (real_t*)sin;
               real_t* __restrict sigma_out = (real_t*)sout;
@@ -190,6 +195,11 @@ long benchmark(
             }
           }
         }
+
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -230,6 +240,13 @@ long benchmark(
             }
           }
         }
+
+        #undef package_id
+        #undef sigma_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -271,6 +288,13 @@ long benchmark(
             }
           }
         }
+
+        #undef package_id
+        #undef sigma_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -326,6 +350,13 @@ long benchmark(
             }
           }
         }
+
+        #undef package_id
+        #undef sigma_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -362,6 +393,13 @@ long benchmark(
             }
           }
         }
+
+        #undef package_id
+        #undef sigma_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -398,6 +436,13 @@ long benchmark(
             }
           }
         }
+
+        #undef package_id
+        #undef sigma_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -438,6 +483,13 @@ long benchmark(
             }
           }
         }
+
+        #undef package_id
+        #undef sigma_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -480,6 +532,13 @@ long benchmark(
                 }
               }
             }
+
+        #undef package_id
+        #undef sigma_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -522,6 +581,13 @@ long benchmark(
                 }
               }
             }
+
+        #undef package_id
+        #undef sigma_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -577,6 +643,13 @@ long benchmark(
                 }
               }
             }
+
+        #undef package_id
+        #undef sigma_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -614,6 +687,13 @@ long benchmark(
 	        }
               }
             }
+
+        #undef package_id
+        #undef sigma_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -651,6 +731,13 @@ long benchmark(
 	        }
               }
             }
+
+        #undef package_id
+        #undef sigma_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -692,6 +779,13 @@ long benchmark(
 	        }
               }
             }
+
+        #undef package_id
+        #undef sigma_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -730,6 +824,12 @@ long benchmark(
             }
           }
         }
+
+        #undef package_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -768,6 +868,12 @@ long benchmark(
             }
           }
         }
+
+        #undef package_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -820,6 +926,12 @@ long benchmark(
             }
           }
         }
+
+        #undef package_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -858,6 +970,12 @@ long benchmark(
             }
           }
         }
+
+        #undef package_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -892,6 +1010,12 @@ long benchmark(
             }
           }
         }
+
+        #undef package_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -926,6 +1050,12 @@ long benchmark(
             }
           }
         }
+
+        #undef package_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -963,6 +1093,12 @@ long benchmark(
             }
           }
         }
+
+        #undef package_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -1001,6 +1137,12 @@ long benchmark(
             }
           }
         }
+
+        #undef package_id
+        #undef sigma_real
+        #undef sigma_imag
+        #undef ham_real
+        #undef ham_imag
         break;
       }
 
@@ -1112,6 +1254,10 @@ long benchmark(
             }
           }
         }
+
+        #undef id_2d_to_1d
+        #undef sigma_id
+        #undef MIN
         break;
       }
       default: std::cerr << "ERROR: **** benchmark kernel unavailable **** \n";

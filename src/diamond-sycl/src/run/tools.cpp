@@ -131,7 +131,7 @@ void run_masker()
 
 void fastq2fasta()
 {
-	auto_ptr<Input_stream> f(Compressed_istream::auto_detect(config.query_file));
+	unique_ptr<Input_stream> f(Compressed_istream::auto_detect(config.query_file));
 	vector<Letter> seq;
 	vector<char> id;
 	const FASTQ_format format;
@@ -142,4 +142,5 @@ void fastq2fasta()
 		cout << sequence(seq.data(), seq.size()) << endl;
 		++n;
 	}
+	f->close();
 }

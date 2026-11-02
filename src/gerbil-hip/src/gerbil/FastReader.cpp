@@ -167,16 +167,16 @@ void gerbil::FastReader::readFile(
 	if(verbose) {
 		printf("Thread[%i]: read file '%s' (%4lu %sB)...\n",
 		       tId,
-		       fastFile.getPath().leaf().c_str(),
+		       fastFile.getPath().filename().c_str(),
 		       inGB ? B_TO_GB(fastFile.getSize()) : B_TO_MB(fastFile.getSize()),
 		       inGB ? "G" : "M");
 	}
 	//if (fastFile.getSize() > ((uint64) 1 << 30))
 	//	printf("read file '%s' (%4lu GB)...\n",
-	//			fastFile.getPath().leaf().c_str(), B_TO_GB(fastFile.getSize()));
+	//			fastFile.getPath().filename().c_str(), B_TO_GB(fastFile.getSize()));
 	//else
 	//	printf("read file '%s' (%4lu MB)...\n",
-	//			fastFile.getPath().leaf().c_str(), B_TO_MB(fastFile.getSize()));
+	//			fastFile.getPath().filename().c_str(), B_TO_MB(fastFile.getSize()));
 
 	//open file
 	FILE* file;

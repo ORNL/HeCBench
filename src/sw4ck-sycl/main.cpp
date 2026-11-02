@@ -28,34 +28,42 @@ int main(int argc, char *argv[]) {
   // Open an input data file
   std::ifstream iff;
   iff.open(argv[1]);
+  if (!iff.is_open()) {
+    std::cerr << "Error: failed to open input file " << argv[1] << "\n";
+    return 1;
+  }
 
   // Repeat the execution of kernels
   const int repeat = atoi(argv[2]);
 
-  // At most 10 input datasets
-  std::map<std::string, Sarray*> arrays[10];
+  std::vector<std::map<std::string, Sarray*>> arrays;
   std::vector<int*> onesided;
   std::string line;
   int lc = 0;
+  // One dataset is a 14-integer header plus 15 Sarray records.
+  const int N = 16;
   std::cout << "Reading from file " << argv[1] << "\n";
   while (std::getline(iff, line)) {
     std::istringstream iss(line);
-    int* optr = new int[14];
-    const int N = 16;
     if ((lc % N) == 0) {
+      int* optr = new int[14];
       if (!(iss >> optr[0] >> optr[1] >> optr[2] >> optr[3] >> optr[4] >>
             optr[5] >> optr[6] >> optr[7] >> optr[8] >> optr[9] >> optr[10] >>
             optr[11] >> optr[12] >> optr[13])) {
+        delete[] optr;
         std::cerr << "Error reading data on line " << lc + 1 << "\n";
-        break;
+        return 1;
       }
       onesided.push_back(optr);
+      arrays.emplace_back();
     } else {
       Sarray* s = new Sarray();
+      s->m_data = nullptr;
       auto name = s->fill(iss);
       if (name == "Break") {
+        delete s;
         std::cerr << "Error reading Sarray data on line " << lc + 1 << "\n";
-        break;
+        return 1;
       } else {
         arrays[lc / N][name] = s;
       }
@@ -63,10 +71,23 @@ int main(int argc, char *argv[]) {
     lc++;
   } // while
 
+  // A header is stored before its 15 records. Do not run that partial case.
+  if (lc % N != 0) {
+    std::cerr << "Error: truncated dataset in " << argv[1]
+              << " at line " << lc + 1 << "\n";
+    return 1;
+  }
+
+  const int ndata = static_cast<int>(onesided.size());
+  if (ndata == 0) {
+    std::cerr << "Error: no input datasets in " << argv[1] << "\n";
+    return 1;
+  }
+
 #ifdef VERBOSE
   std::cout << "\nCurrent state of map array\n";
 #endif
-  for (int i = 0; i < 2; i++)
+  for (int i = 0; i < ndata; i++)
     for (auto const& x : arrays[i]) {
 #ifdef VERBOSE
       std::cout << x.first << " " << x.second->g << " " << x.second->m_npts
@@ -101,10 +122,12 @@ int main(int argc, char *argv[]) {
   float_sw4 *d_acof_no_gp = d_ghcof + 6;
   float_sw4 *d_ghcof_no_gp = d_acof_no_gp + 384;
 
-  // Expected norm values after executing five kernels for the two input dataset
-  float_sw4 exact_norm[2] = {2.2502232733796421194, 202.0512747393526638};
+  // Reference norms for the cases shipped in sw4ck.in. Further cases are
+  // still executed; their norms are printed without a percentage error.
+  const float_sw4 exact_norm[] = {2.2502232733796421194, 202.0512747393526638};
+  const int nref = sizeof(exact_norm) / sizeof(exact_norm[0]);
 
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < ndata; i++) {
     int* optr = onesided[i];
     float_sw4* alpha_ptr = arrays[i]["a_AlphaVE_0"]->m_data;
     size = arrays[i]["a_AlphaVE_0"]->m_nc *
@@ -206,8 +229,14 @@ int main(int argc, char *argv[]) {
     q.memcpy(uacc_ptr, d_uacc_ptr, size).wait();
 
     float_sw4 norm = arrays[i]["a_Uacc"]->norm();
-    float_sw4 err = (norm - exact_norm[i]) / exact_norm[i] * 100;
-    std::cout << "Error = " << err << " %\n";
+    if (i < nref) {
+      float_sw4 err = (norm - exact_norm[i]) / exact_norm[i] * 100;
+      std::cout << "Error = " << err << " %\n";
+    } else {
+      auto prec = std::cout.precision();
+      std::cout << "Norm = " << std::setprecision(17) << norm << "\n";
+      std::cout.precision(prec);
+    }
 
     // Free host and device memory allocations
     sycl::free(d_alpha_ptr, q);
@@ -222,7 +251,7 @@ int main(int argc, char *argv[]) {
   }
   sycl::free(d_cof_ptr, q);
   free(cof_ptr);
-  for (int i = 0; i < 2; i++)
+  for (int i = 0; i < ndata; i++)
     for (auto const& x : arrays[i])
       delete(x.second);
   return 0;
