@@ -5,7 +5,6 @@ add_hecbench_benchmark(
     MODEL hip
     SOURCES
         src/main.cpp
-        src/kernel.cpp
         src/helper.cpp
     CATEGORIES bioinformatics
 )

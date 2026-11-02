@@ -35,7 +35,7 @@ using real_2_t = double2;
 
 using complex_t = std::complex<real_t>;
 
-#define VEC_LENGTH_AUTO 8
+#define VEC_LENGTH_AUTO 4
 
 #ifndef VEC_LENGTH 
 #define VEC_LENGTH VEC_LENGTH_AUTO  

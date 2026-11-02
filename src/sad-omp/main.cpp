@@ -10,6 +10,8 @@
 #define THRESHOLD     20
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
+#include "reference.h"
+
 void compute_sad_array(
                     int*__restrict sad_array,
     const unsigned char*__restrict image,
@@ -25,8 +27,8 @@ void compute_sad_array(
   auto kbegin = std::chrono::steady_clock::now();
 
   #pragma omp target teams distribute parallel for collapse(2) thread_limit(BLOCK_SIZE)
-  for (int row = 0; row < image_height; row++) {
-    for (int col = 0; col < image_width; col++) {
+  for (int row = 0; row <= image_height - kernel_height; row++) {
+    for (int col = 0; col <= image_width - kernel_width; col++) {
       int sad_result = 0;
       const int overlap_width = min(image_width - col, kernel_width);
       const int overlap_height = min(image_height - row, kernel_height);
@@ -49,7 +51,7 @@ void compute_sad_array(
 
       int norm_sad = (int)(sad_result / (float)kernel_size);
 
-      int my_index_in_sad_array = row * image_width + col;
+      int my_index_in_sad_array = row * (image_width - kernel_width + 1) + col;
       if (my_index_in_sad_array < sad_array_size) {
         sad_array[my_index_in_sad_array] = norm_sad;
       }
@@ -124,13 +126,14 @@ int main(int argc, char* argv[]) {
   }
 
   int* h_sad_array = new int[sad_array_size];
+  for (int i = 0; i < sad_array_size; i++) h_sad_array[i] = -1;
   int h_num_occurances;
   int h_min_mse;
   float elapsed_time; 
 
   #pragma omp target data map(to: h_main_image[0:3*main_size],\
                                   h_template_image[0:3*template_size]) \
-                          map(alloc: h_sad_array[0:sad_array_size])
+                          map(to: h_sad_array[0:sad_array_size])
   {
     // Measure device execution time
     double kernel_time = 0.0;
@@ -150,6 +153,8 @@ int main(int argc, char* argv[]) {
     auto end = std::chrono::steady_clock::now();
     elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds> (end - begin).count();
 
+    #pragma omp target update from (h_sad_array[0:sad_array_size])
+
     std::cout << "Parallel Computation Results: " << std::endl;
     std::cout << "Kernel time in msec: " << kernel_time << std::endl; 
     std::cout << "Elapsed time in msec = " << elapsed_time << std::endl; 
@@ -159,8 +164,13 @@ int main(int argc, char* argv[]) {
     std::cout << "Number of Occurances: " << h_num_occurances << std::endl;
   }
 
+  bool ok = reference(h_sad_array, h_main_image, h_template_image, sad_array_size,
+                      main_width, main_height, template_width, template_height,
+                      THRESHOLD, h_min_mse, h_num_occurances);
+  std::cout << (ok ? "PASS" : "FAIL") << std::endl;
+
   delete[] h_main_image;
   delete[] h_template_image;
   delete[] h_sad_array;
-  return 0;
+  return ok ? 0 : 1;
 }

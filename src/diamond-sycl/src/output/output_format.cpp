@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using std::endl;
 
-auto_ptr<Output_format> output_format;
+unique_ptr<Output_format> output_format;
 
 void Output_format::print_title(Text_buffer &buf, const char *id, bool full_titles, bool all_titles, const char *separator)
 {
@@ -92,7 +92,7 @@ Output_format* get_output_format()
 
 void init_output()
 {
-	output_format = auto_ptr<Output_format>(get_output_format());
+	output_format = unique_ptr<Output_format>(get_output_format());
 	if (*output_format == Output_format::taxon && config.toppercent == 100.0)
 		config.toppercent = 10.0;
 	if (config.toppercent == 100.0) {
