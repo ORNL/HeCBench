@@ -21,6 +21,7 @@ int main(int argc, char* argv[]) {
   }
   const int length = atoi(argv[1]);
   const int repeat = atoi(argv[2]);
+  const int warmup = 100;
 
   const int pad_size = (length + RADIUS);
 
@@ -47,10 +48,7 @@ int main(int argc, char* argv[]) {
   sycl::range<1> gws (length);
   sycl::range<1> lws (BLOCK_SIZE);
 
-  q.wait();
-  auto start = std::chrono::steady_clock::now();
-
-  for (int i = 0; i < repeat; i++) {
+  auto launch = [&]() {
     q.submit([&](sycl::handler& cgh) {
       sycl::local_accessor <int, 1> temp (sycl::range<1>(BLOCK_SIZE + 2 * RADIUS), cgh);
       cgh.parallel_for<class stencil1D>(
@@ -80,6 +78,15 @@ int main(int argc, char* argv[]) {
 
       });
     });
+  };
+
+  std::chrono::steady_clock::time_point start;
+  for (int iter = 0; iter < repeat + warmup; iter++) {
+    if (iter == warmup) {
+      q.wait();
+      start = std::chrono::steady_clock::now();
+    }
+    launch();
   }
 
   q.wait();

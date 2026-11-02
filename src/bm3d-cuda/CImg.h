@@ -77,6 +77,7 @@
 #include <cmath>
 #include <ctime>
 #include <exception>
+#include <limits>
 
 // Detect/configure OS variables.
 //
@@ -2312,8 +2313,8 @@ namespace cimg_library_suffixed {
       static bool is_float() { return false; }
       static bool is_inf(const char) { return false; }
       static bool is_nan(const char) { return false; }
-      static char min() { return (char)(-1L<<(8*sizeof(char)-1)); }
-      static char max() { return (char)~((char)(-1L<<(8*sizeof(char)-1))); }
+      static char min() { return std::numeric_limits<char>::min(); }
+      static char max() { return std::numeric_limits<char>::max(); }
       static char inf() { return max(); }
       static char cut(const double val) { return val<(double)min()?min():val>(double)max()?max():(char)val; }
       static const char* format() { return "%d"; }
@@ -2325,8 +2326,8 @@ namespace cimg_library_suffixed {
       static bool is_float() { return false; }
       static bool is_inf(const signed char) { return false; }
       static bool is_nan(const signed char) { return false; }
-      static signed char min() { return (signed char)(-1L<<(8*sizeof(signed char)-1)); }
-      static signed char max() { return ~((signed char)(-1L<<(8*sizeof(signed char)-1))); }
+      static signed char min() { return std::numeric_limits<signed char>::min(); }
+      static signed char max() { return std::numeric_limits<signed char>::max(); }
       static signed char inf() { return max(); }
       static signed char cut(const double val) {
         return val<(double)min()?min():val>(double)max()?max():(signed char)val; }
@@ -2353,8 +2354,8 @@ namespace cimg_library_suffixed {
       static bool is_float() { return false; }
       static bool is_inf(const short) { return false; }
       static bool is_nan(const short) { return false; }
-      static short min() { return (short)(-1L<<(8*sizeof(short)-1)); }
-      static short max() { return ~((short)(-1L<<(8*sizeof(short)-1))); }
+      static short min() { return std::numeric_limits<short>::min(); }
+      static short max() { return std::numeric_limits<short>::max(); }
       static short inf() { return max(); }
       static short cut(const double val) { return val<(double)min()?min():val>(double)max()?max():(short)val; }
       static const char* format() { return "%d"; }
@@ -2380,8 +2381,8 @@ namespace cimg_library_suffixed {
       static bool is_float() { return false; }
       static bool is_inf(const int) { return false; }
       static bool is_nan(const int) { return false; }
-      static int min() { return (int)(-1L<<(8*sizeof(int)-1)); }
-      static int max() { return ~((int)(-1L<<(8*sizeof(int)-1))); }
+      static int min() { return std::numeric_limits<int>::min(); }
+      static int max() { return std::numeric_limits<int>::max(); }
       static int inf() { return max(); }
       static int cut(const double val) { return val<(double)min()?min():val>(double)max()?max():(int)val; }
       static const char* format() { return "%d"; }
@@ -2407,8 +2408,8 @@ namespace cimg_library_suffixed {
       static bool is_float() { return false; }
       static bool is_inf(const long) { return false; }
       static bool is_nan(const long) { return false; }
-      static long min() { return (long)(-1L<<(8*sizeof(long)-1)); }
-      static long max() { return ~((long)(-1L<<(8*sizeof(long)-1))); }
+      static long min() { return std::numeric_limits<long>::min(); }
+      static long max() { return std::numeric_limits<long>::max(); }
       static long inf() { return max(); }
       static long cut(const double val) { return val<(double)min()?min():val>(double)max()?max():(long)val; }
       static const char* format() { return "%ld"; }
@@ -46453,13 +46454,13 @@ namespace cimg_library_suffixed {
         *_data = img;
       } else {
         if (new_data) { // Insert with re-allocation.
-          if (npos) std::memcpy(new_data,_data,sizeof(CImg<T>)*npos);
-          if (npos!=_width-1) std::memcpy(new_data+npos+1,_data+npos,sizeof(CImg<T>)*(_width-1-npos));
-          std::memset(_data,0,sizeof(CImg<T>)*(_width-1));
+          if (npos) std::memcpy((void*)new_data,(void*)_data,sizeof(CImg<T>)*npos);
+          if (npos!=_width-1) std::memcpy((void*)(new_data+npos+1),(void*)(_data+npos),sizeof(CImg<T>)*(_width-1-npos));
+          std::memset((void*)_data,0,sizeof(CImg<T>)*(_width-1));
           delete[] _data;
           _data = new_data;
         } else if (npos!=_width-1)
-          std::memmove(_data+npos+1,_data+npos,sizeof(CImg<T>)*(_width-1-npos)); // Insert without re-allocation.
+          std::memmove((void*)(_data+npos+1),(void*)(_data+npos),sizeof(CImg<T>)*(_width-1-npos)); // Insert without re-allocation.
         _data[npos]._width = _data[npos]._height = _data[npos]._depth = _data[npos]._spectrum = 0;
         _data[npos]._data = 0;
         _data[npos] = img;
@@ -46491,8 +46492,8 @@ namespace cimg_library_suffixed {
       }
       else {
         if (new_data) { // Insert with re-allocation.
-          if (npos) std::memcpy(new_data,_data,sizeof(CImg<T>)*npos);
-          if (npos!=_width-1) std::memcpy(new_data+npos+1,_data+npos,sizeof(CImg<T>)*(_width-1-npos));
+          if (npos) std::memcpy((void*)new_data,(void*)_data,sizeof(CImg<T>)*npos);
+          if (npos!=_width-1) std::memcpy((void*)(new_data+npos+1),(void*)(_data+npos),sizeof(CImg<T>)*(_width-1-npos));
           if (is_shared && img) {
             new_data[npos]._width = img._width;
             new_data[npos]._height = img._height;
@@ -46505,11 +46506,11 @@ namespace cimg_library_suffixed {
             new_data[npos]._data = 0;
             new_data[npos] = img;
           }
-          std::memset(_data,0,sizeof(CImg<T>)*(_width-1));
+          std::memset((void*)_data,0,sizeof(CImg<T>)*(_width-1));
           delete[] _data;
           _data = new_data;
         } else { // Insert without re-allocation.
-          if (npos!=_width-1) std::memmove(_data+npos+1,_data+npos,sizeof(CImg<T>)*(_width-1-npos));
+          if (npos!=_width-1) std::memmove((void*)(_data+npos+1),(void*)(_data+npos),sizeof(CImg<T>)*(_width-1-npos));
           if (is_shared && img) {
             _data[npos]._width = img._width;
             _data[npos]._height = img._height;
@@ -46644,16 +46645,16 @@ namespace cimg_library_suffixed {
         const unsigned int nb = 1 + npos2 - npos1;
         if (!(_width-=nb)) return assign();
         if (_width>(_allocated_width>>2) || _allocated_width<=16) { // Removing items without reallocation.
-          if (npos1!=_width) std::memmove(_data+npos1,_data+npos2+1,sizeof(CImg<T>)*(_width - npos1));
-          std::memset(_data + _width,0,sizeof(CImg<T>)*nb);
+          if (npos1!=_width) std::memmove((void*)(_data+npos1),(void*)(_data+npos2+1),sizeof(CImg<T>)*(_width - npos1));
+          std::memset((void*)(_data + _width),0,sizeof(CImg<T>)*nb);
         } else { // Removing items with reallocation.
           _allocated_width>>=2;
           while (_allocated_width>16 && _width<(_allocated_width>>1)) _allocated_width>>=1;
           CImg<T> *const new_data = new CImg<T>[_allocated_width];
-          if (npos1) std::memcpy(new_data,_data,sizeof(CImg<T>)*npos1);
-          if (npos1!=_width) std::memcpy(new_data+npos1,_data+npos2+1,sizeof(CImg<T>)*(_width-npos1));
-          if (_width!=_allocated_width) std::memset(new_data+_width,0,sizeof(_allocated_width - _width));
-          std::memset(_data,0,sizeof(CImg<T>)*(_width+nb));
+          if (npos1) std::memcpy((void*)new_data,(void*)_data,sizeof(CImg<T>)*npos1);
+          if (npos1!=_width) std::memcpy((void*)(new_data+npos1),(void*)(_data+npos2+1),sizeof(CImg<T>)*(_width-npos1));
+          if (_width!=_allocated_width) std::memset((void*)(new_data+_width),0,sizeof(_allocated_width - _width));
+          std::memset((void*)_data,0,sizeof(CImg<T>)*(_width+nb));
           delete[] _data;
           _data = new_data;
         }
