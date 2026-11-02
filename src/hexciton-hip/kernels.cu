@@ -52,7 +52,7 @@ void comm_refactor(
 #define sigma_imag(i, j) (sigma_id + 2 * ((i) * dim + (j)) + 1)
 
 #define ham_real(i, j) (2 * ((i) * dim + (j)))
-#define ham_imag(i, j) (2 * ((i) * dim + (k)) + 1)
+#define ham_imag(i, j) (2 * ((i) * dim + (j)) + 1)
   real_t *__restrict__ sigma_in = (real_t*) sigma2_in;
   real_t *__restrict__ sigma_out = (real_t*) sigma2_out;
   real_t *__restrict__ hamiltonian = (real_t*) hamiltonian2;
@@ -79,6 +79,11 @@ void comm_refactor(
       sigma_out[sigma_imag(i, j)] -= hdt * tmp_real;
     }
   }
+
+#undef sigma_real
+#undef sigma_imag
+#undef ham_real
+#undef ham_imag
 }
 
 __global__
@@ -91,7 +96,7 @@ void comm_refactor_direct_store(
 #define sigma_real(i, j) (sigma_id + 2 * ((i) * dim + (j)))
 #define sigma_imag(i, j) (sigma_id + 2 * ((i) * dim + (j)) + 1)
 #define ham_real(i, j) (2 * ((i) * dim + (j)))
-#define ham_imag(i, j) (2 * ((i) * dim + (k)) + 1)
+#define ham_imag(i, j) (2 * ((i) * dim + (j)) + 1)
 
   real_t *__restrict__ sigma_in = (real_t*) sigma2_in;
   real_t *__restrict__ sigma_out = (real_t*) sigma2_out;
@@ -114,6 +119,11 @@ void comm_refactor_direct_store(
       }
     }
   }
+
+#undef sigma_real
+#undef sigma_imag
+#undef ham_real
+#undef ham_imag
 }
 
 __global__ 
@@ -156,6 +166,13 @@ void comm_aosoa_naive(
       sigma_out[sigma_imag(i, j)] += tmp_imag;
     }
   }
+
+#undef package_id
+#undef sigma_id
+#undef sigma_real
+#undef sigma_imag
+#undef ham_real
+#undef ham_imag
 }
 
 __global__ 
@@ -198,6 +215,13 @@ void comm_aosoa_naive_constants (
       sigma_out[sigma_imag(i, j)] += tmp_imag;
     }
   }
+
+#undef package_id
+#undef sigma_id
+#undef sigma_real
+#undef sigma_imag
+#undef ham_real
+#undef ham_imag
 }
 
 __global__ 
@@ -253,6 +277,13 @@ void comm_aosoa_naive_constants_perm (
       }
     }
   }
+
+#undef package_id
+#undef sigma_id
+#undef sigma_real
+#undef sigma_imag
+#undef ham_real
+#undef ham_imag
 }
 
 __global__ 
@@ -292,6 +323,13 @@ void comm_aosoa_naive_direct (
       }
     }
   }
+
+#undef package_id
+#undef sigma_id
+#undef sigma_real
+#undef sigma_imag
+#undef ham_real
+#undef ham_imag
 }
 
 __global__ 
@@ -329,6 +367,13 @@ void comm_aosoa_naive_constants_direct (
       }
     }
   }
+
+#undef package_id
+#undef sigma_id
+#undef sigma_real
+#undef sigma_imag
+#undef ham_real
+#undef ham_imag
 }
 
 __global__ 
@@ -370,6 +415,13 @@ void comm_aosoa_naive_constants_direct_perm (
       }
     }
   }
+
+#undef package_id
+#undef sigma_id
+#undef sigma_real
+#undef sigma_imag
+#undef ham_real
+#undef ham_imag
 }
 
 __global__ 
@@ -410,6 +462,13 @@ void comm_aosoa (
       sigma_out[sigma_imag(i, j)] += tmp_imag;
     }
   }
+
+#undef package_id
+#undef sigma_id
+#undef sigma_real
+#undef sigma_imag
+#undef ham_real
+#undef ham_imag
 }
 
 __global__ 
@@ -449,6 +508,13 @@ void comm_aosoa_constants (
       sigma_out[sigma_imag(i, j)] += tmp_imag;
     }
   }
+
+#undef package_id
+#undef sigma_id
+#undef sigma_real
+#undef sigma_imag
+#undef ham_real
+#undef ham_imag
 }
 
 __global__ 
@@ -502,6 +568,13 @@ void comm_aosoa_constants_perm (
       }
     }
   }
+
+#undef package_id
+#undef sigma_id
+#undef sigma_real
+#undef sigma_imag
+#undef ham_real
+#undef ham_imag
 }
 
 __global__ 
@@ -537,6 +610,13 @@ void comm_aosoa_direct (
       }
     }
   }
+
+#undef package_id
+#undef sigma_id
+#undef sigma_real
+#undef sigma_imag
+#undef ham_real
+#undef ham_imag
 }
 
 __global__ 
@@ -571,6 +651,13 @@ void comm_aosoa_constants_direct (
       }
     }
   }
+
+#undef package_id
+#undef sigma_id
+#undef sigma_real
+#undef sigma_imag
+#undef ham_real
+#undef ham_imag
 }
 
 __global__ 
@@ -610,6 +697,13 @@ void comm_aosoa_constants_direct_perm (
       }
     }
   }
+
+#undef package_id
+#undef sigma_id
+#undef sigma_real
+#undef sigma_imag
+#undef ham_real
+#undef ham_imag
 }
 
 __global__ 
@@ -653,6 +747,12 @@ void comm_manual_aosoa (
       sigma_out[sigma_imag(i, j)] += tmp_imag;
     }
   }
+
+#undef package_id
+#undef sigma_real
+#undef sigma_imag
+#undef ham_real
+#undef ham_imag
 }
 
 __global__ 
@@ -693,6 +793,12 @@ void comm_manual_aosoa_constants (
       sigma_out[sigma_imag(i, j)] += tmp_imag;
     }
   }
+
+  #undef package_id
+  #undef sigma_real
+  #undef sigma_imag
+  #undef ham_real
+  #undef ham_imag
 }
 
 __global__ 
@@ -747,6 +853,12 @@ void comm_manual_aosoa_constants_perm (
       }
     }
   }
+
+  #undef package_id
+  #undef sigma_real
+  #undef sigma_imag
+  #undef ham_real
+  #undef ham_imag
 }
 
 __global__ 
@@ -789,6 +901,12 @@ void comm_manual_aosoa_constants_perm_prefetch (
       sigma_out[sigma_imag(i, j)] += tmp_imag;
     }
   }
+
+  #undef package_id
+  #undef sigma_real
+  #undef sigma_imag
+  #undef ham_real
+  #undef ham_imag
 }
 
 __global__ 
@@ -826,6 +944,12 @@ void comm_manual_aosoa_direct (
       }
     }
   }
+
+  #undef package_id
+  #undef sigma_real
+  #undef sigma_imag
+  #undef ham_real
+  #undef ham_imag
 }
 
 __global__ 
@@ -861,6 +985,12 @@ void comm_manual_aosoa_constants_direct (
       }
     }
   }
+
+  #undef package_id
+  #undef sigma_real
+  #undef sigma_imag
+  #undef ham_real
+  #undef ham_imag
 }
 
 __global__ 
@@ -901,6 +1031,12 @@ void comm_manual_aosoa_constants_direct_prefetch (
       }
     }
   }
+
+  #undef package_id
+  #undef sigma_real
+  #undef sigma_imag
+  #undef ham_real
+  #undef ham_imag
 }
 
 __global__ 
@@ -941,6 +1077,12 @@ void comm_manual_aosoa_constants_direct_perm (
       }
     }
   }
+
+  #undef package_id
+  #undef sigma_real
+  #undef sigma_imag
+  #undef ham_real
+  #undef ham_imag
 }
 
 __global__ 
@@ -1039,4 +1181,8 @@ void final_gpu_kernel (
       sigma_out[sigma_id(i, j, m + 1)] = {snew1_ij.y, snew2_ij.y};
     }
   }
+
+  #undef id_2d_to_1d
+  #undef sigma_id
+  #undef MIN
 }

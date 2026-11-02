@@ -116,8 +116,9 @@ void GSimulation::Start() {
 
   RealType *e = sycl::malloc_device<RealType>(n, q);
 
-  TimeInterval t0;
   int nsteps = get_nsteps();
+
+  TimeInterval t0;
   // Looping across integration steps
   for (int s = 1; s <= nsteps; ++s) {
     TimeInterval ts0;

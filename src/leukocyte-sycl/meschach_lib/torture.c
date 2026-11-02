@@ -38,7 +38,7 @@ static char rcsid[] = "$Id: torture.c,v 1.6 1994/08/25 15:22:11 des Exp $";
 #define	errmesg(mesg)	printf("Error: %s error: line %d\n",mesg,__LINE__)
 #define notice(mesg)	printf("# Testing %s...\n",mesg);
 
-static char *test_err_list[] = {
+static const char *test_err_list[] = {
    "unknown error",			/* 0 */
    "testing error messages",		/* 1 */
    "unexpected end-of-file"		/* 2 */

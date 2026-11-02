@@ -23,6 +23,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define _COUNTINGHASHTABLE_H_
 
 #include <hip/hip_runtime.h>
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include <stdexcept>
@@ -169,33 +170,26 @@ namespace cuda_ds {
 				// wait for synchronize
 				err = hipDeviceSynchronize();
 				if (err != hipSuccess) {
-					throw std::runtime_error(
-							std::string(
-									std::string("cuda_ds::~CountingHashTable::exception1: ")
-									+ hipGetErrorName(err)) + std::string(": ")
-							+ std::string(hipGetErrorString(err)));
+					fprintf(stderr,
+							"cuda_ds::~CountingHashTable::exception1: %s: %s\n",
+							hipGetErrorName(err), hipGetErrorString(err));
 				}
 
 				// free data
 				err = hipFree(data);
 				if (err != hipSuccess) {
-					throw std::runtime_error(
-							std::string(
-									std::string("cuda_ds::~CountingHashTable::exception2: ")
-									+ hipGetErrorName(err)) + std::string(": ")
-							+ std::string(hipGetErrorString(err)));
+					fprintf(stderr,
+							"cuda_ds::~CountingHashTable::exception2: %s: %s\n",
+							hipGetErrorName(err), hipGetErrorString(err));
 				}
 
 				// destroy streams
 				for (int i = 0; i < numStreams; ++i) {
 					err = hipStreamDestroy(stream[i]);
 					if (err != hipSuccess) {
-						throw std::runtime_error(
-								std::string(
-										std::string("cuda_ds::CountingHashTable::~CountingHashTable::exception3: ")
-										+ hipGetErrorName(err))
-								+ std::string(": ")
-								+ std::string(hipGetErrorString(err)));
+						fprintf(stderr,
+								"cuda_ds::CountingHashTable::~CountingHashTable::exception3: %s: %s\n",
+								hipGetErrorName(err), hipGetErrorString(err));
 					}
 				}
 			}
