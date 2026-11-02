@@ -1,0 +1,73 @@
+#===============================================================================
+# User Options
+#===============================================================================
+
+# Compiler can be set below, or via environment variable
+CC        = clang++
+OPTIMIZE  = yes
+DEBUG     = no
+DEVICE    = gpu
+ARCH      = gfx906
+LAUNCHER  ?=
+
+#===============================================================================
+# Program name & source code list
+#===============================================================================
+
+program = main
+
+source = main.cpp
+
+obj = $(source:.cpp=.o)
+
+#===============================================================================
+# Sets Flags
+#===============================================================================
+
+# Standard Flags
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../rmsnorm-rope-cuda
+
+# Linker Flags
+LDFLAGS =
+
+# Debug Flags
+ifeq ($(DEBUG),yes)
+  CFLAGS += -g
+  LDFLAGS  += -g
+endif
+
+# Optimization Flags
+ifeq ($(OPTIMIZE),yes)
+  CFLAGS += -O3
+endif
+
+ifeq ($(DEVICE),gpu)
+  CFLAGS += -target x86_64-pc-linux-gnu \
+          -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
+          -Xopenmp-target=amdgcn-amd-amdhsa \
+          -march=$(ARCH)
+else
+  CFLAGS +=-fopenmp
+endif
+#===============================================================================
+# Targets to Build
+#===============================================================================
+
+$(program): $(obj)
+	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
+
+%.o: %.cpp ../rmsnorm-rope-cuda/reference.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -rf $(program) $(obj)
+
+run: $(program)
+	$(LAUNCHER) ./$(program) 4096 18 256 24 20 20 100
+	$(LAUNCHER) ./$(program) 4096 18 256 22 21 21 100
+	$(LAUNCHER) ./$(program) 16384 18 256 24 20 20 100
+	$(LAUNCHER) ./$(program) 16384 18 256 22 21 21 100
+
+test: $(program)
+	$(LAUNCHER) ./$(program) 1000 3 64 8 4 4 100
+	$(LAUNCHER) ./$(program) 999 5 128 16 8 8 100
