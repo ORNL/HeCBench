@@ -40,8 +40,10 @@
 #define VAR_DENSITY_ENERGY (VAR_MOMENTUM+NDIM)
 #define NVAR (VAR_DENSITY_ENERGY+1)
 
-#if block_length > 128
-#warning "the kernels may fail too launch on some systems if the block length is too large"
+/* Default block_length is 192. Only warn above the 1024-thread
+   launch limit, where kernels fail on common GPU targets. */
+#if block_length > 1024
+#warning "the kernels may fail to launch on some systems if the block length is too large"
 #endif
 
 //self-defined user type
