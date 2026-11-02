@@ -50,7 +50,7 @@ endif
 $(program): divergence.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
-divergence.o: divergence.cpp divergence.hpp Makefile.nvc
+divergence.o: divergence.cpp divergence.hpp ../divergence-cuda/divergence_pragmas.hpp Makefile.nvc
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

@@ -218,6 +218,7 @@ set(HECBENCH_POC_BENCHMARKS
     kmeans
     kurtosis
     lanczos
+    laghos-force
     langevin
     langford
     laplace
@@ -233,6 +234,7 @@ set(HECBENCH_POC_BENCHMARKS
     lid-driven-cavity
     lif
     linearprobing
+    local-ht
     logan
     log2
     logic-rewrite
@@ -278,6 +280,7 @@ set(HECBENCH_POC_BENCHMARKS
     mnist
     moe
     moe-align
+    moe-combine
     moe-sum
     morphology
     mpc
@@ -346,6 +349,7 @@ set(HECBENCH_POC_BENCHMARKS
     reaction
     recursiveGaussian
     relu
+    reshapeKVCache
     resize
     resnet-kernels
     reverse
@@ -391,6 +395,7 @@ set(HECBENCH_POC_BENCHMARKS
     slit
     slu
     snake
+    snicit
     sobel
     sobol
     sort
@@ -440,6 +445,7 @@ set(HECBENCH_POC_BENCHMARKS
     trimul
     tsne
     tsp
+    twell
     unfold
     urng
     vanGenuchten
@@ -561,11 +567,16 @@ set(HECBENCH_POC_BENCHMARKS
     stiff-ode
     ssm
     storeKVCache
+    axpby
+    f8cast
+    minimap2
+    tgvnn
     threadcpy
     tridiagonal
     topk
     upsample
     vadd
+    vdi
     wenofv
 )
 

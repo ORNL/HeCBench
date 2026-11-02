@@ -58,7 +58,7 @@ class Exception : public Std_Exception {
                        const std::string &detailed);
 
   //! Destructor
-  virtual ~Exception() throw();
+  virtual ~Exception() noexcept;
 
  private:
   //! Constructor, default (private)
@@ -144,7 +144,7 @@ Exception<Std_Exception>::Exception(const std::string &s) : Std_Exception(s) {}
 //! Destructor
 ////////////////////////////////////////////////////////////////////////////////
 template <class Std_Exception>
-Exception<Std_Exception>::~Exception() throw() {}
+Exception<Std_Exception>::~Exception() noexcept {}
 
   // functions, exported
 

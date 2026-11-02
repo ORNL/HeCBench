@@ -21,7 +21,7 @@ CFLAGS = -v -O3
 #-mllvm -regalloc=pbqp
 #CFLAGS = -qreport -O3 -fopenmp -mcpu=power8 -mtune=power8
 
-CXXFLAGS = -I. -I../utils -I../fem $(MINIFE_TYPES) -O3 -x cu \
+CXXFLAGS = -I. -I../utils -I../fem $(MINIFE_TYPES) -O3 -std=c++17 -x cu \
 	-arch=$(ARCH) \
 	$(MINIFE_MATRIX_TYPE) \
 #            -DMINIFE_DEBUG \

@@ -27,7 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "../data/sequence_set.h"
 
 using std::vector;
-using std::auto_ptr;
+using std::unique_ptr;
 
 struct Masking
 {
@@ -42,7 +42,7 @@ struct Masking
 	{
 		return *instance;
 	}
-	static auto_ptr<Masking> instance;
+	static unique_ptr<Masking> instance;
 	static const uint8_t bit_mask;
 private:
 	enum { size = 64 };

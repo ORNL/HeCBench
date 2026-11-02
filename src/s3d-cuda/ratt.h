@@ -11,8 +11,8 @@ ratt_kernel(const real* RESTRICT T, real* RESTRICT RF, real TCONV)
 
     const real TEMP = T[threadIdx.x + (blockIdx.x * blockDim.x)]*TCONV;
 
-    const register real ALOGT = LOG(TEMP);
-    const register real TI = (real)1.0e0/(TEMP);
+    const real ALOGT = LOG(TEMP);
+    const real TI = (real)1.0e0/(TEMP);
     const real TI2 = TI*TI;
     real TMP;
 
@@ -247,7 +247,7 @@ rdsmh_kernel(const real* RESTRICT T, real* RESTRICT EG, real TCONV)
     const real TLOG = LOG((TEMP));
     const real TI = (real)1.0e0/(TEMP);
 
-    const register real TN1 = TLOG - (real)1.0;
+    const real TN1 = TLOG - (real)1.0;
 
     if ((TEMP) > (real)1.0e3)
     {

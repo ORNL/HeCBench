@@ -8,5 +8,6 @@ add_hecbench_benchmark(
         src/tgv.cpp
         src/ra.cpp
     INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
+    LINK_LIBRARIES -qmkl=parallel
     CATEGORIES imaging algorithms
 )

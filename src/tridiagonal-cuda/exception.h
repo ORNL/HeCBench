@@ -45,7 +45,7 @@ public:
                           const std::string& detailed);  
 
     //! Destructor
-    virtual ~Exception() throw(); 
+    virtual ~Exception() noexcept; 
 
 private:
 
@@ -143,7 +143,7 @@ Exception<Std_Exception>::Exception( const std::string& s) :
 //! Destructor
 ////////////////////////////////////////////////////////////////////////////////
 template<class Std_Exception>
-Exception<Std_Exception>::~Exception() throw() { }
+Exception<Std_Exception>::~Exception() noexcept { }
 
 // functions, exported
 

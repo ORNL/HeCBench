@@ -12,7 +12,7 @@ Z. Jin and J. S. Vetter, "A Benchmark Suite for Improving Performance Portabilit
 # Dependencies
 Certain benchmarks require [Boost](https://www.boost.org/releases/latest/), [Eigen](https://eigen.tuxfamily.org), [GDAL](https://github.com/OSGeo/gdal), GPU-aware Message Passing Interface(MPI) or vendors' collective communication libraries (e.g. NCCL).<br>
 Boost: hbc, ge-spmm, mmcsf, warpsort, gerbil<br>
-MPI:   miniDGS, miniWeather, sparkler, allreduce, ccl, halo-finder<br>
+MPI:   miniDGS, miniWeather, sparkler, allreduce, ccl, halo-finder, moe-combine<br>
 GPU-aware MPI: pingpong (`main-mpi`)<br>
 CCL:   ccl<br>
 Eigen: xlqc<br>
@@ -86,10 +86,10 @@ Each benchmark falls into a single category. While such classification is not ac
     adjacent, aligned-types, asta, asyncAllocation, awbarrier, blockAccess, blockexchange, blockScan, collision, concurrentKernels, conversion, dispatch, dp4a, graphExecution, ert, interleave, intrinsics-cast, kernelLaunch, layout, mallocFree, maxFlops, mixbench, nosync, openmp, overlap, pad, pitch, popcount, pointerchase, prefetch, reverse, ring, saxpy-ompt, shuffle, simpleMultiDevice, streamCreateCopyDestroy, streamOrderedAllocation, streamPriority, streamUM, tensorAccessor, threadfence, warpexchange, vote, wmma, wordcount, zerocopy 
 
 ### Machine learning  
-    accuracy, adam, adamw, addBiasQKV, addBiasResidualLayerNorm, attention, attention-paged, attentionMergeState, attentionMultiHead, attentionMultiHeadKVCache, backprop, bincount, bn, channelShuffle, channelSum, clink, concat, crossEntropy, dense-embedding, dropout, dwconv, dwconv1d, expdist, flip, gd, gelu, ge-spmm, geglu, glu, gmm, gru, gru2, kalman, kda, kmc, kmeans, knn, layernorm, lda, lif, logprob, lr, lrn, mace, mask, matern, maxpool3d, mcpr, meanshift, megablocks, mergeVS, mf-sgd, mlaDecode, mlp, mmcsf, mnist, moe, moe-align, moe-sum, mrc, multinomial, muon, nlll, nonzero, overlay, p4, page-rank, permute, perplexity, pointwise, pool, qkv, qtclustering, remap, relu, resnet-kernels, rmsnorm, rmsnorm-quant, rowwiseMoments, rotary, sampling, scel, silu, snicit, softmax, softmax-fused, softmax-online, ssm, stddev, streamcluster, swiglu-oai, trimul, tsne, twell, unfold, vol2col, wedford, winograd, word2vec
+    accuracy, adam, adamw, addBiasQKV, addBiasResidualLayerNorm, attention, attention-paged, attentionMergeState, attentionMultiHead, attentionMultiHeadKVCache, backprop, bincount, bn, channelShuffle, channelSum, clink, concat, crossEntropy, dense-embedding, dropout, dwconv, dwconv1d, expdist, flip, gd, gelu, ge-spmm, geglu, glu, gmm, gru, gru2, kalman, kda, kmc, kmeans, knn, layernorm, lda, lif, logprob, lr, lrn, mace, mask, matern, maxpool3d, mcpr, meanshift, megablocks, mergeVS, mf-sgd, mlaDecode, mlp, mmcsf, mnist, moe, moe-align, moe-combine, moe-sum, mrc, multinomial, muon, nlll, nonzero, overlay, p4, page-rank, permute, perplexity, pointwise, pool, qkv, qtclustering, remap, relu, resnet-kernels, rmsnorm, rmsnorm-quant, rowwiseMoments, rotary, sampling, scel, silu, snicit, softmax, softmax-fused, softmax-online, ssm, stddev, streamcluster, swiglu-oai, trimul, tsne, twell, unfold, vol2col, wedford, winograd, word2vec
 
 ### Math
-    atan2, axpby, bgmv, blas-dot, blas-fp4gemm, blas-fp8gemm, blas-gemm, blas-gemmBatched, blas-gemmStridedBatched, blas-gemmEx, blas-gemmEx2, blas-groupgemm, blas-mxfp6gemm, blas-mxfp8gemm, braycurtis, complex, cross, determinant, divergence, dp, eigenvalue, f16max, f16sp, f8cast, fresnel, fwt, gaussian, geam, gels, gemv, hadamard, hellinger, hmm, idivide, interval, jaccard, jacobi, jacobian, kurtosis, lanczos, langford, lci, lebesgue, leukocyte, lfib4, log2, lud, ludb, lut-gemm, michalewicz, matrix-rotate, matrixT, minkowski, mr, mrg32k3a, norm2, nqueen, ntt, oziMMU, phmm, pnpoly, quant3MatMul, reverse2D, rfs, romberg, rsc, schur-complement, sddmm-batch, secp256k1, simpleSpmv, slu, spd2s, spgeam, spgemm, spmm, spmv, spnnz, sps2d, spsort, sptrsv, thomas, wyllie, zeropoint
+    atan2, axpby, bgmv, blas-dot, blas-fp4gemm, blas-fp8gemm, blas-gemm, blas-gemmBatched, blas-gemmStridedBatched, blas-gemmEx, blas-gemmEx2, blas-groupgemm, blas-mxfp6gemm, blas-mxfp8gemm, braycurtis, complex, cross, determinant, divergence, dp, eigenvalue, f16max, f16sp, f8cast, fresnel, fwt, gaussian, geam, gels, gemv, hadamard, hellinger, hmm, idivide, interval, jaccard, jacobi, jacobian, kurtosis, lanczos, langford, lci, lebesgue, leukocyte, lfib4, log2, lud, ludb, lut-gemm, michalewicz, matrix-rotate, matrixT, minkowski, mr, mrg32k3a, norm2, nqueen, ntt, oziMMU, phmm, pnpoly, quant3MatMul, reverse2D, rfs, romberg, rsc, schur-complement, sddmm-batch, secp256k1, simpleSpmv, slu, spd2s, spgeam, spgemm, spmm, spmv, spnnz, sps2d, spsort, sptrsv, thomas, vdi, wyllie, zeropoint
    
 ### Random number generation
     mt, permutate, qrg, rng-wallace, sobol, urng
@@ -101,7 +101,7 @@ Each benchmark falls into a single category. While such classification is not ac
     extrema, fft, lombscargle, sosfil, zmddft
 
 ### Simulation
-    ace, adv, amgmk, axhelm, bh, bspline-vgh, burger, cooling, ccsd-trpdrv, che, chemv, chi2, clenergy, cmp, cobahh, d2q9_bgk, d3q19_bgk, damage, ddbp, dslash, easyWave, eikonal, fdtd3d, feynman-kac, fhd, fluidSim, gibbs, goulash, gpp, grrt, gsplat4d, haccmk, halo-finder, heartwall, heat, heat2d, henry, hexicton, hotspot, hotspot3D, hpl, hwt1d, hypterm, ising, iso2dfd, laplace, laplace3d, lavaMD, lid-driven-cavity, logic-resim, logic-rewrite, loopback, lsqt, lulesh, mcmd, md, mdh, metropolis, miniFE, minimod, minisweep, miniWeather, multimaterial, mxfp4, myocte, nbody, particle-diffusion, particlefilter, particles, pathfinder, pns, projectile, pso, qem, rainflow, rayleighBenardConvection, reaction, rsbench, rtm8, rushlarsen, s3d, su3, sundials, sheath, simplemoc, slit, sparkler, sph, stiff-ode, svt, sw4ck, tensorT, testSNAP, tissue, tpacf, tqs, tridiagonal, tsa, vanGenuchten, vmc, wenofv, wlcpow, wsm5, xlqc, xsbench
+    ace, adv, amgmk, axhelm, bh, bspline-vgh, burger, cooling, ccsd-trpdrv, che, chemv, chi2, clenergy, cmp, cobahh, d2q9_bgk, d3q19_bgk, damage, ddbp, dslash, easyWave, eikonal, fdtd3d, feynman-kac, fhd, fluidSim, gibbs, goulash, gpp, grrt, gsplat4d, haccmk, halo-finder, heartwall, heat, heat2d, henry, hexicton, hotspot, hotspot3D, hpl, hwt1d, hypterm, ising, iso2dfd, laghos-force, laplace, laplace3d, lavaMD, lid-driven-cavity, logic-resim, logic-rewrite, loopback, lsqt, lulesh, mcmd, md, mdh, metropolis, miniFE, minimod, minisweep, miniWeather, multimaterial, mxfp4, myocte, nbody, particle-diffusion, particlefilter, particles, pathfinder, pns, projectile, pso, qem, rainflow, rayleighBenardConvection, reaction, rsbench, rtm8, rushlarsen, s3d, su3, sundials, sheath, simplemoc, slit, sparkler, sph, stiff-ode, svt, sw4ck, tensorT, testSNAP, tissue, tpacf, tqs, tridiagonal, tsa, vanGenuchten, vmc, wenofv, wlcpow, wsm5, xlqc, xsbench
 
 ### Sorting
     bitonic-sort, hybridsort, is, merge, quicksort, radixsort, segsort, sort, sortKV, split, topk, warpsort
@@ -986,6 +986,9 @@ Early results are shown [here](results/README.md)
 ### kurtosis (cuda)
   Compute the kurtosis of two variables (https://github.com/d-d-j/ddj_store)
 
+### laghos-force (cuda)
+  3D partial-assembly force action from Laghos (https://github.com/CEED/Laghos)
+
 ### lanczos (cuda)
   Lanczos tridiagonalization (https://github.com/linhr/15618)
 
@@ -1213,6 +1216,9 @@ Early results are shown [here](results/README.md)
 
 ### moe-align (cuda)
   Sort the indices of padded tokens by expert in a Mixture-of-Experts layer (https://github.com/vllm-project/vllm)
+
+### moe-combine (cuda, hip, sycl)
+  Weighted sum of top-k expert outputs gathered across GPUs in an expert-parallel Mixture-of-Experts layer (https://github.com/ROCm/mori)
 
 ### moe-sum (cuda)
   Element-wise summation operation across the top-k expert outputs in a Mixture-of-Experts layer (https://github.com/vllm-project/vllm)
@@ -1814,6 +1820,9 @@ Early results are shown [here](results/README.md)
 
 ### vanGenuchten (cuda)
   Genuchten conversion of soil moisture and pressure (https://github.com/HydroComplexity/Dhara)
+
+### vdi (torch)
+  Batched 128x128 fp32 SPD inverse with two epilogue products (https://github.com/sgl-project/sglang/blob/main/python/sglang/multimodal_gen/runtime/models/dits/minimax_h3_vdn.py)
 
 ### vmc (cuda)
   Computes expectation values (6D integrals) associated with the helium atom (https://github.com/wadejong/Summer-School-Materials/tree/master/Examples/vmc)

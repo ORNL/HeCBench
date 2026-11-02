@@ -9,16 +9,16 @@ LAUNCH_BOUNDS (QSSA2_THRD, QSSA2_BLK)
 qssa2_kernel(real* RESTRICT RF, real* RESTRICT RB, const real* RESTRICT A)
 {
 
-    register real xq4 = A(4,0);
-    register real xq3 = A(3,0) +A(3,4)*xq4;
-    register real xq7 = A(7,0) +A(7,4)*xq4 +A(7,3)*xq3;
-    register real xq2 = A(2,0) +A(2,4)*xq4 +A(2,3)*xq3 +A(2,7)*xq7;
-    register real xq1 = A(1,0) +A(1,4)*xq4 +A(1,3)*xq3 +A(1,7)*xq7 +A(1,2)*xq2;
-    register real xq8 = A(8,0) +A(8,4)*xq4 +A(8,3)*xq3;
-    register real xq6 = A(6,0) +A(6,3)*xq3 +A(6,7)*xq7 +A(6,2)*xq2;
-    register real xq9 = A(9,0) +A(9,4)*xq4 +A(9,7)*xq7;
-    register real xq5 = A(5,0) +A(5,3)*xq3;
-    register real xq10 = A(10,0) +A(10,8)*xq8;
+    real xq4 = A(4,0);
+    real xq3 = A(3,0) +A(3,4)*xq4;
+    real xq7 = A(7,0) +A(7,4)*xq4 +A(7,3)*xq3;
+    real xq2 = A(2,0) +A(2,4)*xq4 +A(2,3)*xq3 +A(2,7)*xq7;
+    real xq1 = A(1,0) +A(1,4)*xq4 +A(1,3)*xq3 +A(1,7)*xq7 +A(1,2)*xq2;
+    real xq8 = A(8,0) +A(8,4)*xq4 +A(8,3)*xq3;
+    real xq6 = A(6,0) +A(6,3)*xq3 +A(6,7)*xq7 +A(6,2)*xq2;
+    real xq9 = A(9,0) +A(9,4)*xq4 +A(9,7)*xq7;
+    real xq5 = A(5,0) +A(5,3)*xq3;
+    real xq10 = A(10,0) +A(10,8)*xq8;
 
     RF(34) = RF(34)*xq1;
     RF(35) = RF(35)*xq1;

@@ -51,7 +51,7 @@ DATA_HDR := $(DATA_DIR)/bitmap_image.hpp
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu $(DATA_HDR) Makefile
+%.o: %.cu $(DATA_HDR) $(DATA_DIR)/reference.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(DATA_HDR): $(wildcard $(DATA_TGZ))
