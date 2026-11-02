@@ -569,6 +569,7 @@ set(HECBENCH_POC_BENCHMARKS
     sundials
     stiff-ode
     ssm
+    ssm2
     storeKVCache
     axpby
     f8cast
