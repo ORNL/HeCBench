@@ -49,7 +49,7 @@ extern MEM_CONNECT mem_connect[MEM_CONNECT_MAX_LISTS];
 
 
 /* names of types */
-static char *mem_type_names[] = {
+static const char *mem_type_names[] = {
    "MAT",
    "BAND",
    "PERM",
@@ -106,12 +106,12 @@ MEM_CONNECT mem_connect[MEM_CONNECT_MAX_LISTS] = {
 #ifndef ANSI_C
 int mem_attach_list(list, ntypes, type_names, free_funcs, info_sum)
 int list,ntypes;         /* number of a list and number of types there */
-char *type_names[];      /* list of names of types */
+const char *type_names[];      /* list of names of types */
 int (*free_funcs[])();   /* list of releasing functions */
 MEM_ARRAY info_sum[];    /* local table */
 #else
 int mem_attach_list(int list, int ntypes, 
-		    char *type_names[], 
+		    const char *type_names[], 
 		    int (*free_funcs[])(void *), 
 		    MEM_ARRAY info_sum[])
 #endif
