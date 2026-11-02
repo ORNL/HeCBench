@@ -242,6 +242,11 @@ void fast_hadamard_transform(HadamardParamsBase &params, sycl::queue& stream) {
     }
 }
 
+template <typename T> struct machine_eps;
+template <> struct machine_eps<float>                       { static constexpr float value = 0x1p-23f; };
+template <> struct machine_eps<sycl::half>                  { static constexpr float value = 0x1p-10f; };
+template <> struct machine_eps<sycl::ext::oneapi::bfloat16> { static constexpr float value = 0x1p-7f; };
+
 template <typename T>
 void hadamard_transform(sycl::queue &q, int batch_size, int dim, int repeat) try {
 
@@ -301,14 +306,7 @@ void hadamard_transform(sycl::queue &q, int batch_size, int dim, int repeat) try
 
     reference(h_x, r_out, batch_size, dim, scale);
 
-    bool ok = true;
-    for (int64_t i = 0; i < numel; ++i) {
-      if (std::fabs((float)h_out[i] - (float)r_out[i]) > 1e-3f) {
-        printf("Mismatch at index %ld %f %f\n", i, (float)h_out[i], (float)r_out[i]);
-        ok = false;
-        break;
-      }
-    }
+    bool ok = verify(h_out, r_out, machine_eps<T>::value);
     printf("%s\n", ok ? "PASS" : "FAIL");
 
     sycl::free(d_x, q);

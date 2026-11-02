@@ -12,7 +12,8 @@ Z. Jin and J. S. Vetter, "A Benchmark Suite for Improving Performance Portabilit
 # Dependencies
 Certain benchmarks require [Boost](https://www.boost.org/releases/latest/), [Eigen](https://eigen.tuxfamily.org), [GDAL](https://github.com/OSGeo/gdal), GPU-aware Message Passing Interface(MPI) or vendors' collective communication libraries (e.g. NCCL).<br>
 Boost: hbc, ge-spmm, mmcsf, warpsort, gerbil<br>
-MPI:   miniDGS, miniWeather, pingpong, sparkler, allreduce, ccl, halo-finder<br>
+MPI:   miniDGS, miniWeather, sparkler, allreduce, ccl, halo-finder, moe-combine<br>
+GPU-aware MPI: pingpong (`main-mpi`)<br>
 CCL:   ccl<br>
 Eigen: xlqc<br>
 GDAL:  stsg<br>
@@ -55,7 +56,7 @@ Each benchmark falls into a single category. While such classification is not ac
     daphne
 
 ### Bandwidth
-    allreduce, cmembench, babelstream, ccl, memcpy, memtest, p2p, pingpong, randomAccess, reshapeKVCache, shmembench, storeKVCache, threadcpy, triad, vadd
+    allreduce, cmembench, babelstream, ccl, memcpy, memtest, p2p, pingpong, putget, randomAccess, reshapeKVCache, sdma, shmembench, storeKVCache, threadcpy, triad, vadd
 
 ### Bioinformatics
     all-pairs-distance, bsw, ccs, cm, deredundancy, diamond, epistasis, extend2, frna, fsm, ga, local-ht, logan, minibude, minimap2, nbnxm, nw, pcc, prna, sa, snake
@@ -67,7 +68,7 @@ Each benchmark falls into a single category. While such classification is not ac
     aes, bitcracker, bitpermute, chacha20, columnarSolver, ecdh, keccaktreehash, merkle, present  
 
 ### Data compression and reduction
-    atomicAggregate, atomicCAS, atomicCost, atomicIntrinsics, atomicPerf, atomicSystemWide, bitpacking, bscan, bwt, compute-score, contract, dxtc2, filter, fma, fpc, histogram, lzss, minmax, mpc, mtf, quantAQLM, quantBnB, quantVLLM, rle, sc, scan, scan2, scan3, scatter, scatterAdd, scatterThrust, segment-reduce
+    atomicAggregate, atomicCAS, atomicCost, atomicIntrinsics, atomicPerf, atomicSystemWide, bitpacking, bscan, bwt, compute-score, contract, dxtc2, filter, fma, fpc, histogram, lzss, minmax, mpc, mtf, quantAQLM, quantBnB, quantVLLM, rle, sc, scan, scan2, scan3, scatter, scatterAdd, scatterThrust, segment-reduce, segment-reduce2
 
 ### Data encoding, decoding, or verification
     ans, base64e, crc64, crs, entropy, jenkins-hash, kiss, ldpc, md5hash, murmurhash3
@@ -85,10 +86,10 @@ Each benchmark falls into a single category. While such classification is not ac
     adjacent, aligned-types, asta, asyncAllocation, awbarrier, blockAccess, blockexchange, blockScan, collision, concurrentKernels, conversion, dispatch, dp4a, graphExecution, ert, interleave, intrinsics-cast, kernelLaunch, layout, mallocFree, maxFlops, mixbench, nosync, openmp, overlap, pad, pitch, popcount, pointerchase, prefetch, reverse, ring, saxpy-ompt, shuffle, simpleMultiDevice, streamCreateCopyDestroy, streamOrderedAllocation, streamPriority, streamUM, tensorAccessor, threadfence, warpexchange, vote, wmma, wordcount, zerocopy 
 
 ### Machine learning  
-    accuracy, adam, adamw, addBiasQKV, addBiasResidualLayerNorm, attention, attention-paged, attentionMergeState, attentionMultiHead, attentionMultiHeadKVCache, backprop, bincount, bn, channelShuffle, channelSum, clink, concat, crossEntropy, dense-embedding, dropout, dwconv, dwconv1d, expdist, flip, gd, gelu, ge-spmm, geglu, glu, gmm, gru, gru2, kalman, kmc, kmeans, knn, layernorm, lda, lif, logprob, lr, lrn, mask, matern, maxpool3d, mcpr, meanshift, megablocks, mergeVS, mf-sgd, mlaDecode, mlp, mmcsf, mnist, moe, moe-align, moe-sum, mrc, multinomial, muon, nlll, nonzero, overlay, p4, page-rank, permute, perplexity, pointwise, pool, qkv, qtclustering, remap, relu, resnet-kernels, rmsnorm, rowwiseMoments, rotary, sampling, scel, silu, snicit, softmax, softmax-fused, softmax-online, ssm, stddev, streamcluster, tsne, twell, unfold, vol2col, wedford, winograd, word2vec
+    accuracy, adam, adamw, addBiasQKV, addBiasResidualLayerNorm, attention, attention-paged, attentionMergeState, attentionMultiHead, attentionMultiHeadKVCache, backprop, bincount, bn, channelShuffle, channelSum, clink, concat, crossEntropy, dense-embedding, dropout, dwconv, dwconv1d, expdist, flip, gd, gelu, ge-spmm, geglu, glu, gmm, gru, gru2, kalman, kda, kmc, kmeans, knn, layernorm, lda, lif, logprob, lr, lrn, mace, mask, matern, maxpool3d, mcpr, meanshift, megablocks, mergeVS, mf-sgd, mlaDecode, mlp, mmcsf, mnist, moe, moe-align, moe-combine, moe-sum, mrc, multinomial, muon, nlll, nonzero, overlay, p4, page-rank, permute, perplexity, pointwise, pool, qkv, qtclustering, remap, relu, resnet-kernels, rmsnorm, rmsnorm-quant, rowwiseMoments, rotary, sampling, scel, shampoo, silu, snicit, softmax, softmax-fused, softmax-online, ssm, ssm2, stddev, streamcluster, swiglu-oai, trimul, tsne, twell, unfold, vol2col, wedford, winograd, word2vec
 
 ### Math
-    atan2, axpby, bgmv, blas-dot, blas-fp4gemm, blas-fp8gemm, blas-gemm, blas-gemmBatched, blas-gemmStridedBatched, blas-gemmEx, blas-gemmEx2, blas-groupgemm, blas-mxfp6gemm, blas-mxfp8gemm, braycurtis, complex, cross, determinant, divergence, dp, eigenvalue, f16max, f16sp, f8cast, fresnel, fwt, gaussian, geam, gels, gemv, hadamard, hellinger, hmm, idivide, interval, jaccard, jacobi, jacobian, kurtosis, lanczos, langford, lci, lebesgue, leukocyte, lfib4, log2, lud, ludb, lut-gemm, michalewicz, matrix-rotate, matrixT, minkowski, mr, mrg32k3a, norm2, nqueen, ntt, oziMMU, phmm, pnpoly, quant3MatMul, reverse2D, rfs, romberg, rsc, schur-complement, sddmm-batch, secp256k1, simpleSpmv, slu, spd2s, spgeam, spgemm, spmm, spmv, spnnz, sps2d, spsort, sptrsv, thomas, wyllie, zeropoint
+    atan2, axpby, bgmv, blas-dot, blas-fp4gemm, blas-fp8gemm, blas-gemm, blas-gemmBatched, blas-gemmStridedBatched, blas-gemmEx, blas-gemmEx2, blas-groupgemm, blas-mxfp6gemm, blas-mxfp8gemm, braycurtis, complex, cross, determinant, divergence, dp, eigenvalue, f16max, f16sp, f8cast, fresnel, fwt, gaussian, geam, gels, gemv, hadamard, hellinger, hmm, idivide, interval, jaccard, jacobi, jacobian, kurtosis, lanczos, langford, lci, lebesgue, leukocyte, lfib4, log2, lud, ludb, lut-gemm, michalewicz, matrix-rotate, matrixT, minkowski, mr, mrg32k3a, norm2, nqueen, ntt, oziMMU, phmm, pnpoly, quant3MatMul, reverse2D, rfs, romberg, rsc, schur-complement, sddmm-batch, secp256k1, simpleSpmv, slu, spd2s, spgeam, spgemm, spmm, spmv, spnnz, sps2d, spsort, sptrsv, thomas, vdi, wyllie, zeropoint
    
 ### Random number generation
     mt, permutate, qrg, rng-wallace, sobol, urng
@@ -100,7 +101,7 @@ Each benchmark falls into a single category. While such classification is not ac
     extrema, fft, lombscargle, sosfil, zmddft
 
 ### Simulation
-    ace, adv, amgmk, axhelm, bh, bspline-vgh, burger, cooling, ccsd-trpdrv, che, chemv, chi2, clenergy, cmp, cobahh, d2q9_bgk, d3q19_bgk, damage, ddbp, dslash, easyWave, eikonal, fdtd3d, feynman-kac, fhd, fluidSim, gibbs, goulash, gpp, grrt, haccmk, halo-finder, heartwall, heat, heat2d, henry, hexicton, hotspot, hotspot3D, hpl, hwt1d, hypterm, ising, iso2dfd, laplace, laplace3d, lavaMD, lid-driven-cavity, logic-resim, logic-rewrite, loopback, lsqt, lulesh, mcmd, md, mdh, metropolis, miniFE, minimod, minisweep, miniWeather, multimaterial, mxfp4, myocte, nbody, particle-diffusion, particlefilter, particles, pathfinder, pns, projectile, pso, qem, rainflow, rayleighBenardConvection, reaction, rsbench, rtm8, rushlarsen, s3d, su3, sundials, sheath, simplemoc, slit, sparkler, sph, sw4ck, tensorT, testSNAP, tissue, tpacf, tqs, tridiagonal, tsa, vanGenuchten, vmc, wenofv, wlcpow, wsm5, xlqc, xsbench
+    ace, adv, amgmk, axhelm, bh, bspline-vgh, burger, cooling, ccsd-trpdrv, che, chemv, chi2, clenergy, cmp, cobahh, condor, d2q9_bgk, d3q19_bgk, damage, ddbp, dslash, easyWave, eikonal, fdtd3d, feynman-kac, fhd, fluidSim, gibbs, goulash, gpp, grrt, gsplat4d, haccmk, halo-finder, heartwall, heat, heat2d, henry, hexicton, hotspot, hotspot3D, hpl, hwt1d, hypterm, ising, iso2dfd, laghos-force, laplace, laplace3d, lavaMD, lid-driven-cavity, logic-resim, logic-rewrite, loopback, lsqt, lulesh, mcmd, md, mdh, metropolis, miniFE, minimod, minisweep, miniWeather, multimaterial, mxfp4, myocte, nbody, particle-diffusion, particlefilter, particles, pathfinder, pns, projectile, pso, qem, rainflow, rayleighBenardConvection, reaction, rsbench, rtm8, rushlarsen, s3d, su3, sundials, sheath, simplemoc, slit, sparkler, sph, stiff-ode, svt, sw4ck, tensorT, testSNAP, tissue, tpacf, tqs, tridiagonal, tsa, vanGenuchten, vmc, wenofv, wlcpow, wsm5, xlqc, xsbench
 
 ### Sorting
     bitonic-sort, hybridsort, is, merge, quicksort, radixsort, segsort, sort, sortKV, split, topk, warpsort
@@ -208,6 +209,8 @@ Program hang: bh-hip, mpc-sycl
 When double-precision floating-point operations are not supported on certain Intel GPU devices, software emulation may be enabled. [FP64 emulation](https://github.com/intel/compute-runtime/blob/master/opencl/doc/FAQ.md#feature-double-precision-emulation-fp64)
 
 # Feedback from the papers
+
+Hagn, M., 2026. LLM-driven Translation of GPU Code Across Parallel Execution Models (Technische Universität Wien).
 
 Stephenson, M., Damani, S., Tarek Ibn Ziad, M., Ladram, A. and Garland, M., 2026. SuperCollider: Scalable and Effective Data Race Detection for CUDA. Proceedings of the ACM on Programming Languages, 10(PLDI), pp.2303-2327.
 
@@ -572,6 +575,9 @@ Early results are shown [here](results/README.md)
 ### concurrentKernels (cuda)
   Demonstrate the use of streams for concurrent execution of several kernels with dependency on a device (https://github.com/NVIDIA/cuda-samples/tree/master/Samples/0_Introduction/concurrentKernels)
 
+### condor (cuda)
+  Dense temperature field from the ORNL Condor ellipsoidal heat-source integral (https://github.com/ORNL/Condor)
+
 ### contract (cuda)
   Second-order tensor aggregation with an adjacency matrix (https://github.com/HyTruongSon/GraphFlow)
 
@@ -848,6 +854,9 @@ Early results are shown [here](results/README.md)
 ### gru2 (cuda)
   Forward operations of a multi-layer gated recurrent unit (https://pytorch.org/)
 
+### gsplat4d (cuda)
+  Physics-Aware 4D Dynamic Endoscopic Scene Simulations via MLLM-Guided Gaussian Splatting (https://arxiv.org/abs/2605.16022)
+
 ### haccmk (c)
   The HACC microkernel (https://asc.llnl.gov/CORAL-benchmarks/#haccmk)
 
@@ -953,6 +962,9 @@ Early results are shown [here](results/README.md)
 ### kalman (cuda)
   Kalman filter (https://github.com/rapidsai/cuml/)  
 
+### kda (cuda)
+  Fused recurrent Kimi Delta Attention forward pass (https://github.com/fla-org/flash-linear-attention)
+
 ### keccaktreehash (cuda)
   A Keccak tree hash function (http://sites.google.com/site/keccaktreegpu/)
 
@@ -976,6 +988,9 @@ Early results are shown [here](results/README.md)
 
 ### kurtosis (cuda)
   Compute the kurtosis of two variables (https://github.com/d-d-j/ddj_store)
+
+### laghos-force (cuda)
+  3D partial-assembly force action from Laghos (https://github.com/CEED/Laghos)
 
 ### lanczos (cuda)
   Lanczos tridiagonalization (https://github.com/linhr/15618)
@@ -1075,6 +1090,9 @@ Early results are shown [here](results/README.md)
 
 ### lzss (cuda)
   Efficient LZSS compression solution for multi-byte data on GPUs (https://github.com/hipdac-lab/ICS23-GPULZ)
+
+### mace (cuda, hip, sycl, omp)
+  HydraGNN MACE forward pipeline with neighbor-list reconstruction (https://github.com/ORNL/HydraGNN)
 
 ### mallocFree (hip)
   Memory allocation and deallocation samples (https://github.com/ROCm-Developer-Tools/HIP/)
@@ -1201,6 +1219,9 @@ Early results are shown [here](results/README.md)
 
 ### moe-align (cuda)
   Sort the indices of padded tokens by expert in a Mixture-of-Experts layer (https://github.com/vllm-project/vllm)
+
+### moe-combine (cuda, hip, sycl)
+  Weighted sum of top-k expert outputs gathered across GPUs in an expert-parallel Mixture-of-Experts layer (https://github.com/ROCm/mori)
 
 ### moe-sum (cuda)
   Element-wise summation operation across the top-k expert outputs in a Mixture-of-Experts layer (https://github.com/vllm-project/vllm)
@@ -1376,6 +1397,9 @@ Early results are shown [here](results/README.md)
 ### pso (cuda)
   A modified implementation of particle swarm optimization using Levy function (https://github.com/wiseodd/cuda-pso, https://github.com/chensohg/GPU_CUDA_PSO)
 
+### putget (cuda)
+  One-sided put and get using loads and stores through a peer GPU pointer. Bandwidth uses 32 blocks and latency uses one block, both timed on the host (https://github.com/ROCm/mori/tree/main/benchmark/cco)
+
 ### qem (cuda)
   A quartic equation minimizer (https://github.com/qureshizawar/CUDA-quartic-solver)
 
@@ -1456,6 +1480,9 @@ Early results are shown [here](results/README.md)
 
 ### rmsnorm (cuda)
   Apply root mean square layer normalization over a batch of inputs (https://github.com/AMD-AGI/Primus-Turbo)
+
+### rmsnorm-quant (cuda)
+  Fused RMSNorm and static per-tensor FP8 (E4M3) quantization (https://github.com/vllm-project/vllm)
 
 ### rng-wallace (cuda)
   Random number generation using the Wallace algorithm (https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-37-efficient-random-number-generation-and-application)
@@ -1539,6 +1566,9 @@ Early results are shown [here](results/README.md)
 ### sddmm-batch (cuda)
   Batched dense matrix - dense matrix multiplication into sparse matrix (https://docs.nvidia.com/cuda/cusparse/index.html#cusparsesddmm)
 
+### sdma (hip)
+  Device-to-device copy bandwidth
+
 ### secp256k1 (cuda)
   Part of BIP39 solver
 
@@ -1548,11 +1578,17 @@ Early results are shown [here](results/README.md)
 ### segment-reduce (cuda)
   Segmented reduction using Thrust and oneDPL (https://github.com/c3sr/tcu_scope)
 
+### segment-reduce2 (cuda)
+  Offset-based segmented sum/min/max with 64-bit CSR offsets
+
 ### segsort (cuda)
   Fast segmented sort on a GPU (https://github.com/Funatiq/bb_segsort)
 
 ### sheath (cuda)
   Plasma sheath simulation with the particle-in-cell method (https://www.particleincell.com/2016/cuda-pic/)
+
+### shampoo (torch)
+  Root-inverse Shampoo preconditioner for one order-2 block (https://github.com/facebookresearch/optimizers/blob/main/distributed_shampoo)
 
 ### shmembench (cuda)
   The shared local memory microbenchmark (https://github.com/ekondis/gpumembench)
@@ -1662,6 +1698,9 @@ Early results are shown [here](results/README.md)
 ### ssm (cuda)
   Selective scan mechanism (https://github.com/vllm-project/vllm)
 
+### ssm2 (cuda)
+  Mamba-2 state-space forward pass (https://github.com/NVIDIA/TileGym/blob/main/src/tilegym/ops/cutile/mamba2.py)
+
 ### sss (cuda)
   Stochastic shotgun search for Dirichlet process mixtures of Gaussian graphical models (https://github.com/mukherjeec/DPmixGGM/)
 
@@ -1676,6 +1715,9 @@ Early results are shown [here](results/README.md)
 
 ### stencil3d (cuda)
   3D stencil (https://github.com/LLNL/cardioid)
+
+### stiff-ode (cuda, hip, sycl, omp)
+  Isothermal backward Euler at the detailed n-heptane size (https://rocm.blogs.amd.com/software-tools-optimization/profiling-guide/ai-assist-optimization/README.html)
 
 ### storeKVCache (cuda)
   KV cache storage (https://github.com/sgl-project/sglang/tree/main)
@@ -1710,8 +1752,14 @@ Early results are shown [here](results/README.md)
 ### svd3x3 (cuda)
   Compute the singular value decomposition of 3x3 matrices (https://github.com/kuiwuchn/3x3_SVD_CUDA)
 
+### svt (cuda)
+  Sparse volume traversal using two-level DDA ray casting through a procedurally generated TSDF volume (https://github.com/AcademySoftwareFoundation/openvdb/tree/master/nanovdb)
+
 ### sw4ck (cuda)
   SW4 curvilinear kernels are five stencil kernels that account for ~50% of the solution time in SW4 (https://github.com/LLNL/SW4CK)
+
+### swiglu-oai (cuda)
+  The clamped SwiGLU activation in OpenAI gpt-oss with low-precision inputs and FP8/MXFP4 output quantization (https://github.com/openai/gpt-oss)
 
 ### tensorAccessor (cuda)
   A demo of tensor accessors in Pytorch (https://pytorch.org/)
@@ -1755,6 +1803,9 @@ Early results are shown [here](results/README.md)
 ### tridiagonal (opencl)
   Matrix solvers for large number of small independent tridiagonal linear systems(http://developer.download.nvidia.com/compute/cuda/3_0/sdk/website/OpenCL/website/samples.html)
 
+### trimul (cuda)
+  Triangle multiplicative update in the AlphaFold Evoformer (https://github.com/NVIDIA/cuEquivariance)
+
 ### tsa (cuda)
   Trotter-Suzuki approximation (https://bitbucket.org/zzzoom/trottersuzuki/src/master/)
 
@@ -1781,6 +1832,9 @@ Early results are shown [here](results/README.md)
 
 ### vanGenuchten (cuda)
   Genuchten conversion of soil moisture and pressure (https://github.com/HydroComplexity/Dhara)
+
+### vdi (torch)
+  Batched 128x128 fp32 SPD inverse with two epilogue products (https://github.com/sgl-project/sglang/blob/main/python/sglang/multimodal_gen/runtime/models/dits/minimax_h3_vdn.py)
 
 ### vmc (cuda)
   Computes expectation values (6D integrals) associated with the helium atom (https://github.com/wadejong/Summer-School-Materials/tree/master/Examples/vmc)

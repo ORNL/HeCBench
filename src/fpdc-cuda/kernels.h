@@ -31,6 +31,7 @@ __global__ void CompressionKernel(
 {
   int offset, code, bcount, tmp, off, beg, end, lane, warp, iindex, lastidx, start, term;
   ull diff, prev;
+  code = 0;
   __shared__ int ibufs[32 * (3 * WARPSIZE / 2)]; // shared space for prefix sum
 
   // index within this warp

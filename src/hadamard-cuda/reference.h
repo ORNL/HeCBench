@@ -67,3 +67,29 @@ void reference (
         }
     }
 }
+
+// eps is the machine epsilon of T; both outputs are rounded to T from fp32,
+// so they may differ by about one ULP of T.
+template <typename T>
+bool verify (
+    const std::vector<T> &output,
+    const std::vector<T> &ref_output,
+    float eps
+)
+{
+    const float rel_tol = 2.0f * eps;
+    const float abs_tol = 1e-5f;
+
+    for (size_t i = 0; i < output.size(); ++i) {
+        float out = (float)output[i];
+        float ref = (float)ref_output[i];
+        float diff = std::fabs(out - ref);
+        float bound = rel_tol * std::fabs(ref) + abs_tol;
+        if (!std::isfinite(out) || diff > bound) {
+            printf("Mismatch at index %zu %f %f (diff=%e, bound=%e)\n",
+                   i, out, ref, diff, bound);
+            return false;
+        }
+    }
+    return true;
+}

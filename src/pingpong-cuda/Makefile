@@ -7,6 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+# main-mpi requires GPU-aware MPI. See README.md for GPU-aware vs host-only tests.
 #MPI_ROOT  = /usr/lib/x86_64-linux-gnu/openmpi
 #LAUNCHER  = /usr/bin/mpirun -n 2
 NVHPC_SDK ?= /opt/nvidia/hpc_sdk/Linux_x86_64/25.7
@@ -35,7 +36,7 @@ CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -I$(MPI_ROOT)/include \
           -Xcompiler -Wall -arch=$(ARCH)
 
 # Linker Flags
-LDFLAGS = -L$(MPI_ROOT)/lib -lmpi -lnccl
+LDFLAGS = -L$(MPI_ROOT)/lib -Xlinker -rpath=$(MPI_ROOT)/lib -lmpi -lnccl
 
 # Debug Flags
 ifeq ($(DEBUG),yes)

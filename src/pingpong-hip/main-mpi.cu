@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <hip/hip_runtime.h>
 #include <mpi.h>
+#include "../pingpong-cuda/gpu_aware_mpi.h"
 
 // Macro for checking errors in HIP API calls
 #define hipErrorCheck(call)                                                              \
@@ -9,7 +10,9 @@
     hipError_t cuErr = call;                                                             \
     if(hipSuccess != cuErr){                                                             \
       printf("HIP Error - %s:%d: '%s'\n", __FILE__, __LINE__, hipGetErrorString(cuErr)); \
-      exit(0);                                                                           \
+      fflush(stdout);                                                                    \
+      MPI_Abort(MPI_COMM_WORLD, 1);                                                      \
+      exit(1);                                                                           \
     }                                                                                    \
   }while(0)
 
@@ -50,7 +53,9 @@ int main(int argc, char *argv[])
   hipErrorCheck( hipGetDeviceCount(&num_devices) );
   hipErrorCheck( hipSetDevice(rank % num_devices) );
 
-  //   Loop from 65536 B to 1 GB
+  gpu_aware_mpi_require(GPU_AWARE_MPI_KIND_HIP, rank);
+
+  //   Loop from 512 KiB to 1 GB (8 * 2^i bytes, i = 16..27)
   for(int i=16; i<=27; i++){
 
     long int N = 1 << i;
@@ -79,15 +84,22 @@ int main(int argc, char *argv[])
         MPI_Send(d_A, N, MPI_DOUBLE, 0, tag2, MPI_COMM_WORLD);
       }
     }
-    if(rank == 0) {
-      hipErrorCheck(hipMemcpy(h_A, d_A, N*sizeof(double), hipMemcpyDeviceToHost));
-      for (long int i = 0; i < N; i++) {
-        if(h_A[i] != 5) {
-          printf("ERROR: MPI pingpong test failed\n");
-          break;
-        }
+    hipErrorCheck(hipMemcpy(h_A, d_A, N*sizeof(double), hipMemcpyDeviceToHost));
+    int valid = 1;
+    for (long int j = 0; j < N; j++) {
+      if(h_A[j] != 5) {
+        fprintf(stderr,
+                "ERROR: rank %d: MPI pingpong validation failed at N=%ld index %ld value %.17g\n",
+                rank, N, j, h_A[j]);
+        fflush(stderr);
+        valid = 0;
+        break;
       }
     }
+    int valid_all = 0;
+    MPI_Allreduce(&valid, &valid_all, 1, MPI_INT, MPI_LAND, MPI_COMM_WORLD);
+    if (!valid_all)
+      MPI_Abort(MPI_COMM_WORLD, 1);
 
     free(h_A);
 

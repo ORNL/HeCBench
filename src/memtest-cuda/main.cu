@@ -4,15 +4,16 @@
 #include "kernels.h"
 
 // check the test result
-void check (const unsigned *err_cnt) {
+void check (unsigned *err_cnt) {
   unsigned err = 0;
   // read error
   cudaMemcpy(&err, err_cnt, sizeof(unsigned), cudaMemcpyDeviceToHost);
 
   printf("%s", err ? "x" : ".");
 
-  // reset
-  cudaMemset(&err, 0, sizeof(unsigned));
+  // Reset the device counter. cudaMemset is async, but cudaFree later
+  // synchronizes, unlike sycl::free (https://github.com/ORNL/HeCBench/pull/344).
+  cudaMemset(err_cnt, 0, sizeof(unsigned));
 }
 
 // moving inversion tests with complementary patterns

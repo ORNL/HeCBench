@@ -12,134 +12,89 @@
 // Other header files.
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
+#include <climits>
+#include <cstring>
 #include <chrono>
-#include <iostream>
 #include <hip/hip_runtime.h>
+#include "../pathfinder-cuda/reference.h"
 
 
 // halo width along one direction when advancing to the next iteration
 #define HALO     1
-#define STR_SIZE 256
-#define DEVICE   0
+#define NUMBER_THREADS 250
 #define M_SEED   9
 #define IN_RANGE(x, min, max)  ((x)>=(min) && (x)<=(max))
-#define CLAMP_RANGE(x, min, max) x = (x<(min)) ? min : ((x>(max)) ? max : x )
 #define MIN(a, b) ((a)<=(b) ? (a) : (b))
-
-
-void fatal(char *s)
-{
-  fprintf(stderr, "error: %s\n", s);
-}
 
 __global__ void pathfinder (
     const int*__restrict__ gpuWall,
     const int*__restrict__ gpuSrc,
           int*__restrict__ gpuResult,
-          int*__restrict__ outputBuffer,
     const int iteration,
     const int theHalo,
     const int borderCols,
     const int cols,
     const int t)
 {
-  int BLOCK_SIZE = blockDim.x;
-  int bx = blockIdx.x;
-  int tx = threadIdx.x;
-  __shared__ int prev[250];
-  __shared__ int result[250];
+  // Logical block width is fixed (host sizes the grid from NUMBER_THREADS).
+  // Threads stride if the launch provides fewer than NUMBER_THREADS.
+  const int BLOCK_SIZE = NUMBER_THREADS;
+  const int nthreads = blockDim.x;
+  const int bx = blockIdx.x;
+  const int tid = threadIdx.x;
+  __shared__ int sm[2][NUMBER_THREADS];
 
   // Each block finally computes result for a small block
   // after N iterations.
   // it is the non-overlapping small blocks that cover
   // all the input data
 
-  // calculate the small block size.
-  int small_block_cols = BLOCK_SIZE - (iteration*theHalo*2);
+  const int small_block_cols = BLOCK_SIZE - (iteration*theHalo*2);
+  const int blkX = (small_block_cols*bx) - borderCols;
+  const int blkXmax = blkX+BLOCK_SIZE-1;
 
-  // calculate the boundary for the block according to
-  // the boundary of its small block
-  int blkX = (small_block_cols*bx) - borderCols;
-  int blkXmax = blkX+BLOCK_SIZE-1;
+  const int validXmin = (blkX < 0) ? -blkX : 0;
+  const int validXmax = (blkXmax > cols-1) ? BLOCK_SIZE-1-(blkXmax-cols+1) : BLOCK_SIZE-1;
 
-  // calculate the global thread coordination
-  int xidx = blkX+tx;
-
-  // effective range within this block that falls within
-  // the valid range of the input data
-  // used to rule out computation outside the boundary.
-  int validXmin = (blkX < 0) ? -blkX : 0;
-  int validXmax = (blkXmax > cols-1) ? BLOCK_SIZE-1-(blkXmax-cols+1) : BLOCK_SIZE-1;
-
-  int W = tx-1;
-  int E = tx+1;
-
-  W = (W < validXmin) ? validXmin : W;
-  E = (E > validXmax) ? validXmax : E;
-
-  bool isValid = IN_RANGE(tx, validXmin, validXmax);
-
-  if(IN_RANGE(xidx, 0, cols-1))
+  for (int tx = tid; tx < BLOCK_SIZE; tx += nthreads)
   {
-    prev[tx] = gpuSrc[xidx];
+    if (IN_RANGE(tx, validXmin, validXmax))
+      sm[0][tx] = gpuSrc[blkX+tx];
   }
 
   __syncthreads();
 
-  bool computed;
+  int cur = 0;
   for (int i = 0; i < iteration; i++)
   {
-    computed = false;
+    const int lo = (i+1 > validXmin) ? i+1 : validXmin;
+    const int hi = (BLOCK_SIZE-i-2 < validXmax) ? BLOCK_SIZE-i-2 : validXmax;
+    const int* __restrict__ wallRow = gpuWall + (cols*(t+i) + blkX);
+    const int* __restrict__ prev = sm[cur];
+    int* __restrict__ result = sm[cur^1];
 
-    if( IN_RANGE(tx, i+1, BLOCK_SIZE-i-2) && isValid )
+    for (int tx = lo + tid; tx <= hi; tx += nthreads)
     {
-      computed = true;
+      const int W = (tx-1 < validXmin) ? validXmin : tx-1;
+      const int E = (tx+1 > validXmax) ? validXmax : tx+1;
       int left = prev[W];
       int up = prev[tx];
       int right = prev[E];
       int shortest = MIN(left, up);
       shortest = MIN(shortest, right);
-
-      int index = cols*(t+i)+xidx;
-      result[tx] = shortest + gpuWall[index];
-
-      // ===================================================================
-      // add debugging info to the debug output buffer...
-      if (tx==11 && i==0)
-      {
-        // set bufIndex to what value/range of values you want to know.
-        int bufIndex = gpuSrc[xidx];
-        // dont touch the line below.
-        outputBuffer[bufIndex] = 1;
-      }
-      // ===================================================================
+      result[tx] = shortest + wallRow[tx];
     }
 
-    __syncthreads();
-
-    if(i==iteration-1)
-    {
-      // we are on the last iteration, and thus don't need to
-      // compute for the next step.
-      break;
-    }
-
-    if(computed)
-    {
-      //Assign the computation range
-      prev[tx] = result[tx];
-    }
+    cur ^= 1;
     __syncthreads();
   }
 
-  // update the global memory
-  // after the last iteration, only threads coordinated within the
-  // small block perform the calculation and switch on "computed"
-  if (computed)
-  {
-    gpuResult[xidx] = result[tx];
-  }
+  const int last = iteration-1;
+  const int lo = (last+1 > validXmin) ? last+1 : validXmin;
+  const int hi = (BLOCK_SIZE-last-2 < validXmax) ? BLOCK_SIZE-last-2 : validXmax;
+  const int* __restrict__ result = sm[cur];
+  for (int tx = lo + tid; tx <= hi; tx += nthreads)
+    gpuResult[blkX+tx] = result[tx];
 }
 
 int main(int argc, char** argv)
@@ -159,9 +114,28 @@ int main(int argc, char** argv)
   }
   else
   {
-    printf("Usage: %s <column length> <row length> <pyramid_height>\n", argv[0]);
+    printf("Usage: %s <column length> <row length> <pyramid_height>\n", argv[0]);
     exit(0);
   }
+
+  if (rows < 1 || cols < 1 || pyramid_height < 1) {
+    fprintf(stderr, "error: rows, cols, and pyramid_height must be positive\n");
+    exit(1);
+  }
+  if (rows > INT_MAX / cols) {
+    fprintf(stderr, "error: rows * cols exceeds INT_MAX\n");
+    exit(1);
+  }
+
+  const int lws = NUMBER_THREADS;
+  int smallBlockCol = lws - pyramid_height * HALO * 2;
+  if (smallBlockCol < 1) {
+    fprintf(stderr,
+            "error: pyramid_height (%d) too large for work-group size %d\n",
+            pyramid_height, lws);
+    exit(1);
+  }
+  int blockCols = (cols + smallBlockCol - 1) / smallBlockCol;
 
   data = new int[rows * cols];
   wall = new int*[rows];
@@ -182,16 +156,6 @@ int main(int argc, char** argv)
       wall[i][j] = rand() % 10;
     }
   }
-#ifdef BENCH_PRINT
-  for (int i = 0; i < rows; i++)
-  {
-    for (int j = 0; j < cols; j++)
-    {
-      printf("%d ", wall[i][j]);
-    }
-    printf("\n");
-  }
-#endif
 
   // Pyramid parameters.
   const int borderCols = (pyramid_height) * HALO;
@@ -199,11 +163,10 @@ int main(int argc, char** argv)
   /* printf("pyramidHeight: %d\ngridSize: [%d]\nborder:[%d]\nblockSize: %d\nblockGrid:[%d]\ntargetBlock:[%d]\n",
      pyramid_height, cols, borderCols, NUMBER_THREADS, blockCols, smallBlockCol); */
 
-  int size = rows * cols; // the size (global work size) is a multiple of lws
+  int size = rows * cols;
 
-  // running the opencl application shows lws=4000 (cpu) and lws=250 (gpu)
-  int lws = 250;
-  int* outputBuffer = (int*)calloc(16384, sizeof(int));
+  // Grid covers the current row: overlapping blocks of width smallBlockCol,
+  // not the full 2-D wall.
   int theHalo = HALO;
 
   auto start = std::chrono::steady_clock::now();
@@ -219,10 +182,7 @@ int main(int argc, char** argv)
   int* d_gpuResult;
   hipMalloc((void**)&d_gpuResult, sizeof(int)*cols);
 
-  int* d_outputBuffer;
-  hipMalloc((void**)&d_outputBuffer, sizeof(int)*16384);
-
-  dim3 gridDim (size/lws);
+  dim3 gridDim (blockCols);
   dim3 blockDim (lws);
 
   hipDeviceSynchronize();
@@ -234,7 +194,7 @@ int main(int argc, char** argv)
     int iteration = MIN(pyramid_height, rows-t-1);
 
     pathfinder<<<gridDim, blockDim>>>(
-        d_gpuWall, d_gpuSrc, d_gpuResult, d_outputBuffer,
+        d_gpuWall, d_gpuSrc, d_gpuResult,
         iteration, theHalo, borderCols, cols, t);
 
     int* temp = d_gpuResult;
@@ -248,34 +208,25 @@ int main(int argc, char** argv)
   printf("Total kernel execution time: %lf (s)\n", ktime * 1e-9);
 
   hipMemcpy(result, d_gpuSrc, sizeof(int)*cols, hipMemcpyDeviceToHost);
-  hipMemcpy(outputBuffer, d_outputBuffer, sizeof(int)*16348, hipMemcpyDeviceToHost);
 
   hipFree(d_gpuResult);
   hipFree(d_gpuSrc);
   hipFree(d_gpuWall);
-  hipFree(d_outputBuffer);
 
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Device offloading time = %lf (s)\n", time * 1e-9);
 
-  // add a null terminator at the end of the string.
-  outputBuffer[16383] = '\0';
-
-#ifdef BENCH_PRINT
-  for (int i = 0; i < cols; i++)
-    printf("%d ", data[i]);
-  printf("\n");
-  for (int i = 0; i < cols; i++)
-    printf("%d ", result[i]);
-  printf("\n");
-#endif
+  int* ref = new int[cols];
+  PathfinderReference(data, rows, cols, ref);
+  int unequal = memcmp(result, ref, sizeof(int) * cols);
+  printf("%s\n", unequal ? "FAIL" : "PASS");
 
   // Memory cleanup here.
   delete[] data;
   delete[] wall;
   delete[] result;
-  free(outputBuffer);
+  delete[] ref;
 
   return EXIT_SUCCESS;
 }

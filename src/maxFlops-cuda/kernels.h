@@ -74,7 +74,7 @@
 template <class T>
 __global__ void Add1(T *data, int nIters, T v) {
   int gid = blockIdx.x*blockDim.x + threadIdx.x;
-  register T s = data[gid];
+  T s = data[gid];
   for (int j=0 ; j<nIters ; ++j) {
      /* Each macro op has 20 operations.
         Unroll 12 more times for 240 operations total.
@@ -88,7 +88,7 @@ __global__ void Add1(T *data, int nIters, T v) {
 template <class T>
 __global__ void Add2(T *data, int nIters, T v) {
   int gid = blockIdx.x*blockDim.x + threadIdx.x;
-  register T s = data[gid], s2=10.0f-s;
+  T s = data[gid], s2=10.0f-s;
   for (int j=0 ; j<nIters ; ++j) {
      /* Each macro op has 20 operations.
         Unroll 6 more times for 120 operations total.
@@ -102,7 +102,7 @@ __global__ void Add2(T *data, int nIters, T v) {
 template <class T>
 __global__ void Add4(T *data, int nIters, T v) {
   int gid = blockIdx.x*blockDim.x + threadIdx.x;
-  register T s = data[gid], s2=10.0f-s, s3=9.0f-s, s4=9.0f-s2;
+  T s = data[gid], s2=10.0f-s, s3=9.0f-s, s4=9.0f-s2;
   for (int j=0 ; j<nIters ; ++j) {
      /* Each macro op has 10 operations.
         Unroll 6 more times for 60 operations total.
@@ -116,7 +116,7 @@ __global__ void Add4(T *data, int nIters, T v) {
 template <class T>
 __global__ void Add8(T *data, int nIters, T v) {
   int gid = blockIdx.x*blockDim.x + threadIdx.x;
-  register T s = data[gid], s2=10.0f-s, s3=9.0f-s, s4=9.0f-s2, s5=8.0f-s, s6=8.0f-s2, s7=7.0f-s, s8=7.0f-s2;
+  T s = data[gid], s2=10.0f-s, s3=9.0f-s, s4=9.0f-s2, s5=8.0f-s, s6=8.0f-s2, s7=7.0f-s, s8=7.0f-s2;
   for (int j=0 ; j<nIters ; ++j) {
      /* Each macro op has 5 operations.
         Unroll 6 more times for 30 operations total.
@@ -131,7 +131,7 @@ __global__ void Add8(T *data, int nIters, T v) {
 template <class T>
 __global__ void Mul1(T *data, int nIters, T v) {
   int gid = blockIdx.x*blockDim.x + threadIdx.x;
-  register T s = data[gid]-data[gid]+0.999f;
+  T s = data[gid]-data[gid]+0.999f;
   for (int j=0 ; j<nIters ; ++j) {
      /* Each macro op has 20 operations.
         Unroll 10 more times for 200 operations total.
@@ -145,7 +145,7 @@ __global__ void Mul1(T *data, int nIters, T v) {
 template <class T>
 __global__ void Mul2(T *data, int nIters, T v) {
   int gid = blockIdx.x*blockDim.x + threadIdx.x;
-  register T s = data[gid]-data[gid]+0.999f, s2=s-0.0001f;
+  T s = data[gid]-data[gid]+0.999f, s2=s-0.0001f;
   for (int j=0 ; j<nIters ; ++j) {
      /* Each macro op has 20 operations.
         Unroll 5 more times for 100 operations total.
@@ -159,7 +159,7 @@ __global__ void Mul2(T *data, int nIters, T v) {
 template <class T>
 __global__ void Mul4(T *data, int nIters, T v) {
   int gid = blockIdx.x*blockDim.x + threadIdx.x;
-  register T s = data[gid]-data[gid]+0.999f, s2=s-0.0001f, s3=s-0.0002f, s4=s-0.0003f;
+  T s = data[gid]-data[gid]+0.999f, s2=s-0.0001f, s3=s-0.0002f, s4=s-0.0003f;
   for (int j=0 ; j<nIters ; ++j) {
      /* Each macro op has 10 operations.
         Unroll 5 more times for 50 operations total.
@@ -188,7 +188,7 @@ __global__ void Mul8(T *data, int nIters, T v) {
 template <class T>
 __global__ void MAdd1(T *data, int nIters, T v1, T v2) {
   int gid = blockIdx.x*blockDim.x + threadIdx.x;
-  register T s = data[gid];
+  T s = data[gid];
   for (int j=0 ; j<nIters ; ++j) {
      /* Each macro op has 20 operations.
         Unroll 12 more times for 240 operations total.
@@ -202,7 +202,7 @@ __global__ void MAdd1(T *data, int nIters, T v1, T v2) {
 template <class T>
 __global__ void MAdd2(T *data, int nIters, T v1, T v2) {
   int gid = blockIdx.x*blockDim.x + threadIdx.x;
-  register T s = data[gid], s2=10.0f-s;
+  T s = data[gid], s2=10.0f-s;
   for (int j=0 ; j<nIters ; ++j) {
      /* Each macro op has 20 operations.
         Unroll 6 more times for 120 operations total.
@@ -216,7 +216,7 @@ __global__ void MAdd2(T *data, int nIters, T v1, T v2) {
 template <class T>
 __global__ void MAdd4(T *data, int nIters, T v1, T v2) {
   int gid = blockIdx.x*blockDim.x + threadIdx.x;
-  register T s = data[gid], s2=10.0f-s, s3=9.0f-s, s4=9.0f-s2;
+  T s = data[gid], s2=10.0f-s, s3=9.0f-s, s4=9.0f-s2;
   for (int j=0 ; j<nIters ; ++j) {
      /* Each macro op has 10 operations.
         Unroll 6 more times for 60 operations total.
@@ -245,7 +245,7 @@ __global__ void MAdd8(T *data, int nIters, T v1, T v2) {
 template <class T>
 __global__ void MulMAdd1(T *data, int nIters, T v1, T v2) {
   int gid = blockIdx.x*blockDim.x + threadIdx.x;
-  register T s = data[gid];
+  T s = data[gid];
   for (int j=0 ; j<nIters ; ++j) {
      /* Each macro op has 20 operations.
         Unroll 8 more times for 160 operations total.
@@ -259,7 +259,7 @@ __global__ void MulMAdd1(T *data, int nIters, T v1, T v2) {
 template <class T>
 __global__ void MulMAdd2(T *data, int nIters, T v1, T v2) {
   int gid = blockIdx.x*blockDim.x + threadIdx.x;
-  register T s = data[gid], s2=10.0f-s;
+  T s = data[gid], s2=10.0f-s;
   for (int j=0 ; j<nIters ; ++j) {
      /* Each macro op has 20 operations.
         Unroll 4 more times for 80 operations total.
@@ -273,7 +273,7 @@ __global__ void MulMAdd2(T *data, int nIters, T v1, T v2) {
 template <class T>
 __global__ void MulMAdd4(T *data, int nIters, T v1, T v2) {
   int gid = blockIdx.x*blockDim.x + threadIdx.x;
-  register T s = data[gid], s2=10.0f-s, s3=9.0f-s, s4=9.0f-s2;
+  T s = data[gid], s2=10.0f-s, s3=9.0f-s, s4=9.0f-s2;
   for (int j=0 ; j<nIters ; ++j) {
      /* Each macro op has 10 operations.
         Unroll 4 more times for 40 operations total.

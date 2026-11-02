@@ -5,5 +5,5 @@ add_hecbench_benchmark(
     MODEL omp
     SOURCES cluster.c getopt.c kmeans.c read_input.c rmse.c
     CATEGORIES algorithms
+    C_AS_CXX
 )
-set_source_files_properties(cluster.c getopt.c kmeans.c read_input.c rmse.c PROPERTIES LANGUAGE CXX)

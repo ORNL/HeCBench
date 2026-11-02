@@ -7,6 +7,7 @@
 #include <chrono> // timing
 #include <stdio.h>
 #include <omp.h>
+#include "../shmembench-cuda/reference.h"
 
 using namespace std::chrono;
 
@@ -48,24 +49,32 @@ void set_vector(float4 *target, int offset, float4 v){
 }
 
 
-void shmembenchGPU(double *c, const long size, const int n) {
-  const int TOTAL_BLOCKS = size/(BLOCK_SIZE);
-
+void shmembenchGPU(float *c, const size_t size, const int n) {
   double time_shmem_128b;
 
-  #pragma omp target data map(from: c[0:size])
+  // size floats, one float4 per thread => size/4 stored values
+  if (size % ((size_t)BLOCK_SIZE * 4) != 0) {
+    printf("size must be a multiple of %zu\n", (size_t)BLOCK_SIZE * 4);
+    printf("FAIL\n");
+    return;
+  }
+  const size_t num_float4 = size / 4;
+  int team_threads[1] = {0};
+
+  #pragma omp target data map(from: c[0:num_float4*4]) map(tofrom: team_threads[0:1])
   {
     auto start = high_resolution_clock::now();
     for (int i = 0; i < n; i++) {
-      #pragma omp target teams num_teams(TOTAL_BLOCKS/4) thread_limit(BLOCK_SIZE)
+      #pragma omp target teams num_teams(num_float4/BLOCK_SIZE) thread_limit(BLOCK_SIZE)
       {
         float4 shm_buffer[BLOCK_SIZE*6];
-        #pragma omp parallel 
+        #pragma omp parallel num_threads(BLOCK_SIZE)
         {
           int tid = omp_get_thread_num();
           int blk = omp_get_num_threads();
           int gid = omp_get_team_num();
           int globaltid = gid * blk + tid;
+          if (tid == 0 && gid == 0) team_threads[0] = blk;
 
           set_vector(shm_buffer, tid+0*blk, init_val(tid));
           set_vector(shm_buffer, tid+1*blk, init_val(tid+1));
@@ -106,15 +115,19 @@ void shmembenchGPU(double *c, const long size, const int n) {
     // Copy results back to host memory
   }
 
-  // simple checksum
-  double sum = 0;
-  for (long i = 0; i < size; i++) sum += c[i];
-  if (sum != 21256458760384741137729978368.00)
-    printf("checksum failed\n");
+  if (team_threads[0] != BLOCK_SIZE) {
+    printf("FAIL (team threads %d, expected %d)\n", team_threads[0], BLOCK_SIZE);
+    return;
+  }
+  int errors = shmembench_verify(c, num_float4, BLOCK_SIZE, TOTAL_ITERATIONS);
+  printf("%s\n", errors ? "FAIL" : "PASS");
+  if (errors) return;
 
   printf("Memory throughput\n");
-  const long long operations_bytes  = (6LL+4*5*TOTAL_ITERATIONS+6)*size*sizeof(float);
-  const long long operations_128bit = (6LL+4*5*TOTAL_ITERATIONS+6)*size/4;
+  // 6LL keeps the product in 64-bit; 20492*size overflows 32-bit int
+  const long long nops = (6LL + 4 * 5 * TOTAL_ITERATIONS + 6) * size;
+  const long long operations_bytes  = nops * sizeof(float);
+  const long long operations_128bit = nops / 4;
 
   printf("\tusing 128bit operations : %8.2f GB/sec (%6.2f billion accesses/sec)\n", 
     (double)operations_bytes / time_shmem_128b,

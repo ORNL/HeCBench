@@ -14,10 +14,14 @@ CUDA_ARCH ?= sm_70
 HIP       = no
 HIP_ARCH  ?= gfx908
 ONEMKL    = no
+ONEMATH   = no
 #GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 # path to the install of the oneMKL interface
 ONEMKL_PATH   ?= /path/to/oneMKL
+
+# path to the install of the oneMath library
+ONEMATH_PATH  ?= /path/to/oneMath
 
 #===============================================================================
 # Program name & source code list
@@ -34,29 +38,42 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl --gcc-toolchain=$(GCC_TOOLCHAIN) 
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl --gcc-toolchain=$(GCC_TOOLCHAIN)
 
 ifeq ($(VENDOR), AdaptiveCpp)
     CFLAGS_TMP := $(CFLAGS)
     CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
 endif
 
-# Linker Flags
-LDFLAGS = -ltbb
+ifeq ($(ONEMATH), yes)
+  CFLAGS += -DUSE_ONEMATH
+else
+  LDFLAGS = -ltbb
+endif
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
             -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
-  LDFLAGS = -L$(ONEMKL_PATH)/lib -lonemkl -lonemkl_blas_cublas
-endif
-
-ifeq ($(HIP), yes)
+  ifeq ($(ONEMATH), yes)
+    LDFLAGS = -L$(ONEMATH_PATH)/lib -lonemath -lonemath_blas_cublas
+  else
+    LDFLAGS = -L$(ONEMKL_PATH)/lib -lonemkl -lonemkl_blas_cublas
+  endif
+else ifeq ($(HIP), yes)
   CFLAGS += -fsycl-targets=amdgcn-amd-amdhsa \
-	    -Xsycl-target-backend --offload-arch=$(HIP_ARCH) 
-  LDFLAGS = -L$(ONEMKL_PATH)/lib -lonemkl -lonemkl_blas_rocblas
+            -Xsycl-target-backend --offload-arch=$(HIP_ARCH)
+  ifeq ($(ONEMATH), yes)
+    LDFLAGS = -L$(ONEMATH_PATH)/lib -lonemath -lonemath_blas_rocblas
+  else
+    LDFLAGS = -L$(ONEMKL_PATH)/lib -lonemkl -lonemkl_blas_rocblas
+  endif
+else ifeq ($(ONEMATH), yes)
+  LDFLAGS = -L$(ONEMATH_PATH)/lib -lonemath
 endif
 
-ifeq ($(ONEMKL), yes)
+ifeq ($(ONEMATH), yes)
+  CFLAGS += -I$(ONEMATH_PATH)/include
+else ifeq ($(ONEMKL), yes)
   CFLAGS += -I$(ONEMKL_PATH)/include
 else
   CFLAGS += -qmkl=parallel

@@ -35,7 +35,7 @@ LIBS	= -lm -L./3rdParty/ParMetis-3.1/ -lparmetis -lmetis -L$(CUDADIR)/lib64 -lcu
 .c.o:
 	$(CC) $(CFLAGS) -o $*.o -c $*.c
 .cu.o: 
-	$(NVCC) -Xcompiler -Wall $(CFLAGS) $(DEBUG) $(FAST) -o $*.o -c $*.cu  
+	$(NVCC) -std=c++17 -Xcompiler -Wall $(CFLAGS) $(DEBUG) $(FAST) -o $*.o -c $*.cu  
 
 # list of objects to be compiled
 OBJS    = \

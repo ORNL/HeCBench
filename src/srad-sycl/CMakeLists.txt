@@ -7,4 +7,5 @@ add_hecbench_benchmark(
             util/graphics/graphics.c
             util/graphics/resize.c
     CATEGORIES algorithms
+    C_AS_CXX
 )

@@ -12,28 +12,18 @@
 // Other header files.
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
+#include <climits>
 #include <chrono>
-#include <iostream>
 #include <string.h>
 #include <omp.h>
-
-using namespace std;
+#include "../pathfinder-cuda/reference.h"
 
 // halo width along one direction when advancing to the next iteration
 #define HALO     1
-#define STR_SIZE 256
-#define DEVICE   0
+#define NUMBER_THREADS 250
 #define M_SEED   9
 #define IN_RANGE(x, min, max)  ((x)>=(min) && (x)<=(max))
-#define CLAMP_RANGE(x, min, max) x = (x<(min)) ? min : ((x>(max)) ? max : x )
 #define MIN(a, b) ((a)<=(b) ? (a) : (b))
-
-
-void fatal(char *s)
-{
-  fprintf(stderr, "error: %s\n", s);
-}
 
 int main(int argc, char** argv)
 {
@@ -52,9 +42,28 @@ int main(int argc, char** argv)
   }
   else
   {
-    printf("Usage: %s <column length> <row length> <pyramid_height>\n", argv[0]);
+    printf("Usage: %s <column length> <row length> <pyramid_height>\n", argv[0]);
     exit(0);
   }
+
+  if (rows < 1 || cols < 1 || pyramid_height < 1) {
+    fprintf(stderr, "error: rows, cols, and pyramid_height must be positive\n");
+    exit(1);
+  }
+  if (rows > INT_MAX / cols) {
+    fprintf(stderr, "error: rows * cols exceeds INT_MAX\n");
+    exit(1);
+  }
+
+  const int lws = NUMBER_THREADS;
+  int smallBlockCol = lws - pyramid_height * HALO * 2;
+  if (smallBlockCol < 1) {
+    fprintf(stderr,
+            "error: pyramid_height (%d) too large for work-group size %d\n",
+            pyramid_height, lws);
+    exit(1);
+  }
+  const int gws = (cols + smallBlockCol - 1) / smallBlockCol;
 
   data = new int[rows * cols];
   wall = new int*[rows];
@@ -75,16 +84,6 @@ int main(int argc, char** argv)
       wall[i][j] = rand() % 10;
     }
   }
-#ifdef BENCH_PRINT
-  for (int i = 0; i < rows; i++)
-  {
-    for (int j = 0; j < cols; j++)
-    {
-      printf("%d ", wall[i][j]);
-    }
-    printf("\n");
-  }
-#endif
 
   // Pyramid parameters.
   const int borderCols = (pyramid_height) * HALO;
@@ -92,11 +91,10 @@ int main(int argc, char** argv)
   /* printf("pyramidHeight: %d\ngridSize: [%d]\nborder:[%d]\nblockSize: %d\nblockGrid:[%d]\ntargetBlock:[%d]\n",
      pyramid_height, cols, borderCols, NUMBER_THREADS, blockCols, smallBlockCol); */
 
-  const int size = rows * cols;  // also global work size // 10000000
-  const int lws = 250;
-  const int gws = size/lws;  // the size is a multiple of lws
+  const int size = rows * cols;
+  // Teams cover the current row: overlapping blocks of width smallBlockCol,
+  // not the full 2-D wall.
   int theHalo = HALO;
-  int* outputBuffer = (int*)calloc(16384, sizeof(int));
 
   auto start = std::chrono::steady_clock::now();
 
@@ -106,12 +104,15 @@ int main(int argc, char** argv)
   // and then copy part of the data array to gpuSrc
   int* gpuSrc = (int*) malloc (sizeof(int)*cols);
   int* gpuResult = (int*) malloc (sizeof(int)*cols);
+  if (gpuSrc == NULL || gpuResult == NULL) {
+    fprintf(stderr, "error: failed to allocate ping-pong buffers\n");
+    exit(1);
+  }
   memcpy(gpuSrc, data, cols*sizeof(int));
 
-#pragma omp target data map(tofrom: gpuSrc[0:cols]) \
+#pragma omp target data map(to: gpuSrc[0:cols]) \
                         map(alloc: gpuResult[0:cols]) \
-                        map(to: gpuWall[0:size-cols]) \
-                        map(from: outputBuffer[0:16384])
+                        map(to: gpuWall[0:size-cols])
   {
     auto kstart = std::chrono::steady_clock::now();
 
@@ -120,16 +121,21 @@ int main(int argc, char** argv)
       // Calculate this for the kernel argument...
       int iteration = MIN(pyramid_height, rows-t-1);
 
-      #pragma omp target teams num_teams(gws)
+      #pragma omp target teams num_teams(gws) thread_limit(NUMBER_THREADS)
       {
-        int prev[lws];
-        int result[lws];
-        #pragma omp parallel num_threads(lws)
+        // Ping-pong buffers for the pyramid: a step reads sm[cur] and writes
+        // sm[1-cur], so no shared-memory copy-back is needed between steps.
+        int sm[2][NUMBER_THREADS];
+        #pragma omp parallel num_threads(NUMBER_THREADS)
         {
-          // Set the kernel arguments.
-          int BLOCK_SIZE = omp_get_num_threads();
-          int bx = omp_get_team_num();
-          int tx = omp_get_thread_num();
+          // The ghost-zone decomposition uses a fixed logical block width, which
+          // the host relies on to size the team count. The number of threads the
+          // device actually provides may be smaller, so each thread strides over
+          // the columns of its block.
+          const int BLOCK_SIZE = NUMBER_THREADS;
+          const int nthreads = omp_get_num_threads();
+          const int bx = omp_get_team_num();
+          const int tid = omp_get_thread_num();
 
           // Each block finally computes result for a small block
           // after N iterations.
@@ -137,89 +143,71 @@ int main(int argc, char** argv)
           // all the input data
 
           // calculate the small block size.
-          int small_block_cols = BLOCK_SIZE - (iteration*theHalo*2);
+          const int small_block_cols = BLOCK_SIZE - (iteration*theHalo*2);
 
           // calculate the boundary for the block according to
           // the boundary of its small block
-          int blkX = (small_block_cols*bx) - borderCols;
-          int blkXmax = blkX+BLOCK_SIZE-1;
-
-          // calculate the global thread coordination
-          int xidx = blkX+tx;
+          const int blkX = (small_block_cols*bx) - borderCols;
+          const int blkXmax = blkX+BLOCK_SIZE-1;
 
           // effective range within this block that falls within
           // the valid range of the input data
           // used to rule out computation outside the boundary.
-          int validXmin = (blkX < 0) ? -blkX : 0;
-          int validXmax = (blkXmax > cols-1) ? BLOCK_SIZE-1-(blkXmax-cols+1) : BLOCK_SIZE-1;
+          const int validXmin = (blkX < 0) ? -blkX : 0;
+          const int validXmax = (blkXmax > cols-1) ? BLOCK_SIZE-1-(blkXmax-cols+1) : BLOCK_SIZE-1;
 
-          int W = tx-1;
-          int E = tx+1;
-
-          W = (W < validXmin) ? validXmin : W;
-          E = (E > validXmax) ? validXmax : E;
-
-          bool isValid = IN_RANGE(tx, validXmin, validXmax);
-
-          if(IN_RANGE(xidx, 0, cols-1))
+          for (int tx = tid; tx < BLOCK_SIZE; tx += nthreads)
           {
-            prev[tx] = gpuSrc[xidx];
+            if(IN_RANGE(tx, validXmin, validXmax))
+            {
+              sm[0][tx] = gpuSrc[blkX+tx];
+            }
           }
 
           #pragma omp barrier
 
-          bool computed;
+          int cur = 0;
+
           for (int i = 0; i < iteration; i++)
           {
-            computed = false;
+            // The ghost zone loses one column on each side per pyramid step.
+            const int lo = (i+1 > validXmin) ? i+1 : validXmin;
+            const int hi = (BLOCK_SIZE-i-2 < validXmax) ? BLOCK_SIZE-i-2 : validXmax;
+            // rows*cols is checked to fit in an int on the host.
+            const int* __restrict__ wallRow = gpuWall + (cols*(t+i) + blkX);
+            const int* __restrict__ prev = sm[cur];
+            int* __restrict__ result = sm[cur^1];
 
-            if( IN_RANGE(tx, i+1, BLOCK_SIZE-i-2) && isValid )
+            for (int tx = lo + tid; tx <= hi; tx += nthreads)
             {
-              computed = true;
+              const int W = (tx-1 < validXmin) ? validXmin : tx-1;
+              const int E = (tx+1 > validXmax) ? validXmax : tx+1;
+
               int left = prev[W];
               int up = prev[tx];
               int right = prev[E];
               int shortest = MIN(left, up);
               shortest = MIN(shortest, right);
 
-              int index = cols*(t+i)+xidx;
-              result[tx] = shortest + gpuWall[index];
-
-              // ===================================================================
-              // add debugging info to the debug output buffer...
-              if (tx==11 && i==0)
-              {
-                // set bufIndex to what value/range of values you want to know.
-                int bufIndex = gpuSrc[xidx];
-                // dont touch the line below.
-                outputBuffer[bufIndex] = 1;
-              }
-              // ===================================================================
+              result[tx] = shortest + wallRow[tx];
             }
 
-            #pragma omp barrier
+            cur ^= 1;
 
-            if(i==iteration-1)
-            {
-              // we are on the last iteration, and thus don't need to 
-              // compute for the next step.
-              break;
-            }
-
-            if(computed)
-            {
-              //Assign the computation range
-              prev[tx] = result[tx];
-            }
             #pragma omp barrier
           }
 
           // update the global memory
-          // after the last iteration, only threads coordinated within the
-          // small block perform the calculation and switch on "computed"
-          if (computed)
+          // after the last iteration, only the columns coordinated within the
+          // small block were computed
+          const int last = iteration-1;
+          const int lo = (last+1 > validXmin) ? last+1 : validXmin;
+          const int hi = (BLOCK_SIZE-last-2 < validXmax) ? BLOCK_SIZE-last-2 : validXmax;
+          const int* __restrict__ result = sm[cur];
+
+          for (int tx = lo + tid; tx <= hi; tx += nthreads)
           {
-            gpuResult[xidx] = result[tx];
+            gpuResult[blkX+tx] = result[tx];
           }
         }
       } 
@@ -227,6 +215,9 @@ int main(int argc, char** argv)
       gpuResult = gpuSrc;
       gpuSrc = temp;
     }
+
+    // Final row lives in whichever host pointer gpuSrc currently names.
+    #pragma omp target update from(gpuSrc[0:cols])
 
     auto kend = std::chrono::steady_clock::now();
     auto ktime = std::chrono::duration_cast<std::chrono::nanoseconds>(kend - kstart).count();
@@ -237,23 +228,18 @@ int main(int argc, char** argv)
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Device offloading time = %lf (s)\n", time * 1e-9);
 
-  // add a null terminator at the end of the string.
-  outputBuffer[16383] = '\0';
+  memcpy(result, gpuSrc, sizeof(int)*cols);
 
-#ifdef BENCH_PRINT
-  for (int i = 0; i < cols; i++)
-    printf("%d ", data[i]);
-  printf("\n");
-  for (int i = 0; i < cols; i++)
-    printf("%d ", gpuSrc[i]);
-  printf("\n");
-#endif
+  int* ref = new int[cols];
+  PathfinderReference(data, rows, cols, ref);
+  int unequal = memcmp(result, ref, sizeof(int) * cols);
+  printf("%s\n", unequal ? "FAIL" : "PASS");
 
   // Memory cleanup here.
   delete[] data;
   delete[] wall;
   delete[] result;
-  free(outputBuffer);
+  delete[] ref;
   free(gpuSrc);
   free(gpuResult);
 

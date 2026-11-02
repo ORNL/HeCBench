@@ -1,0 +1,5 @@
+outs:
+- md5: d58473738d66c4e178e5fb312121b26d
+  size: 125647109
+  hash: md5
+  path: mace_pipeline_capture.macepipe

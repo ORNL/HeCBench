@@ -96,6 +96,7 @@ void CompressionKernel(
       int offset, code, bcount, tmp, off, beg, end, lane, warp, iindex, lastidx, start, term;
       ull diff, prev;
       int lid = omp_get_thread_num();
+      code = 0;
 
       // index within this warp
       lane = lid & 31;

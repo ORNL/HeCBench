@@ -5,4 +5,5 @@ add_hecbench_benchmark(
     MODEL sycl
     SOURCES main.cpp
     CATEGORIES math
+    LINK_LIBRARIES -qmkl=parallel
 )

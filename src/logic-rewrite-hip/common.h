@@ -52,6 +52,12 @@ __device__ __forceinline__ int atomicLoadAcquire(const int *addr) {
 // wavefront lanes execute in lockstep, so at this uniform program point a
 // workgroup-scope fence (LDS visibility) plus a wave reconvergence/scheduling
 // barrier is a correct stand-in.
+//
+// ROCm 7.0 added __syncwarp() (and enabled the *_sync builtins by default, the
+// opt-in macro becoming the opt-out HIP_DISABLE_WARP_SYNC_BUILTINS). Defining
+// the shim there makes every call ambiguous against the HIP header overloads,
+// so restrict it to the versions that are actually missing the intrinsic.
+#if HIP_VERSION_MAJOR < 7
 #ifndef __HIP_SYNCWARP_SHIM
 #define __HIP_SYNCWARP_SHIM
 __device__ __forceinline__ void __syncwarp(unsigned long long mask = ~0ull) {
@@ -59,6 +65,7 @@ __device__ __forceinline__ void __syncwarp(unsigned long long mask = ~0ull) {
     __threadfence_block();
     __builtin_amdgcn_wave_barrier();
 }
+#endif
 #endif
 
 // for static_assert false

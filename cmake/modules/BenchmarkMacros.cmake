@@ -9,7 +9,7 @@ set_property(GLOBAL PROPERTY HECBENCH_CATEGORIES "")
 set(DEPEND_ON_BOOST "hbc" "ge-spmm" "mmcsf" "warpsort" "gerbil")
 
 # Global list for benchmarks that require MPI
-set(DEPEND_ON_MPI "miniDGS" "miniWeather" "pingpong" "sparkler" "allreduce" "ccl" "halo-finder")
+set(DEPEND_ON_MPI "miniDGS" "miniWeather" "pingpong" "sparkler" "allreduce" "ccl" "halo-finder" "moe-combine")
 
 # Global list for benchmarks that require Eigen
 set(DEPEND_ON_EIGEN "xlqc")
@@ -44,6 +44,9 @@ set(HECBENCH_TEST_RUNNER "${CMAKE_SOURCE_DIR}/cmake/scripts/run_benchmark_test.p
 #   COMPILE_OPTIONS - Additional compile options (optional)
 #   LINK_LIBRARIES  - Additional libraries to link (optional)
 #   INCLUDE_DIRS  - Additional include path required by the benchmark (optional)
+#   C_AS_CXX    - Compile listed .c sources as C++ (optional). Needed when a
+#                 .c file is C++ (e.g. std::chrono) or is linked from C++
+#                 without extern "C". Applied only if this model is enabled.
 #   TEST_REGEX  - Regex pattern to match output for test verification (optional)
 #   TEST_ARGS   - Arguments to pass when running tests (optional)
 #   TEST_TIMEOUT - Timeout in seconds for test execution (optional, default 300)
@@ -58,7 +61,7 @@ set(HECBENCH_TEST_RUNNER "${CMAKE_SOURCE_DIR}/cmake/scripts/run_benchmark_test.p
 #
 function(add_hecbench_benchmark)
     # Parse arguments
-    set(options "")
+    set(options C_AS_CXX)
     set(oneValueArgs NAME MODEL TEST_REGEX TEST_TIMEOUT ENABLE_FASTMATH)
     set(multiValueArgs SOURCES CATEGORIES COMPILE_OPTIONS LINK_LIBRARIES INCLUDE_DIRS TEST_ARGS)
     cmake_parse_arguments(BENCH "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
@@ -156,6 +159,16 @@ function(add_hecbench_benchmark)
         set_source_files_properties(${BENCH_SOURCES} PROPERTIES LANGUAGE HIP)
     endif()
 
+    # Compile .c sources as C++ when requested (after the model-enabled
+    # early-return, so this is a no-op when the variant is skipped)
+    if(BENCH_C_AS_CXX)
+        foreach(_hecbench_src ${BENCH_SOURCES})
+            if(_hecbench_src MATCHES "\\.c$")
+                set_source_files_properties("${_hecbench_src}" PROPERTIES LANGUAGE CXX)
+            endif()
+        endforeach()
+    endif()
+
     # Add executable
     add_executable(${TARGET_NAME} ${BENCH_SOURCES})
 
@@ -210,15 +223,18 @@ function(add_hecbench_benchmark)
         )
 
     elseif(BENCH_MODEL_LOWER STREQUAL "sycl")
-        # SYCL configuration
-        target_compile_options(${TARGET_NAME} PRIVATE
-            -fsycl
-            ${SYCL_FLAGS}
-        )
-        target_link_options(${TARGET_NAME} PRIVATE
-            -fsycl
-            ${SYCL_FLAGS}
-        )
+        # SYCL configuration. Restrict SYCL_FLAGS (which already includes
+        # -fsycl for DPC++/clang) to C++ so genuine .c files are not passed
+        # to gcc with a flag it does not understand. Link uses SYCL_LINK_FLAGS
+        # so preprocessor -DUSE_GPU is not forwarded to the linker.
+        foreach(_sycl_flag ${SYCL_FLAGS})
+            target_compile_options(${TARGET_NAME} PRIVATE
+                $<$<COMPILE_LANGUAGE:CXX>:${_sycl_flag}>
+            )
+        endforeach()
+        if(SYCL_LINK_FLAGS)
+            target_link_options(${TARGET_NAME} PRIVATE ${SYCL_LINK_FLAGS})
+        endif()
         # Override the default CXX standard
         if(${TARGET_NAME} IN_LIST DEPEND_ON_CXX20)
             set_target_properties(${TARGET_NAME} PROPERTIES
@@ -291,6 +307,9 @@ function(add_hecbench_benchmark)
         set(TEST_CMD
             ${Python3_EXECUTABLE}
             ${HECBENCH_TEST_RUNNER}
+            --regex "${BENCH_TEST_REGEX}"
+            --timeout ${BENCH_TEST_TIMEOUT}
+            --working-dir "${CMAKE_CURRENT_SOURCE_DIR}"
             $<TARGET_FILE:${TARGET_NAME}>
         )
 
@@ -298,11 +317,6 @@ function(add_hecbench_benchmark)
         if(BENCH_TEST_ARGS)
             list(APPEND TEST_CMD ${BENCH_TEST_ARGS})
         endif()
-
-        # Add the regex pattern
-        list(APPEND TEST_CMD --regex "${BENCH_TEST_REGEX}")
-        list(APPEND TEST_CMD --timeout ${BENCH_TEST_TIMEOUT})
-        list(APPEND TEST_CMD --working-dir "${CMAKE_CURRENT_SOURCE_DIR}")
 
         # Register the test
         add_test(
@@ -371,32 +385,44 @@ endfunction()
 # Unzip data needed for certain benchmarks
 #
 MACRO(UNZIPFILE zipfile)
-    # get the filetype extension
     GET_FILENAME_COMPONENT(FILEEXT "${zipfile}" EXT)
     GET_FILENAME_COMPONENT(FILEDIR "${zipfile}" DIRECTORY)
 
-    MESSAGE("Going to unzip file ${zipfile}!")
-    MESSAGE("File extension: ${FILEEXT}")
-    MESSAGE("File dir: ${FILEDIR}")
-    IF(FILEEXT MATCHES "\.tar.bz")
-        set(TOEXEC "tar -xjf ${zipfile} -C ${FILEDIR}")
-    ELSEIF(FILEEXT MATCHES "\.bz2")
-        set(TOEXEC "bzip2 -dkf ${zipfile}")
-    ELSEIF(FILEEXT MATCHES "\.tar")
-        set(TOEXEC "tar -xvf ${zipfile} -C ${FILEDIR}")
-    ELSEIF(FILEEXT MATCHES "\.zip")
-        set(TOEXEC "unzip ${zipfile}")
-    ENDIF()
-    MESSAGE("\tAssociated command to unzip: [${TOEXEC}]")
-    execute_process(
-        COMMAND /bin/bash -c "${TOEXEC}"
-        OUTPUT_VARIABLE EXEC_OUTPUT
-        RESULT_VARIABLE RESULT_CODE
-        WORKING_DIRECTORY ${FILEDIR}
-    )
-    # MESSAGE("Execution Result: \n${EXEC_OUTPUT}")
-    # if the result code was not 0
-    IF (NOT(RESULT_CODE EQUAL 0))
-        message("Problem unzipping file ${zipfile}!!") 
-    ENDIF()
+    if(NOT EXISTS "${zipfile}")
+        message(WARNING
+            "Archive ${zipfile} is missing. "
+            "Fetch it from the repository root with `dvc pull` and re-run CMake.")
+    else()
+        MESSAGE("Going to unzip file ${zipfile}!")
+        MESSAGE("File extension: ${FILEEXT}")
+        MESSAGE("File dir: ${FILEDIR}")
+        IF(FILEEXT MATCHES "\\.tar\\.bz2$" OR FILEEXT MATCHES "\\.tar\\.bz$")
+            set(TOEXEC "tar -xjf ${zipfile} -C ${FILEDIR}")
+        ELSEIF(FILEEXT MATCHES "\\.tar\\.gz$" OR FILEEXT MATCHES "\\.tgz$")
+            set(TOEXEC "tar -xzf ${zipfile} -C ${FILEDIR}")
+        ELSEIF(FILEEXT MATCHES "\\.bz2$")
+            set(TOEXEC "bzip2 -dkf ${zipfile}")
+        ELSEIF(FILEEXT MATCHES "\\.tar$")
+            set(TOEXEC "tar -xvf ${zipfile} -C ${FILEDIR}")
+        ELSEIF(FILEEXT MATCHES "\\.zip$")
+            set(TOEXEC "unzip -o ${zipfile} -d ${FILEDIR}")
+        ELSE()
+            message(WARNING "UNZIPFILE: unsupported archive type '${FILEEXT}' for ${zipfile}")
+            set(TOEXEC "")
+        ENDIF()
+        if(TOEXEC)
+            MESSAGE("\tAssociated command to unzip: [${TOEXEC}]")
+            execute_process(
+                COMMAND /bin/bash -c "${TOEXEC}"
+                OUTPUT_VARIABLE EXEC_OUTPUT
+                ERROR_VARIABLE EXEC_ERROR
+                RESULT_VARIABLE RESULT_CODE
+                WORKING_DIRECTORY ${FILEDIR}
+            )
+            IF (NOT(RESULT_CODE EQUAL 0))
+                message(WARNING
+                    "Problem unzipping file ${zipfile} (exit ${RESULT_CODE}): ${EXEC_ERROR}")
+            ENDIF()
+        endif()
+    endif()
 ENDMACRO()

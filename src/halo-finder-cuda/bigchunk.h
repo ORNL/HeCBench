@@ -108,20 +108,20 @@ public:
   };
 
 public:
-  bigchunk_allocator() throw() {};
-  bigchunk_allocator(const bigchunk_allocator&) throw() {};
+  bigchunk_allocator() noexcept {};
+  bigchunk_allocator(const bigchunk_allocator&) noexcept {};
 
   template <typename U>
-  bigchunk_allocator(const bigchunk_allocator<U>&) throw() {};
+  bigchunk_allocator(const bigchunk_allocator<U>&) noexcept {};
 
 public:
-  ~bigchunk_allocator() throw () {};
+  ~bigchunk_allocator() noexcept {};
 
 public:
   pointer address(reference x) const { return &x; }
   const_pointer address (const_reference x) const { return &x; }
 
-  size_type max_size() const throw() { return size_t(-1) / sizeof(T); }
+  size_type max_size() const noexcept { return size_t(-1) / sizeof(T); }
 
   void construct(pointer p, const_reference val) { ::new ((void*)p) T(val); }
   void destroy(pointer p) { ((T*)p)->~T(); }

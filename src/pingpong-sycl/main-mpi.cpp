@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <vector>
 #include <sycl/sycl.hpp>
 #include <mpi.h>
+#include "../pingpong-cuda/gpu_aware_mpi.h"
 
 void test(sycl::nd_item<1> item, double *d, const long int n) {
   for (long i = item.get_global_id(0);
@@ -10,7 +12,16 @@ void test(sycl::nd_item<1> item, double *d, const long int n) {
   }
 }
 
+static void abort_all(int rank, const char *what)
+{
+  fprintf(stderr, "ERROR: rank %d: %s\n", rank, what);
+  fflush(stderr);
+  MPI_Abort(MPI_COMM_WORLD, 1);
+  exit(1);
+}
+
 int main(int argc, char *argv[])
+try
 {
   /* -------------------------------------------------------------------------------------------
      MPI Initialization
@@ -33,12 +44,27 @@ int main(int argc, char *argv[])
     exit(0);
   }
 
-  // Map MPI ranks to GPUs
-  auto const& gpu_devices = sycl::device::get_devices(sycl::info::device_type::gpu);
+  // Map MPI ranks to GPUs. An Intel GPU is listed once per backend (Level Zero
+  // and OpenCL); GPU-aware MPI needs Level Zero buffers, so when any Level Zero
+  // GPU exists, use only Level Zero GPUs.
+  auto gpu_devices = sycl::device::get_devices(sycl::info::device_type::gpu);
+  std::vector<sycl::device> ze_devices;
+  for (auto const& d : gpu_devices)
+    if (d.get_backend() == sycl::backend::ext_oneapi_level_zero)
+      ze_devices.push_back(d);
+  if (!ze_devices.empty())
+    gpu_devices = ze_devices;
   int num_devices = gpu_devices.size();
+  if (num_devices == 0)
+    abort_all(rank, "no SYCL GPU device found");
   sycl::queue q(gpu_devices[rank % num_devices], sycl::property::queue::in_order());
 
-  //   Loop from 65536 B to 1 GB
+  gpu_aware_mpi_require(
+      gpu_aware_mpi_kind_from_vendor(
+          q.get_device().get_info<sycl::info::device::vendor>().c_str()),
+      rank);
+
+  //   Loop from 512 KiB to 1 GB (8 * 2^i bytes, i = 16..27)
   for(int i=16; i<=27; i++){
 
     long int N = 1 << i;
@@ -46,6 +72,8 @@ int main(int argc, char *argv[])
     double *h_A, *d_A;
     h_A = (double*) malloc (N*sizeof(double)); 
     d_A = sycl::malloc_device<double>(N, q);
+    if (d_A == nullptr)
+      abort_all(rank, "sycl::malloc_device failed");
     q.memset(d_A, 0, N*sizeof(double)).wait();
 
     const int tag1 = 10;
@@ -70,15 +98,22 @@ int main(int argc, char *argv[])
         MPI_Send(d_A, N, MPI_DOUBLE, 0, tag2, MPI_COMM_WORLD);
       }
     }
-    if(rank == 0) {
-      q.memcpy(h_A, d_A, N*sizeof(double)).wait();
-      for (long int i = 0; i < N; i++) {
-        if(h_A[i] != 5) {
-          printf("ERROR: MPI pingpong test failed\n");
-          break;
-        }
+    q.memcpy(h_A, d_A, N*sizeof(double)).wait();
+    int valid = 1;
+    for (long int j = 0; j < N; j++) {
+      if(h_A[j] != 5) {
+        fprintf(stderr,
+                "ERROR: rank %d: MPI pingpong validation failed at N=%ld index %ld value %.17g\n",
+                rank, N, j, h_A[j]);
+        fflush(stderr);
+        valid = 0;
+        break;
       }
     }
+    int valid_all = 0;
+    MPI_Allreduce(&valid, &valid_all, 1, MPI_INT, MPI_LAND, MPI_COMM_WORLD);
+    if (!valid_all)
+      MPI_Abort(MPI_COMM_WORLD, 1);
 
     free(h_A);
 
@@ -114,4 +149,10 @@ int main(int argc, char *argv[])
   MPI_Finalize();
 
   return 0;
+}
+catch (std::exception const &e)
+{
+  int rank = -1;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  abort_all(rank, e.what());
 }

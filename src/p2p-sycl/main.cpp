@@ -62,6 +62,19 @@ void pair_access(std::vector<sycl::device> &Devs, int i, int j, int repeat)
   // GPU1
   float *g1 = (float*) sycl::malloc_device(buf_size, q1);
 
+  // Warmup: exclude one-time costs of the first peer copies from the timing
+  for (int i=0; i<4; i++)
+  {
+    if (i % 2 == 0)
+    {
+      q0.memcpy(g1, g0, buf_size).wait();
+    }
+    else
+    {
+      q1.memcpy(g0, g1, buf_size).wait();
+    }
+  }
+
   q0.wait();
   q1.wait();
   auto start = std::chrono::steady_clock::now();

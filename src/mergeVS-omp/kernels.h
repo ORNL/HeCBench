@@ -61,7 +61,7 @@ void mergehead (
 
 
         int64_t start_m = block_idx_m * BLOCK_SIZE_M;
-        if (start_m >= q_seqlen) break;
+        if (start_m >= q_seqlen) continue;
 
         int64_t end_m = start_m + BLOCK_SIZE_M;
 

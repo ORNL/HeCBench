@@ -23,6 +23,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define _COUNTINGHASHTABLE_H_
 
 #include <cuda_runtime.h>
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include <stdexcept>
@@ -169,33 +170,26 @@ namespace cuda_ds {
 				// wait for synchronize
 				err = cudaDeviceSynchronize();
 				if (err != cudaSuccess) {
-					throw std::runtime_error(
-							std::string(
-									std::string("cuda_ds::~CountingHashTable::exception1: ")
-									+ cudaGetErrorName(err)) + std::string(": ")
-							+ std::string(cudaGetErrorString(err)));
+					fprintf(stderr,
+							"cuda_ds::~CountingHashTable::exception1: %s: %s\n",
+							cudaGetErrorName(err), cudaGetErrorString(err));
 				}
 
 				// free data
 				err = cudaFree(data);
 				if (err != cudaSuccess) {
-					throw std::runtime_error(
-							std::string(
-									std::string("cuda_ds::~CountingHashTable::exception2: ")
-									+ cudaGetErrorName(err)) + std::string(": ")
-							+ std::string(cudaGetErrorString(err)));
+					fprintf(stderr,
+							"cuda_ds::~CountingHashTable::exception2: %s: %s\n",
+							cudaGetErrorName(err), cudaGetErrorString(err));
 				}
 
 				// destroy streams
 				for (int i = 0; i < numStreams; ++i) {
 					err = cudaStreamDestroy(stream[i]);
 					if (err != cudaSuccess) {
-						throw std::runtime_error(
-								std::string(
-										std::string("cuda_ds::CountingHashTable::~CountingHashTable::exception3: ")
-										+ cudaGetErrorName(err))
-								+ std::string(": ")
-								+ std::string(cudaGetErrorString(err)));
+						fprintf(stderr,
+								"cuda_ds::CountingHashTable::~CountingHashTable::exception3: %s: %s\n",
+								cudaGetErrorName(err), cudaGetErrorString(err));
 					}
 				}
 			}

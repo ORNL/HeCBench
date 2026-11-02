@@ -6,7 +6,6 @@
 CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
-OUTPUT    = no
 DEVICE    = gpu
 LAUNCHER  ?=
 
@@ -29,10 +28,6 @@ CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = 
-
-ifeq ($(OUTPUT),yes)
-  CFLAGS += -DBENCH_PRINT
-endif
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
@@ -57,7 +52,7 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp
+%.o: %.cpp ../pathfinder-cuda/reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

@@ -8,7 +8,7 @@ __global__ void
 LAUNCH_BOUNDS (QSSA_THRD, QSSA_BLK)
 qssa_kernel(real* RESTRICT RF, real* RESTRICT RB, real* RESTRICT A) {
 
-    register real DEN;
+    real DEN;
 
     RF(57)  = (real)0.0;
     RF(58)  = (real)0.0;
@@ -131,7 +131,7 @@ LAUNCH_BOUNDS (QSSAB_THRD, QSSAB_BLK)
 qssab_kernel(real* RESTRICT RF, real* RESTRICT RB, real* RESTRICT A)
 {
 
-    register real DEN;
+    real DEN;
 
     A(8,0) = A(8,0) + A(8,10)*A(10,0);
     DEN = 1 -A(8,10)*A(10,8);

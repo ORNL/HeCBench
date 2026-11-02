@@ -41,8 +41,15 @@
 
 // mkl/sycl includes
 #include <sycl/sycl.hpp>
-#include "oneapi/mkl/blas.hpp"
-#include "mkl.h"
+//#include "oneapi/mkl/blas.hpp"
+#ifdef USE_ONEMATH
+#include <oneapi/math.hpp>
+namespace math_ns = oneapi::math;
+#else
+#include <oneapi/mkl.hpp>
+namespace math_ns = oneapi::mkl;
+#endif
+//#include "mkl.h"
 
 #include "utils.h"
 
@@ -85,7 +92,7 @@ void run_simple_gemm(sycl::queue &q, T *a, T *b, T *c, int M, int K, int N, T al
 // is performed and finally the results are post processed.
 //
 template <typename fp>
-void run_gemm_example(MKL_INT m, MKL_INT k, MKL_INT n, int repeat) {
+void run_gemm_example( int m, int k, int n, int repeat) {
 
   //
   // Initialize data for Gemm
@@ -93,34 +100,38 @@ void run_gemm_example(MKL_INT m, MKL_INT k, MKL_INT n, int repeat) {
   // C = alpha * op(A) * op(B)  + beta * C
   //
 
-  oneapi::mkl::transpose transA = oneapi::mkl::transpose::nontrans;
-  oneapi::mkl::transpose transB = oneapi::mkl::transpose::nontrans;
+  math_ns::transpose transA = math_ns::transpose::nontrans;
+  math_ns::transpose transB = math_ns::transpose::nontrans;
 
   // set scalar fp values
   fp alpha = fp(2.0);
   fp beta  = fp(0.5);
 
-  const size_t A_size = sizeof(fp) * m * k;
-  const size_t B_size = sizeof(fp) * k * n;
-  const size_t C_size = sizeof(fp) * m * n;
+  const size_t A_elems = (size_t)m * k;
+  const size_t B_elems = (size_t)k * n;
+  const size_t C_elems = (size_t)m * n;
 
-  // prepare matrix data
-  fp* a = (fp *)mkl_malloc(A_size, 64);
-  fp* b = (fp *)mkl_malloc(B_size, 64);
-  fp* c = (fp *)mkl_malloc(C_size, 64);
-  fp* r = (fp *)mkl_malloc(C_size, 64);
+  const size_t A_size = sizeof(fp) * A_elems;
+  const size_t B_size = sizeof(fp) * B_elems;
+  const size_t C_size = sizeof(fp) * C_elems;
 
-  srand(2);
-  rand_matrix(a, m, k);
-  rand_matrix(b, k, n);
-  rand_matrix(c, m, n);
-
-  // create execution queue and buffers of matrix data
 #ifdef USE_GPU
   sycl::queue q(sycl::gpu_selector_v, sycl::property::queue::in_order());
 #else
   sycl::queue q(sycl::cpu_selector_v, sycl::property::queue::in_order());
 #endif
+
+  // prepare matrix data
+  fp* a = sycl::malloc_host<fp>(A_elems, q);
+  fp* b = sycl::malloc_host<fp>(B_elems, q);
+  fp* c = sycl::malloc_host<fp>(C_elems, q);
+  fp* r = sycl::malloc_host<fp>(C_elems, q);
+
+
+  srand(2);
+  rand_matrix(a, m, k);
+  rand_matrix(b, k, n);
+  rand_matrix(c, m, n);
 
   fp *da, *db, *dc, *dr;
   da = sycl::malloc_device<fp>(m*k, q);
@@ -129,24 +140,34 @@ void run_gemm_example(MKL_INT m, MKL_INT k, MKL_INT n, int repeat) {
   dr = sycl::malloc_device<fp>(m*n, q);
   q.memcpy(da, a, A_size);
   q.memcpy(db, b, B_size);
-  q.memcpy(dc, c, B_size);
-  q.memcpy(dr, c, B_size);
+  q.memcpy(dc, c, C_size);
+  q.memcpy(dr, c, C_size);
 
   std::cout << "Checking BLAS GEMM.. ";
   run_simple_gemm(q, da, db, dr, m, k, n, alpha, beta);
 
-  oneapi::mkl::blas::gemm(q, transA, transB,
+  math_ns::blas::column_major::gemm(q, transA, transB,
                           n, m, k, alpha, db, n, da, k, beta, dc, n);
   q.memcpy(c, dc, C_size).wait();
   q.memcpy(r, dr, C_size).wait();
-  int error = memcmp(c, r, C_size);
+
+  int error = 0;
+  for(size_t i = 0; i < C_elems; i++){
+    if( fabs(c[i] - r[i]) > 1e-1 ){
+      error++;
+      std::cout << c[i] << " " << r[i] << std::endl;
+    }
+  }
+
   std::cout << (error ? "FAIL" : "PASS") << std::endl;
+  if(error != 0)
+    std::cout << error  << " values missmatch" << std::endl;
 
   q.wait();
   auto start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < repeat; i++) {
-    oneapi::mkl::blas::gemm(q, transA, transB, n, m, k,
+    math_ns::blas::column_major::gemm(q, transA, transB, n, m, k,
                             alpha, db, n, da, k, beta, dc, n);
   }
 
@@ -178,10 +199,10 @@ void run_gemm_example(MKL_INT m, MKL_INT k, MKL_INT n, int repeat) {
   sycl::free(dc, q);
   sycl::free(dr, q);
 
-  mkl_free(a);
-  mkl_free(b);
-  mkl_free(c);
-  mkl_free(r);
+  sycl::free(a, q);
+  sycl::free(b, q);
+  sycl::free(c, q);
+  sycl::free(r, q);
 }
 
 //

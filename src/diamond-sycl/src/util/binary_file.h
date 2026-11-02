@@ -80,6 +80,7 @@ protected:
 struct Input_stream
 {
 	Input_stream(const string &file_name);
+	virtual ~Input_stream();
 	void rewind();
 	Input_stream(const Output_stream &tmp_file);
 	void seek(size_t pos);

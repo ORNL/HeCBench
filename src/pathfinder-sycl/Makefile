@@ -8,7 +8,6 @@ LAUNCHER  ?=
 
 OPTIMIZE  = yes
 DEBUG     = no
-OUTPUT    = no
 
 GPU       = yes
 CUDA      = no
@@ -63,10 +62,6 @@ endif
 ifeq ($(GPU),yes)
   CFLAGS +=-DUSE_GPU
 endif
-
-ifeq ($(OUTPUT),yes)
-  CFLAGS += -DBENCH_PRINT
-endif
 #===============================================================================
 # Targets to Build
 #===============================================================================
@@ -74,7 +69,7 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp kernel.sycl
+%.o: %.cpp kernel.sycl ../pathfinder-cuda/reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

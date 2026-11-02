@@ -6,6 +6,7 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
+# main-mpi requires GPU-aware MPI. See README.md for GPU-aware vs host-only tests.
 MPI_ROOT  ?= /opt/intel/oneapi/2024.1
 LAUNCHER  ?= $(MPI_ROOT)/bin/mpirun -n 2
 
@@ -45,7 +46,7 @@ ifeq ($(VENDOR), AdaptiveCpp)
 endif
 
 # Linker Flags
-LDFLAGS = -L$(MPI_ROOT)/lib -lmpi -lccl
+LDFLAGS = -L$(MPI_ROOT)/lib -Wl,-rpath,$(MPI_ROOT)/lib -lmpi -lccl
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \

@@ -13,9 +13,9 @@ ratx_kernel(const real* RESTRICT T, const real* RESTRICT C, real* RESTRICT RF,
     const real TEMP = T[threadIdx.x + (blockIdx.x * blockDim.x)]*TCONV;
     //const real ALOGT = LOG((TEMP));
     real CTOT = 0.0;
-    register real PR, PCOR, PRLOG, FCENT, FCLOG, XN;
-    register real CPRLOG, FLOG, FC;
-    register real SQR;
+    real PR, PCOR, PRLOG, FCENT, FCLOG, XN;
+    real CPRLOG, FLOG, FC;
+    real SQR;
     const real SMALL = FLT_MIN;
 
     #pragma unroll 22
@@ -213,8 +213,8 @@ ratxb_kernel(const real* RESTRICT T, const real* RESTRICT C, real* RESTRICT RF,
     const real TEMP = T[threadIdx.x + (blockIdx.x * blockDim.x)]*TCONV;
     //const real ALOGT = LOG((TEMP));
     real CTOT = (real)0.0;
-    register real PR, PCOR, PRLOG, FCENT, FCLOG, XN;
-    register real CPRLOG, FLOG, FC, SQR;
+    real PR, PCOR, PRLOG, FCENT, FCLOG, XN;
+    real CPRLOG, FLOG, FC, SQR;
     const real SMALL = FLT_MIN;
 
     #pragma unroll 22

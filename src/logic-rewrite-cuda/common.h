@@ -1,6 +1,10 @@
 #pragma once
 
 #include <cassert>
+// Older Thrust defines thrust::tuple, thrust::get, and thrust::make_tuple
+// here. Current CCCL re-exports the cuda::std equivalents from the same
+// header, and zip_iterator.h no longer includes it.
+#include <thrust/tuple.h>
 #include <thrust/iterator/zip_iterator.h>
 #include <thrust/functional.h>
 

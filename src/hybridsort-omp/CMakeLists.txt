@@ -5,5 +5,5 @@ add_hecbench_benchmark(
     MODEL omp
     SOURCES bucketsort.c hybridsort.c mergesort.c
     CATEGORIES algorithms
+    C_AS_CXX
 )
-set_source_files_properties(bucketsort.c hybridsort.c mergesort.c PROPERTIES LANGUAGE CXX)

@@ -613,6 +613,14 @@
             "100"
         ]
     ],
+    "kda": [
+        "(?:Average kernel execution time: )([0-9.+-e]+)(?: ms)",
+        [
+            "8",
+            "1024",
+            "100"
+        ]
+    ],
     "knn": [
         "(?:100 iterations \\()([0-9.+-e]+)(?: s by iteration\\))",
         [
@@ -747,6 +755,17 @@
         [
             "100000",
             "0"
+        ]
+    ],
+    "mace": [
+        "(?:Average total time: )([0-9.+-e]+)(?: ms)",
+        [
+            "--fixture",
+            "../data/hydragnn-sc26/mace_pipeline_capture.macepipe",
+            "--warmup",
+            "100",
+            "--repeat",
+            "100"
         ]
     ],
     "mandelbrot": [

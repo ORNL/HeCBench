@@ -4,15 +4,16 @@
 #include "kernels.h"
 
 // check the test result
-void check (const unsigned *err_cnt) {
+void check (unsigned *err_cnt) {
   unsigned err = 0;
   // read error
   hipMemcpy(&err, err_cnt, sizeof(unsigned), hipMemcpyDeviceToHost);
 
   printf("%s", err ? "x" : ".");
 
-  // reset
-  hipMemset(&err, 0, sizeof(unsigned));
+  // Reset the device counter. hipMemset is async, but hipFree later
+  // synchronizes, unlike sycl::free (https://github.com/ORNL/HeCBench/pull/344).
+  hipMemset(err_cnt, 0, sizeof(unsigned));
 }
 
 // moving inversion tests with complementary patterns

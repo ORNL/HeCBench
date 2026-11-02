@@ -1,0 +1,70 @@
+#===============================================================================
+# User Options
+#===============================================================================
+
+# nvc++ OpenMP GPU offload with cuBLAS. CPU (DEVICE=cpu) is unsupported.
+CC        = nvc++
+OPTIMIZE  = yes
+DEBUG     = no
+DEVICE    = gpu
+SM        ?= cc70
+LAUNCHER  ?=
+FIXTURE   ?= ../data/hydragnn-sc26/mace_pipeline_capture.macepipe
+
+#===============================================================================
+# Program name & source code list
+#===============================================================================
+
+program = main
+
+source = main.cpp
+
+obj = $(source:.cpp=.o)
+
+#===============================================================================
+# Sets Flags
+#===============================================================================
+
+# Standard Flags
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
+
+# Linker Flags
+LDFLAGS =
+
+# Debug Flags
+ifeq ($(DEBUG),yes)
+  CFLAGS  += -g -DDEBUG
+  LDFLAGS += -g
+endif
+
+# Optimization Flags
+ifeq ($(OPTIMIZE),yes)
+  CFLAGS += -O3
+endif
+
+ifneq ($(DEVICE),gpu)
+  $(error mace-omp requires DEVICE=gpu; CPU is unsupported)
+endif
+
+CFLAGS += -Minfo -mp=gpu -gpu=$(SM) -DMACE_OMP_CUBLAS
+LDFLAGS += -cudalib=cublas
+
+#===============================================================================
+# Targets to Build
+#===============================================================================
+
+$(program): $(obj) Makefile.nvc
+	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
+
+%.o: %.cpp mace_pipeline.hpp mace_nlist.hpp Makefile.nvc
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -rf $(program) $(obj)
+
+# The timed workload is a synthetic batch at the published SC26 dimensions:
+# 128 graphs, 2726 atoms, 45974 edges. Correctness is validated on the captured
+# fixture first. Default GEMM is cuBLAS cublasSgemm.
+run: $(program)
+	$(LAUNCHER) ./$(program) --fixture $(FIXTURE) --gemm blas \
+	  --warmup 100 --repeat 100

@@ -408,6 +408,7 @@ void Pre_logGamma() {
 
   LG = (float*) malloc ((DATA_N + 2) * sizeof(float));
 
+  LG[0] = 0.f; // log(0!) = 0; Nij counts can be zero
   LG[1] = log(1.0);
   float i;
   for (i = 2; i <= DATA_N + 1; i++) {

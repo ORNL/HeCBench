@@ -147,23 +147,23 @@ void compute_bicluster(
 
             if ((genekj - mean_k)>=0 && (geneij - mean_i)>=0) //i and k upregulated : positive correlation
             {
-              s_vect[0*3+j] = '1';
-              s_vect[1*3+j] = '0';
-              s_vect[2*3+j] = '0';
+              s_vect[0*MAXSAMPLE+j] = '1';
+              s_vect[1*MAXSAMPLE+j] = '0';
+              s_vect[2*MAXSAMPLE+j] = '0';
               wid_0++;
             }
             else if ((genekj - mean_k)<0 && (geneij - mean_i)<0)  // i and k down regulated : positive correlation
             {
-              s_vect[0*3+j] = '0';
-              s_vect[1*3+j] = '1';
-              s_vect[2*3+j] = '0';
+              s_vect[0*MAXSAMPLE+j] = '0';
+              s_vect[1*MAXSAMPLE+j] = '1';
+              s_vect[2*MAXSAMPLE+j] = '0';
               wid_1++;
             }
             else if ((genekj - mean_k)*(geneij - mean_i)<0) //betwenn i and k one is up regulated and the other one is down regulated : negative correlation
             {
-              s_vect[0*3+j] = '0';
-              s_vect[1*3+j] = '0';
-              s_vect[2*3+j] = '1';
+              s_vect[0*MAXSAMPLE+j] = '0';
+              s_vect[1*MAXSAMPLE+j] = '0';
+              s_vect[2*MAXSAMPLE+j] = '1';
               wid_2++;
             } 
           }

@@ -33,6 +33,7 @@ void CompressionKernel(
 {
   int offset, code, bcount, tmp, off, beg, end, lane, warp, iindex, lastidx, start, term;
   ull diff, prev;
+  code = 0;
    // shared space for prefix sum
 
   const int lid = item.get_local_id(0);
