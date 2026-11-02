@@ -201,6 +201,7 @@ set(HECBENCH_POC_BENCHMARKS
     hungarian
     hwt1d
     hypterm
+    index-shuffle
     interval
     intrinsics-cast
     intrinsics-simd
