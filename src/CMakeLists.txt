@@ -280,6 +280,7 @@ set(HECBENCH_POC_BENCHMARKS
     mnist
     moe
     moe-align
+    moe-combine
     moe-sum
     morphology
     mpc

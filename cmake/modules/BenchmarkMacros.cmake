@@ -9,7 +9,7 @@ set_property(GLOBAL PROPERTY HECBENCH_CATEGORIES "")
 set(DEPEND_ON_BOOST "hbc" "ge-spmm" "mmcsf" "warpsort" "gerbil")
 
 # Global list for benchmarks that require MPI
-set(DEPEND_ON_MPI "miniDGS" "miniWeather" "pingpong" "sparkler" "allreduce" "ccl" "halo-finder")
+set(DEPEND_ON_MPI "miniDGS" "miniWeather" "pingpong" "sparkler" "allreduce" "ccl" "halo-finder" "moe-combine")
 
 # Global list for benchmarks that require Eigen
 set(DEPEND_ON_EIGEN "xlqc")
