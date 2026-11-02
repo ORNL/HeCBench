@@ -31,6 +31,8 @@ struct Target_culling
 		n_(0),
 		top_score_(first ? first->filter_score : 0)
 	{}
+	virtual ~Target_culling()
+	{}
 	virtual int cull(const Target &t)
 	{
 		return config.output_range((unsigned)n_, t.filter_score, top_score_) ? use : finished;

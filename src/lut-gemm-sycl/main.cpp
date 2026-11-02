@@ -146,9 +146,9 @@ public:
     void dequantizeFrom_qW(){
         for(int n=0;n<N;n++){
             for(int k=0;k<K;k++){
-                weight[n*K+k] = q_bias[k/A_GROUP_SIZE * N + n];
+                weight[k*N+n] = q_bias[k/A_GROUP_SIZE * N + n];
                 for(int b=0;b<NUM_BITS;b++){
-                    weight[n*K+k] += alpha[k/A_GROUP_SIZE * (NUM_BITS*N) + b * N + n] * 
+                    weight[k*N+n] += alpha[k/A_GROUP_SIZE * (NUM_BITS*N) + b * N + n] * 
                                      qW[k * (NUM_BITS*N) + b * N + n]; 
                 }
             }

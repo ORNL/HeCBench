@@ -50,6 +50,7 @@ int main(int argc, char* argv[]) {
   }
   const int length = atoi(argv[1]);
   const int repeat = atoi(argv[2]);
+  const int warmup = 100;
 
   int size = length * sizeof(int);
   int pad_size = (length + RADIUS) * sizeof(int);
@@ -72,12 +73,14 @@ int main(int argc, char* argv[]) {
   dim3 grids (length/BLOCK_SIZE);
   dim3 blocks (BLOCK_SIZE);
 
-  hipDeviceSynchronize();
-  auto start = std::chrono::steady_clock::now();
-
-  // Launch kernel on GPU
-  for (int i = 0; i < repeat; i++)
+  std::chrono::steady_clock::time_point start;
+  for (int iter = 0; iter < repeat + warmup; iter++) {
+    if (iter == warmup) {
+      hipDeviceSynchronize();
+      start = std::chrono::steady_clock::now();
+    }
     hipLaunchKernelGGL(stencil_1d, grids, blocks , 0, 0, d_a, d_b);
+  }
 
   hipDeviceSynchronize();
   auto end = std::chrono::steady_clock::now();
