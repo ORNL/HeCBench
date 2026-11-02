@@ -60,7 +60,7 @@ private:
 	static void fill_tables(Atomic<unsigned> *seedp, Seed_index *idx);
 	static void count_seeds(Atomic<unsigned> *seedp, vector<size_t> *counts, sorted_list *list);
 
-	auto_ptr<char> list_buffer;
+	unique_ptr<char[]> list_buffer;
 	sorted_list list;
 	PHash_table<Entry> tables[Const::seedp];
 

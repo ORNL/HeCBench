@@ -45,7 +45,7 @@ struct View_writer
 	{
 		f_->close();
 	}
-	auto_ptr<Output_stream> f_;
+	unique_ptr<Output_stream> f_;
 };
 
 struct View_fetcher
@@ -74,7 +74,7 @@ struct View_fetcher
 
 void view_query(DAA_query_record &r, Text_buffer &out, Output_format &format)
 {
-	auto_ptr<Output_format> f(format.clone());
+	unique_ptr<Output_format> f(format.clone());
 	f->print_query_intro(r.query_num, r.query_name.c_str(), (unsigned)r.query_len(), out, false);
 	DAA_query_record::Match_iterator i = r.begin();
 	const unsigned top_score = i.good() ? i->score : 0;

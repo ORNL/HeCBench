@@ -243,7 +243,7 @@ void join_worker(Task_queue<Text_buffer,Join_writer> *queue)
 			}
 		}
 
-		auto_ptr<Output_format> f(output_format->clone());
+		unique_ptr<Output_format> f(output_format->clone());
 
 		if (*f == Output_format::daa)
 			seek_pos = write_daa_query_record(*out, query_name, query_seq);
