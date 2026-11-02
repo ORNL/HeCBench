@@ -564,6 +564,7 @@ set(HECBENCH_POC_BENCHMARKS
     softmax-online
     swiglu-oai
     sundials
+    stiff-ode
     ssm
     storeKVCache
     axpby
