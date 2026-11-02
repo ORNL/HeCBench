@@ -12,6 +12,8 @@
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define syncthreads() item.barrier(sycl::access::fence_space::local_space)
 
+#include "reference.h"
+
 void compute_sad_array(
     sycl::nd_item<2> &item,
                     int*__restrict sad_array,
@@ -207,6 +209,7 @@ int main(int argc, char* argv[]) {
   int *d_sad_array = sycl::malloc_device<int>(sad_array_size, q);
   int *d_min_mse = sycl::malloc_device<int>(1, q);
   int *d_num_occurances = sycl::malloc_device<int>(1, q);
+  q.memset(d_sad_array, 0xFF, sad_array_size * sizeof(int));
 
   sycl::range<2> gws ((unsigned int)ceilf((float)main_height / BLOCK_SIZE_Y) * BLOCK_SIZE_Y,
                       (unsigned int)ceilf((float)main_width / BLOCK_SIZE_X) * BLOCK_SIZE_X );
@@ -284,6 +287,8 @@ int main(int argc, char* argv[]) {
   auto end = std::chrono::steady_clock::now();
   float elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds> (end - begin).count();
 
+  q.memcpy(h_sad_array, d_sad_array, sad_array_size * sizeof(int)).wait();
+
   std::cout << "Parallel Computation Results: " << std::endl;
   std::cout << "Kernel time in msec: " << kernel_time << std::endl;
   std::cout << "Elapsed time in msec = " << elapsed_time << std::endl;
@@ -291,6 +296,11 @@ int main(int argc, char* argv[]) {
   std::cout << "Template Image Dimensions: " << template_width << "*" << template_height << std::endl;
   std::cout << "Found Minimum:  " << h_min_mse << std::endl;
   std::cout << "Number of Occurances: " << h_num_occurances << std::endl;
+
+  bool ok = reference(h_sad_array, h_main_image, h_template_image, sad_array_size,
+                      main_width, main_height, template_width, template_height,
+                      THRESHOLD, h_min_mse, h_num_occurances);
+  std::cout << (ok ? "PASS" : "FAIL") << std::endl;
 
   sycl::free(d_main_image, q);
   sycl::free(d_template_image, q);
@@ -300,5 +310,5 @@ int main(int argc, char* argv[]) {
   delete[] h_main_image;
   delete[] h_template_image;
   delete[] h_sad_array;
-  return 0;
+  return ok ? 0 : 1;
 }

@@ -362,40 +362,42 @@ void selective_scan_vllm_kernel(SSMParamsBase params,
 static constexpr int kNT = 128;
 static constexpr int kNI = 4;
 
+// Function template keeps this in C++17. A templated lambda
+// (auto f = [&]<bool...>()) is a C++20 feature.
+template <bool HZ, bool SP, bool EL>
+static void dispatch_vllm_kernel(SSMParamsBase &p, sycl::queue &stream)
+{
+    using Traits = SSMFwdKernelTraits<kNT, kNI, kDstate, HZ, SP, EL>;
+    int smem = Traits::kSmemSize;
+    sycl::range<3> gws (1, p.n_chunks, p.batch * p.dim * kNT);
+    sycl::range<3> lws (1, 1, kNT);
+    stream.submit([&](sycl::handler &cgh) {
+      sycl::local_accessor<uint8_t, 1> smem_acc(sycl::range<1>(smem), cgh);
+      cgh.parallel_for(
+        sycl::nd_range<3>(gws, lws), [=](sycl::nd_item<3> item) {
+          selective_scan_vllm_kernel<Traits>(
+            p,
+            smem_acc.get_multi_ptr<sycl::access::decorated::no>().get(),
+            item);
+        });
+    });
+}
+
 void launch_kernel(SSMParamsBase &p, bool has_z, bool softplus, bool even_len,
                    float *d_carry_a, float *d_carry_b,
                    sycl::queue &stream)
 {
     p.running_prefix_a = d_carry_a;
     p.running_prefix_b = d_carry_b;
-    // Instantiate all compile-time specialisations via nested lambdas,
-    // mirroring vLLM's BOOL_SWITCH pattern.
-    auto dispatch = [&]<bool HZ, bool SP, bool EL>() {
-      using Traits = SSMFwdKernelTraits<kNT, kNI, kDstate, HZ, SP, EL>;
-      int smem = Traits::kSmemSize;
-      sycl::range<3> gws (1, p.n_chunks, p.batch * p.dim * kNT);
-      sycl::range<3> lws (1, 1, kNT);
-      stream.submit([&](sycl::handler &cgh) {
-        sycl::local_accessor<uint8_t, 1> smem_acc(sycl::range<1>(smem), cgh);
-        cgh.parallel_for(
-          sycl::nd_range<3>(gws, lws), [=](sycl::nd_item<3> item) {
-            selective_scan_vllm_kernel<Traits>(
-              p,
-              smem_acc.get_multi_ptr<sycl::access::decorated::no>().get(),
-              item);
-          });
-      });
-    };
-
-    // Dispatch (8 instantiations)
-    if ( has_z &&  softplus &&  even_len) dispatch.operator()<true,  true,  true >();
-    if ( has_z &&  softplus && !even_len) dispatch.operator()<true,  true,  false>();
-    if ( has_z && !softplus &&  even_len) dispatch.operator()<true,  false, true >();
-    if ( has_z && !softplus && !even_len) dispatch.operator()<true,  false, false>();
-    if (!has_z &&  softplus &&  even_len) dispatch.operator()<false, true,  true >();
-    if (!has_z &&  softplus && !even_len) dispatch.operator()<false, true,  false>();
-    if (!has_z && !softplus &&  even_len) dispatch.operator()<false, false, true >();
-    if (!has_z && !softplus && !even_len) dispatch.operator()<false, false, false>();
+    // Dispatch (8 instantiations), mirroring vLLM's BOOL_SWITCH pattern.
+    if ( has_z &&  softplus &&  even_len) dispatch_vllm_kernel<true,  true,  true >(p, stream);
+    if ( has_z &&  softplus && !even_len) dispatch_vllm_kernel<true,  true,  false>(p, stream);
+    if ( has_z && !softplus &&  even_len) dispatch_vllm_kernel<true,  false, true >(p, stream);
+    if ( has_z && !softplus && !even_len) dispatch_vllm_kernel<true,  false, false>(p, stream);
+    if (!has_z &&  softplus &&  even_len) dispatch_vllm_kernel<false, true,  true >(p, stream);
+    if (!has_z &&  softplus && !even_len) dispatch_vllm_kernel<false, true,  false>(p, stream);
+    if (!has_z && !softplus &&  even_len) dispatch_vllm_kernel<false, false, true >(p, stream);
+    if (!has_z && !softplus && !even_len) dispatch_vllm_kernel<false, false, false>(p, stream);
 }
 
 static void fill_rand(float* buf, int n, float lo, float hi) {
