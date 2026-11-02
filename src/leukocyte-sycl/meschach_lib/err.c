@@ -58,7 +58,7 @@ static	char	rcsid[] = "$Id: err.c,v 1.6 1995/01/30 14:49:14 des Exp $";
 /* The only error caught in this file! */
 #define	E_SIGNAL	16
 
-static char *err_mesg[] =
+static const char *err_mesg[] =
 {	  "unknown error",			    /* 0 */
 	  "sizes of objects don't match",	    /* 1 */
 	  "index out of bounds",		    /* 2 */
@@ -86,7 +86,7 @@ static char *err_mesg[] =
 
 #define	MAXERR	(sizeof(err_mesg)/sizeof(char *))
 
-static char *warn_mesg[] = {
+static const char *warn_mesg[] = {
    "unknown warning",				  /* 0 */
    "wrong type number (use macro TYPE_*)",	  /* 1 */
    "no corresponding mem_stat_mark",		  /* 2 */
@@ -106,7 +106,7 @@ jmp_buf	restart;
 /* array of pointers to lists of errors */
 
 typedef struct {
-   char **listp;    /* pointer to a list of errors */
+   const char **listp;    /* pointer to a list of errors */
    unsigned len;    /* length of the list */
    unsigned warn;   /* =FALSE - errors, =TRUE - warnings */
 }  Err_list;
@@ -131,13 +131,13 @@ static int err_list_end = 2;   /* number of elements in err_list */
 #ifndef ANSI_C
 int err_list_attach(list_num, list_len,err_ptr,warn)
 int list_num, list_len, warn;
-char **err_ptr;
+const char **err_ptr;
 #else
-int err_list_attach(int list_num, int list_len, char **err_ptr, int warn)
+int err_list_attach(int list_num, int list_len, const char **err_ptr, int warn)
 #endif
 {
    if (list_num < 0 || list_len <= 0 ||
-       err_ptr == (char **)NULL) 
+       err_ptr == (const char **)NULL) 
      return -1;
    
    if (list_num >= ERR_LIST_MAX_LEN) {
@@ -152,7 +152,7 @@ int err_list_attach(int list_num, int list_len, char **err_ptr, int warn)
 	exit(0);
      }
 
-   if (err_list[list_num].listp != (char **)NULL &&
+   if (err_list[list_num].listp != (const char **)NULL &&
        err_list[list_num].listp != err_ptr)
      free((char *)err_list[list_num].listp);
    err_list[list_num].listp = err_ptr;
@@ -173,8 +173,8 @@ int err_list_free(int list_num)
 #endif
 {
    if (list_num < 0 || list_num >= err_list_end) return -1;
-   if (err_list[list_num].listp != (char **)NULL) {
-      err_list[list_num].listp = (char **)NULL;
+   if (err_list[list_num].listp != (const char **)NULL) {
+      err_list[list_num].listp = (const char **)NULL;
       err_list[list_num].len = 0;
       err_list[list_num].warn = 0;
    }
@@ -196,7 +196,7 @@ int err_is_list_attached(int list_num)
    if (list_num < 0 || list_num >= err_list_end)
      return FALSE;
    
-   if (err_list[list_num].listp != (char **)NULL)
+   if (err_list[list_num].listp != (const char **)NULL)
      return TRUE;
    
    return FALSE;
@@ -255,7 +255,7 @@ int	ev_err(const char *file, int err_num, int line_num,
    if ( err_num < 0 ) err_num = 0;
    
    if (list_num < 0 || list_num >= err_list_end ||
-       err_list[list_num].listp == (char **)NULL) {
+       err_list[list_num].listp == (const char **)NULL) {
       fprintf(stderr,
 	      "\n Not (properly) attached list of errors: list_num = %d\n",
 	      list_num);

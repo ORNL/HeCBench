@@ -204,8 +204,8 @@ int main(int argc, char *argv[]) {
 #endif
 
   // Initialisations
-  State initstates[N_INIT + N_RANDOM_RESTART];
-  int *initstateID = new int[maxNmodes];
+  State initstates[N_INIT + N_RANDOM_RESTART] = {};
+  int *initstateID = new int[maxNmodes + 1];
   for (i = 0; i < N_INIT; i++) {
     strcpy(datafile, "DATA/");
     strcat(datafile, argv[1]);
@@ -392,9 +392,10 @@ int main(int argc, char *argv[]) {
                  (N_RANDOM_RESTART > 0)) // analyse renadom starting points
       {
         randomRestart(rand_myInt(MAXL - 1) + 2, state, 0.1);
-        initstates[N_INIT - 1 + nmodes - TRY_EACH_INIT * N_INIT] =
-            new DPmixGGM(state);
-        initstateID[nmodes] = N_INIT - 1 + nmodes - TRY_EACH_INIT * N_INIT;
+        int restartSlot = N_INIT - 1 + nmodes - TRY_EACH_INIT * N_INIT;
+        delete initstates[restartSlot];
+        initstates[restartSlot] = new DPmixGGM(state);
+        initstateID[nmodes] = restartSlot;
         num_cases += updateAllXis(1, state, bestList);
         L = state->L;
         score = state->plp;
@@ -425,6 +426,7 @@ int main(int argc, char *argv[]) {
       }
 #ifndef USE_GPU
       else {
+        delete bestList;
         bestList = new DPmixGGMlist(sizeOfBestList, n, p);
         int maxI;
         Real maxScore = NEG_INF;
@@ -516,6 +518,17 @@ int main(int argc, char *argv[]) {
 #ifndef USE_GPU
   outbest.close();
 #endif
+
+  delete state;
+  delete localBestState;
+  delete globalBestState;
+  delete featureList;
+  delete modesList;
+  delete bestList;
+  for (i = 0; i < N_INIT + N_RANDOM_RESTART; i++) {
+    delete initstates[i];
+  }
+  delete[] initstateID;
 #endif
 
   ////////////////////////////////////////////////////////////// END OF SSS

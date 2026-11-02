@@ -218,6 +218,7 @@ set(HECBENCH_POC_BENCHMARKS
     kmeans
     kurtosis
     lanczos
+    laghos-force
     langevin
     langford
     laplace
@@ -279,6 +280,7 @@ set(HECBENCH_POC_BENCHMARKS
     mnist
     moe
     moe-align
+    moe-combine
     moe-sum
     morphology
     mpc
@@ -365,7 +367,7 @@ set(HECBENCH_POC_BENCHMARKS
     rsmt
     rtm8
     rushlarsen
-    # Batch 13: S benchmarks (59 benchmarks)
+    # Batch 13: S benchmarks (60 benchmarks)
     s3d
     s8n
     sa
@@ -379,6 +381,7 @@ set(HECBENCH_POC_BENCHMARKS
     schur-complement
     score
     sddmm-batch
+    sdma
     seam-carving
     secp256k1
     segment-reduce
@@ -531,6 +534,7 @@ set(HECBENCH_POC_BENCHMARKS
     complex
     concat
     concurrentKernels
+    condor
     contract
     conversion
     convolution3D
@@ -557,11 +561,13 @@ set(HECBENCH_POC_BENCHMARKS
     rmsnorm
     rmsnorm-quant
     saxpy-ompt
+    shampoo
     silu
     softmax-fused
     softmax-online
     swiglu-oai
     sundials
+    stiff-ode
     ssm
     ssm2
     storeKVCache
@@ -574,6 +580,7 @@ set(HECBENCH_POC_BENCHMARKS
     topk
     upsample
     vadd
+    vdi
     wenofv
 )
 

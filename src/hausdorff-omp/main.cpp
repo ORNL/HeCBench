@@ -41,59 +41,85 @@ int main(int argc, char* argv[]) {
   const int num_Apoints = atoi(argv[1]);
   const int num_Bpoints = atoi(argv[2]);
   const int repeat = atoi(argv[3]);
+  if (repeat < 2) {
+    printf("repeat must be at least 2\n");
+    return 1;
+  }
 
   const size_t num_Apoints_bytes = sizeof(float2) * num_Apoints;
   const size_t num_Bpoints_bytes = sizeof(float2) * num_Bpoints;
 
-  float2 *h_Apoints = (float2*) malloc (num_Apoints_bytes);
-  float2 *h_Bpoints = (float2*) malloc (num_Bpoints_bytes);
-  
+  float2 *h_A[2], *h_B[2];
+  for (int b = 0; b < 2; b++) {
+    h_A[b] = (float2*) malloc(num_Apoints_bytes);
+    h_B[b] = (float2*) malloc(num_Bpoints_bytes);
+  }
+
   srand(123);
-  for (int i = 0; i < num_Apoints; i++) {
-    h_Apoints[i].x = (float)rand() / (float)RAND_MAX;
-    h_Apoints[i].y = (float)rand() / (float)RAND_MAX;
-  }
-  
-  for (int i = 0; i < num_Bpoints; i++) {
-    h_Bpoints[i].x = (float)rand() / (float)RAND_MAX;
-    h_Bpoints[i].y = (float)rand() / (float)RAND_MAX;
+  for (int b = 0; b < 2; b++) {
+    for (int i = 0; i < num_Apoints; i++) {
+      h_A[b][i].x = (float)rand() / (float)RAND_MAX;
+      h_A[b][i].y = (float)rand() / (float)RAND_MAX;
+    }
+    for (int i = 0; i < num_Bpoints; i++) {
+      h_B[b][i].x = (float)rand() / (float)RAND_MAX;
+      h_B[b][i].y = (float)rand() / (float)RAND_MAX;
+      // Slot 0 is shifted so its distance stays above slot 1 for any point
+      // count. Iteration 1 then keeps slot 0 whenever -1 was uploaded once.
+      if (b == 0) {
+        h_B[b][i].x += 10.f;
+        h_B[b][i].y += 10.f;
+      }
+    }
   }
 
+  // The max reduction keeps the value already at this address. A single
+  // upload of -1 therefore leaves the larger slot in place after iteration 0.
   float h_distance[2] = {-1.f, -1.f};
+  float got[2];
 
-#pragma omp target data map (to: h_Apoints[0:num_Apoints], \
-                                 h_Bpoints[0:num_Bpoints]) \
-                        map (from: h_distance[0:2]) 
+#pragma omp target data map (to: h_A[0][0:num_Apoints], h_A[1][0:num_Apoints], \
+                                 h_B[0][0:num_Bpoints], h_B[1][0:num_Bpoints]) \
+                        map (alloc: h_distance[0:2])
   {
     double time = 0.0;
 
     for (int i = 0; i < repeat; i++) {
+      const int slot = i & 1;
 
+      h_distance[0] = h_distance[1] = -1.f;
       #pragma omp target update to (h_distance[0:2])
 
       auto start = std::chrono::steady_clock::now();
 
-      computeDistance(h_Apoints, h_Bpoints, h_distance,
-                      num_Apoints, num_Bpoints);
-
-      computeDistance(h_Bpoints, h_Apoints, h_distance+1,
-                      num_Bpoints, num_Apoints);
+      computeDistance(h_A[slot], h_B[slot], h_distance, num_Apoints, num_Bpoints);
+      computeDistance(h_B[slot], h_A[slot], h_distance + 1, num_Bpoints, num_Apoints);
 
       auto end = std::chrono::steady_clock::now();
       time += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+
+      // The two slots are fully covered by the first two iterations.
+      if (i < 2) {
+        #pragma omp target update from (h_distance[0:2])
+        got[i] = std::max(h_distance[0], h_distance[1]);
+      }
     }
 
     printf("Average execution time of kernels: %f (ms)\n", (time * 1e-6f) / repeat);
   }
 
   printf("Verifying the result may take a while..\n");
-  float r_distance = hausdorff_distance(h_Apoints, h_Bpoints, num_Apoints, num_Bpoints);
-  float t_distance = std::max(h_distance[0], h_distance[1]);
-
-  bool error = (fabsf(t_distance - r_distance)) > 1e-3f;
+  bool error = false;
+  for (int s = 0; s < 2; s++) {
+    float r_distance = hausdorff_distance(h_A[s], h_B[s], num_Apoints, num_Bpoints);
+    if (fabsf(got[s] - r_distance) > 1e-3f * r_distance)
+      error = true;
+  }
   printf("%s\n", error ? "FAIL" : "PASS");
-  
-  free(h_Apoints);
-  free(h_Bpoints);
+
+  for (int b = 0; b < 2; b++) {
+    free(h_A[b]);
+    free(h_B[b]);
+  }
   return 0;
 }
