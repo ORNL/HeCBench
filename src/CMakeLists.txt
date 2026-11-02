@@ -534,6 +534,7 @@ set(HECBENCH_POC_BENCHMARKS
     complex
     concat
     concurrentKernels
+    condor
     contract
     conversion
     convolution3D
