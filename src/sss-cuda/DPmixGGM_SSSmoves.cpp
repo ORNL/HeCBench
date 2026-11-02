@@ -351,10 +351,11 @@ int updateOneEdgeInOneG(myInt l, myInt nBestLeft, LPGraph G, myInt *xi, State a,
     score[i] = exp(score[i]) / sumScore;
   }
   i = rand_int_weighted(ndecomp + 1, score);
-  int which_change = which[i];
 
-  // Necessary changes in G
+  // Necessary changes in G. which[] has one entry per candidate edge;
+  // i == ndecomp keeps the current graph and has no which[] slot.
   if (i < num_CanDelete) {
+    int which_change = which[i];
     G->Edge[a_delete[which_change]][b_delete[which_change]] = 0;
     G->Edge[b_delete[which_change]][a_delete[which_change]] = 0;
     if (!G->IsDecomposable()) {
@@ -363,6 +364,7 @@ int updateOneEdgeInOneG(myInt l, myInt nBestLeft, LPGraph G, myInt *xi, State a,
       G->GenerateAllCliques();
     }
   } else if (i < ndecomp) {
+    int which_change = which[i];
     G->Edge[a_add[which_change]][b_add[which_change]] = 1;
     G->Edge[b_add[which_change]][a_add[which_change]] = 1;
     if (!G->IsDecomposable()) {
@@ -995,9 +997,15 @@ long int splitMerge(State a, List list, List bestlist, myInt lookForwardLength,
 
     L--;
     a->L = L;
+  } else {
+    for (i = 0; i < L * nSplit + L * (L - 1) / 2; i++) {
+      delete newgraphlist1[i];
+      delete newgraphlist2[i];
+    }
   }
 
   delete[] score;
+  delete[] xi_new;
   delete[] xi_store;
   delete[] pll_clus_old;
   delete[] pll_clus_new;
@@ -1247,14 +1255,20 @@ int Merge(State a, List bestlist, myInt lookForwardLength, bool force) {
 
     L--;
     a->L = L;
+  } else {
+    for (i = 0; i < L * (L - 1) / 2; i++) {
+      delete newgraphlist1[i];
+      delete newgraphlist2[i];
+    }
   }
 
   delete[] score;
+  delete[] xi_new;
   delete[] pll_clus_old;
   delete[] pll_clus_new;
   delete[] plp_store;
-  delete newgraphlist1;
-  delete newgraphlist2;
+  delete[] newgraphlist1;
+  delete[] newgraphlist2;
   return (num_cases);
 }
 
@@ -1389,8 +1403,10 @@ int updateManyXiInOneScan(myInt NN_xi, myInt *which_xi, State a,
   plp = plp_store[k];
   a->plp = plp;
 
-  // Drop redundant clusters
+  // Drop redundant clusters. allClus only holds the 2*NN_xi labels
+  // scored above; empty clusters can be as many as L.
   myInt count = 0;
+  myInt *emptyClus = new myInt[L];
 
   // find redundant clusters
   for (l = 0; l < L; l++) {
@@ -1402,15 +1418,17 @@ int updateManyXiInOneScan(myInt NN_xi, myInt *which_xi, State a,
       }
     }
     if (flag) {
-      allClus[count] = l;
+      emptyClus[count] = l;
       count++;
     }
   }
 
-  // reindexing
+  // reindexing. Compare against the original id: an in-place decrement
+  // makes a later empty cluster look no smaller than the updated id.
   for (i = 0; i < n; i++) {
+    myInt xi_orig = xi[i];
     for (j = 0; j < count; j++) {
-      if (xi[i] > allClus[j]) {
+      if (xi_orig > emptyClus[j]) {
         xi[i] = xi[i] - 1;
       }
     }
@@ -1420,16 +1438,16 @@ int updateManyXiInOneScan(myInt NN_xi, myInt *which_xi, State a,
   graphlist_new = new LPGraph[L - count];
   pll_new = new Real[L - count];
   for (j = 0; j < count; j++) {
-    delete graphlist[allClus[j]];
+    delete graphlist[emptyClus[j]];
   }
   for (l = 0; l < L; l++) {
     k = 0;
     flag = 0;
     for (j = 0; j < count; j++) {
-      if (l == allClus[j]) {
+      if (l == emptyClus[j]) {
         flag = 1;
         break;
-      } else if (l > allClus[j])
+      } else if (l > emptyClus[j])
         k++;
     };
     if (flag)
@@ -1441,7 +1459,7 @@ int updateManyXiInOneScan(myInt NN_xi, myInt *which_xi, State a,
   delete[] graphlist;
   graphlist = a->graphlist;
   a->pll = pll_new;
-  delete pll;
+  delete[] pll;
   pll = a->pll;
 
   // finally redefine number of clusters
@@ -1454,6 +1472,7 @@ int updateManyXiInOneScan(myInt NN_xi, myInt *which_xi, State a,
   delete[] xi_old;
   delete[] qs;
   delete[] allClus;
+  delete[] emptyClus;
   return (num_cases);
 }
 

@@ -71,7 +71,7 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-divergence.o: divergence.cpp divergence.hpp
+divergence.o: divergence.cpp divergence.hpp ../divergence-cuda/divergence_pragmas.hpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

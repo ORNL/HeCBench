@@ -33,7 +33,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "sequence_set.h"
 #include "../util/ptr_vector.h"
 
-using std::auto_ptr;
+using std::unique_ptr;
 
 struct invalid_database_version_exception : public std::exception
 {

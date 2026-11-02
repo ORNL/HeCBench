@@ -26,7 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "util.h"
 
 using std::string;
-using std::auto_ptr;
+using std::unique_ptr;
 
 struct Stream_read_exception : public std::runtime_error
 {
@@ -38,31 +38,31 @@ struct Stream_read_exception : public std::runtime_error
 struct Compressed_istream : public Input_stream
 {
 	Compressed_istream(const string &file_name);
+	virtual ~Compressed_istream();
 	virtual size_t read_bytes(char *ptr, size_t count);
 	virtual void close();
 	static Input_stream* auto_detect(const string &file_name);
 private:
 	z_stream strm;
 	static const size_t chunk_size = 1llu << 20;
-	auto_ptr<char> in, out;
+	unique_ptr<char[]> in, out;
 	size_t read_, total_;
 	bool eos_;
+	bool z_open_;
 };
 
 struct Compressed_ostream : public Output_stream
 {
 	Compressed_ostream(const string &file_name);
-#ifndef _MSC_VER
-	virtual ~Compressed_ostream()
-	{}
-#endif
+	virtual ~Compressed_ostream();
 	virtual void write_raw(const char *ptr, size_t count);
 	virtual void close();
 private:
 	void deflate_loop(const char *ptr, size_t count, int code);
 	static const size_t chunk_size = 1llu << 20;
 	z_stream strm;
-	auto_ptr<char> out;
+	unique_ptr<char[]> out;
+	bool z_open_;
 };
 
 #endif

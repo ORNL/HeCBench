@@ -216,7 +216,7 @@ struct vec_t {
 template <typename src_float_t, typename tgt_float_t, size_t vec_size>
 FLASHINFER_INLINE void cast_from_impl(vec_t<tgt_float_t, vec_size>& dst,
                                       const vec_t<src_float_t, vec_size>& src) {
-  vec_cast<tgt_float_t, src_float_t>::cast<vec_size>(
+  vec_cast<tgt_float_t, src_float_t>::template cast<vec_size>(
       dst.ptr(), const_cast<vec_t<src_float_t, vec_size>*>(&src)->ptr());
 }
 

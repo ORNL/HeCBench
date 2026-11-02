@@ -26,7 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include "hash_function.h"
 
-using std::auto_ptr;
+using std::unique_ptr;
 
 struct hash_table_overflow_exception : public std::exception
 {
@@ -204,7 +204,7 @@ private:
 	}
 
 	size_t size_;
-	auto_ptr<entry> table;	
+	unique_ptr<entry[]> table;
 
 };
 
@@ -305,7 +305,7 @@ private:
 		}
 	}
 
-	auto_ptr<fp> table;
+	unique_ptr<fp[]> table;
 	size_t size_;
 
 };

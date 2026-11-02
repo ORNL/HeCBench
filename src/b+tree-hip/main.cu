@@ -839,17 +839,17 @@ print_leaves( node* root )
   while (true) {
     for (i = 0; i < c->num_keys; i++) {
       if (verbose_output)
-        //printf("%x ", (unsigned int)c->pointers[i]);
-        printf("%d ", c->keys[i]);
+        printf("%p ", c->pointers[i]);
+      printf("%d ", c->keys[i]);
     }
     if (verbose_output)
-      //printf("%x ", (unsigned int)c->pointers[order - 1]);
-      if (c->pointers[order - 1] != NULL) {
-        printf(" | ");
-        c = (node *) c->pointers[order - 1];
-      }
-      else
-        break;
+      printf("%p ", c->pointers[order - 1]);
+    if (c->pointers[order - 1] != NULL) {
+      printf(" | ");
+      c = (node *) c->pointers[order - 1];
+    }
+    else
+      break;
   }
   printf("\n");
 }
