@@ -890,8 +890,8 @@ Early results are shown [here](results/README.md)
 ### henry (cuda)
   Henry coefficient (https://github.com/CorySimon/HenryCoefficient)
 
-### heun (cuda, hip, sycl)
-  EDM Heun sampler with a residual 3x3 denoiser. CUDA uses cuDNN, HIP uses MIOpen, and SYCL uses oneDNN.
+### heun (torch)
+  Heun sampler with a residual 3x3 denoiser (https://research.nvidia.com/publication/2024-08_kilometer-scale-convection-allowing-model-emulation-using-generative-diffusion)
 
 ### hexicton (opencl)
   A Portable and Scalable Solver-Framework for the Hierarchical Equations of Motion (https://github.com/noma/hexciton_benchmark)
