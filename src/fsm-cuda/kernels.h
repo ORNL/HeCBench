@@ -19,13 +19,13 @@ __global__
 void FSMKernel(
   const int length,
   const unsigned short *__restrict__ data,
-  int *__restrict__ best,
+  int *best,
   unsigned int *__restrict__ rndstate,
   unsigned char *__restrict__ bfsm,
-  unsigned char *__restrict__ same,
-  int *__restrict__ smax,
-  int *__restrict__ sbest,
-  int *__restrict__ oldmax)
+  unsigned char *same,
+  int *smax,
+  int *sbest,
+  int *oldmax)
 {
   int i, d, pc, s, bit, id, misses, rnd;
   unsigned long long myresult;
