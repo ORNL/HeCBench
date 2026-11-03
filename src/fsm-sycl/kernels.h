@@ -36,14 +36,14 @@ void FSMKernel(
   sycl::nd_item<1> &item,
   const int length,
   const unsigned short *__restrict data,
-  int *__restrict best,
+  int *best,
   unsigned int *__restrict rndstate,
   unsigned char *__restrict bfsm,
-  unsigned char *__restrict same,
-  int *__restrict smax,
-  int *__restrict sbest,
-  int *__restrict oldmax,
-  unsigned char *__restrict next)
+  unsigned char *same,
+  int *smax,
+  int *sbest,
+  int *oldmax,
+  unsigned char *next)
 {
   int i, d, pc, s, bit, id, misses, rnd;
   unsigned long long myresult;
