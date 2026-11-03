@@ -293,7 +293,7 @@ void wsm (
           }
           rmstep = 1.f/mstep ;
 
-          float falkc_k, falkc_kp1, fallc_k, fallc_kp1 ;
+          float falkc_k, falkc_kp1, fallc_k = 0.f, fallc_kp1 = 0.f;
           for ( n = 1 ; n <= mstep ; n++ ) {
             k = kpe - 1 ;
             den_k = den[P3(ti,k,tj)] ;
