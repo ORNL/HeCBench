@@ -19,6 +19,6 @@ add_hecbench_benchmark(
             src/Timer.cpp
     INCLUDE_DIRS include src/nicslu/include src/nicslu/util
     COMPILE_OPTIONS -DVERIFY
-    CATEGORIES algorithms
+    CATEGORIES math
     LINK_LIBRARIES nicslu_cuda nicslu_util_cuda
 )

@@ -7,5 +7,5 @@ add_hecbench_benchmark(
     MODEL omp
     SOURCES main.cpp ${INC_DIR}/file.cc
     ENABLE_FASTMATH true
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

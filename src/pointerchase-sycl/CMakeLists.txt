@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME pointerchase
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES language
 )

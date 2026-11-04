@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME convolution1D
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

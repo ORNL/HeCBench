@@ -40,7 +40,11 @@ set(HECBENCH_TEST_RUNNER "${CMAKE_SOURCE_DIR}/cmake/scripts/run_benchmark_test.p
 #   NAME        - Benchmark name (e.g., "jacobi")
 #   MODEL       - Programming model: cuda, hip, sycl, omp
 #   SOURCES     - Source files
-#   CATEGORIES  - Categories (e.g., simulation, math)
+#   CATEGORIES  - One README category
+#                   (automotive, bandwidth, bioinformatics, imaging,
+#                    cryptography, compression, encoding, finance, geoscience,
+#                    graph, language, ml, math, rng, search, signal,
+#                    simulation, sorting, robotics)
 #   COMPILE_OPTIONS - Additional compile options (optional)
 #   LINK_LIBRARIES  - Additional libraries to link (optional)
 #   INCLUDE_DIRS  - Additional include path required by the benchmark (optional)
@@ -56,7 +60,7 @@ set(HECBENCH_TEST_RUNNER "${CMAKE_SOURCE_DIR}/cmake/scripts/run_benchmark_test.p
 #       NAME jacobi
 #       MODEL cuda
 #       SOURCES main.cu
-#       CATEGORIES simulation math
+#       CATEGORIES math
 #   )
 #
 function(add_hecbench_benchmark)

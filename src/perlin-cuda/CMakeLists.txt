@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME perlin
     MODEL cuda
     SOURCES main.cu noise.cu
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

@@ -7,7 +7,7 @@ add_hecbench_benchmark(
     MODEL sycl
     SOURCES main.cpp
     INCLUDE_DIRS ${INC_DIR}
-    CATEGORIES algorithms
+    CATEGORIES ml
 )
 
 # Suite default is C++17. This target is built as C++20.

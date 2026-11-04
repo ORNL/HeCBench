@@ -7,6 +7,6 @@ add_hecbench_benchmark(
     NAME meanshift
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES ml
     COMPILE_OPTIONS -use_fast_math
 )

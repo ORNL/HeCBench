@@ -10,5 +10,5 @@ add_hecbench_benchmark(
     ${INC_DIR}/main.cu
     ${INC_DIR}/rectangles.cu
     ${INC_DIR}/stdio-wrapper.cu
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

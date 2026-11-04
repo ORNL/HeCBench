@@ -14,6 +14,6 @@ add_hecbench_benchmark(
             ${INC_DIR}/int_lib/crys.cc
             ${INC_DIR}/int_lib/cints.cc
     INCLUDE_DIRS ${INC_DIR} ${INC_DIR}/int_lib
-    CATEGORIES algorithms
+    CATEGORIES simulation
     LINK_LIBRARIES Eigen3::Eigen
 )

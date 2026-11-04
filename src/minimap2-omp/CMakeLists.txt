@@ -10,5 +10,5 @@ add_hecbench_benchmark(
         src/main.cpp
         src/memory_scheduler.cpp
     INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
-    CATEGORIES bioinformatics algorithms
+    CATEGORIES bioinformatics
 )

@@ -7,6 +7,6 @@ add_hecbench_benchmark(
     NAME wenofv
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
     COMPILE_OPTIONS -ffp-contract=off
 )

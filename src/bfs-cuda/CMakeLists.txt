@@ -8,6 +8,6 @@ add_hecbench_benchmark(
     NAME bfs
     MODEL cuda
     SOURCES bfs.cu
-    CATEGORIES graph algorithms
+    CATEGORIES search
     INCLUDE_DIRS ${INC_DIR}
 )

@@ -4,7 +4,7 @@ add_hecbench_benchmark(
     NAME ssm
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES ml
 )
 
 # Suite default is C++17, and HIP targets also set HIP_STANDARD 17.

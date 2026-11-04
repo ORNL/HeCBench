@@ -7,5 +7,5 @@ add_hecbench_benchmark(
             kernel/kernel_wrapper.cu  
             kernel/kernel2_wrapper.cu  
             util/num/num.c
-    CATEGORIES algorithms
+    CATEGORIES search
 )

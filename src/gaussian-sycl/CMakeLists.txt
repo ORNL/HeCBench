@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME gaussian
     MODEL sycl
     SOURCES gaussianElim.cpp utils.cpp
-    CATEGORIES algorithms
+    CATEGORIES math
 )

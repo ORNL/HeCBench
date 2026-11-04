@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME segment-reduce2
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES compression
     INCLUDE_DIRS ${INC_DIR}
 )

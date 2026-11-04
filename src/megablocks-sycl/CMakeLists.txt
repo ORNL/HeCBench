@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME megablocks
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES math
+    CATEGORIES ml
     LINK_LIBRARIES -qmkl=parallel
 )

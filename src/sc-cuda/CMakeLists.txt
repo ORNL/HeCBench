@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME sc
     MODEL cuda
     SOURCES device_sc.cu host_sc.cpp main.cu
-    CATEGORIES algorithms
+    CATEGORIES compression
     LINK_LIBRARIES pthread
 )

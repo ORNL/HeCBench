@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME lombscargle
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES signal
 )

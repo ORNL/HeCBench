@@ -14,7 +14,7 @@ add_hecbench_benchmark(
             ${INC_DIR}/int_lib/crys.cc
             ${INC_DIR}/int_lib/cints.cc
     INCLUDE_DIRS ${INC_DIR} ${INC_DIR}/int_lib
-    CATEGORIES algorithms
+    CATEGORIES simulation
     COMPILE_OPTIONS -fgpu-rdc
     LINK_LIBRARIES -fgpu-rdc --hip-link Eigen3::Eigen
 )

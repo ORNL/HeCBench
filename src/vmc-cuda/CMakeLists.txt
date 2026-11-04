@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME vmc
     MODEL cuda
     SOURCES vmc2.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

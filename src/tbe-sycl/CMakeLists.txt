@@ -2,7 +2,7 @@ add_hecbench_benchmark(
     NAME tbe
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES machine-learning
+    CATEGORIES ml
     TEST_ARGS 2 64 1024 64 8 1
     INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR}/../tbe-cuda
 )

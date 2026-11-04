@@ -9,6 +9,6 @@ add_hecbench_benchmark(
              ../crs-sycl/galois.cpp
              ../crs-sycl/jerasure.cpp
              ../crs-sycl/GCRSMatrix.cpp
-    CATEGORIES algorithms
+    CATEGORIES encoding
     INCLUDE_DIRS ${INC_DIR}
 )

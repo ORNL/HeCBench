@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME bfs
     MODEL omp
     SOURCES bfs.cpp
-    CATEGORIES graph algorithms
+    CATEGORIES search
     INCLUDE_DIRS ${INC_DIR}
 )

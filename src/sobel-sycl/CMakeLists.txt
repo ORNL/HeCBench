@@ -8,6 +8,6 @@ add_hecbench_benchmark(
     NAME sobel
     MODEL sycl
     SOURCES main.cpp reference.cpp
-    CATEGORIES algorithms
+    CATEGORIES imaging
     INCLUDE_DIRS ${SDK_DIR}
 )

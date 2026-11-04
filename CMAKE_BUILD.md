@@ -236,7 +236,7 @@ add_hecbench_benchmark(
     NAME mybench
     MODEL cuda
     SOURCES main.cu kernel.cu
-    CATEGORIES simulation physics
+    CATEGORIES simulation
 )
 ```
 
@@ -247,7 +247,7 @@ add_hecbench_benchmark(
     NAME mybench                    # Benchmark name (required)
     MODEL cuda                      # Programming model: cuda, hip, sycl, omp (required)
     SOURCES main.cu kernel.cu       # Source files (required)
-    CATEGORIES simulation physics   # Categories for grouping (optional)
+    CATEGORIES simulation           # One README category (optional)
     INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include  # Additional include paths (optional)
     COMPILE_OPTIONS -maxrregcount=32                  # Extra compiler flags (optional)
     LINK_LIBRARIES CUDA::cublas                       # Libraries to link (optional)

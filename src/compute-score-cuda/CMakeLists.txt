@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME compute-score
     MODEL cuda
     SOURCES main.cu options.cu
-    CATEGORIES algorithms
+    CATEGORIES compression
 )

@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME tpacf
     MODEL cuda
     SOURCES main.cu args.cu compute.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

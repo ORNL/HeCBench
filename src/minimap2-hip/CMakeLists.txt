@@ -11,5 +11,5 @@ add_hecbench_benchmark(
         device/device_kernel.cu
         device/device_kernel_wrapper.cu
     INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
-    CATEGORIES bioinformatics algorithms
+    CATEGORIES bioinformatics
 )

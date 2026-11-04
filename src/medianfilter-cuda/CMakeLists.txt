@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME medianfilter
     MODEL cuda
     SOURCES MedianFilterHost.cpp main.cu ${INC_DIR}/shrUtils.cpp
-    CATEGORIES algorithms
+    CATEGORIES imaging
     INCLUDE_DIRS ${INC_DIR}
 )

@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME radixsort
     MODEL omp
     SOURCES main.cpp RadixSort.cpp Scan.cpp
-    CATEGORIES algorithms
+    CATEGORIES sorting
 )

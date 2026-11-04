@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME boxfilter
     MODEL cuda
     SOURCES main.cu ${INC_DIR}/shrUtils.cpp ${INC_DIR}/reference.cpp ${INC_DIR}/cmd_arg_reader.cpp
-    CATEGORIES algorithms
+    CATEGORIES imaging
     INCLUDE_DIRS ${INC_DIR}
 )

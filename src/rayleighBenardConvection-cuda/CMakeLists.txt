@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME rayleighBenardConvection
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
     LINK_LIBRARIES cublas
 )

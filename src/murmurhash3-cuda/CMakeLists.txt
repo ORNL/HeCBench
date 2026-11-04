@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME murmurhash3
     MODEL cuda
     SOURCES murmurhash3.cu
-    CATEGORIES algorithms
+    CATEGORIES encoding
 )

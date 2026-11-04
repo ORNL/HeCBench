@@ -5,5 +5,5 @@ add_hecbench_benchmark(
     MODEL hip
     SOURCES main.cu
     COMPILE_OPTIONS -DCDNA
-    CATEGORIES language_kernel_features
+    CATEGORIES language
 )

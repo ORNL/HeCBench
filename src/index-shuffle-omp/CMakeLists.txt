@@ -4,7 +4,7 @@ add_hecbench_benchmark(
   NAME index-shuffle
   MODEL omp
   SOURCES main.cpp
-  CATEGORIES algorithms
+  CATEGORIES ml
   TEST_ARGS 2048 128 4 1
   TEST_REGEX "PASS"
 )

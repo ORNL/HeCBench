@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME sc
     MODEL hip
     SOURCES device_sc.cu main.cu ${INC_DIR}/host_sc.cpp
-    CATEGORIES algorithms
+    CATEGORIES compression
     LINK_LIBRARIES pthread
 )

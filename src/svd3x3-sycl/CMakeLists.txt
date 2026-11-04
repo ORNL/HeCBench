@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME svd3x3
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES math
     COMPILE_OPTIONS -ffast-math
 )

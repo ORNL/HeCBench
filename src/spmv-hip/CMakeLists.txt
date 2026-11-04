@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME spmv
     MODEL hip
     SOURCES kernels.cu ${INC_DIR}/utils.cpp  ${INC_DIR}/main.cpp 
-    CATEGORIES algorithms
+    CATEGORIES math
     LINK_LIBRARIES hipsparse
 )

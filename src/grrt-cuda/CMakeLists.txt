@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME grrt
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
     COMPILE_OPTIONS -use_fast_math
 )

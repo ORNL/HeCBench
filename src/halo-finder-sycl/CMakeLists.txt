@@ -17,7 +17,7 @@ add_hecbench_benchmark(
             Timer.cxx
             bigchunk.c
             BGQStep16.c
-    CATEGORIES algorithms
+    CATEGORIES simulation
     INCLUDE_DIRS dfft
     COMPILE_OPTIONS -DRCB_UNTHREADED_BUILD -DUSE_SERIAL_COSMO -DID_64 -DPOSVEL_32 -DGRID_32 -DLONG_INTEGER
 )

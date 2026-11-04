@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME laplace3d
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

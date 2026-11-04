@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME bfs
     MODEL hip
     SOURCES bfs.cu
-    CATEGORIES graph algorithms
+    CATEGORIES search
     INCLUDE_DIRS ${INC_DIR}
 )

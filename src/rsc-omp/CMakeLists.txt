@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME rsc
     MODEL omp
     SOURCES main.cpp model_eval.cpp ${INC_DIR}/model_fitting.cpp
-    CATEGORIES algorithms
+    CATEGORIES math
     LINK_LIBRARIES pthread
 )

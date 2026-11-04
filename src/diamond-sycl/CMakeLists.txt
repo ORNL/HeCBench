@@ -72,6 +72,6 @@ add_hecbench_benchmark(
        ${DMND_PATH}/src/output/view.cpp 
        ${DMND_PATH}/src/output/output_sink.cpp 
        ${DMND_PATH}/src/output/target_culling.cpp
-    CATEGORIES algorithms
+    CATEGORIES bioinformatics
     LINK_LIBRARIES z pthread
 )

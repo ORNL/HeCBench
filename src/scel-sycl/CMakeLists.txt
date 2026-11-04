@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME scel
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES ml
     COMPILE_OPTIONS -ffast-math
 )

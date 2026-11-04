@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME gaussian
     MODEL hip
     SOURCES gaussianElim.cu utils.cu
-    CATEGORIES algorithms
+    CATEGORIES math
 )

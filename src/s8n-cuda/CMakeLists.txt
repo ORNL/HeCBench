@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME s8n
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES search
 )

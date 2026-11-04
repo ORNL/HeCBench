@@ -9,5 +9,5 @@ add_hecbench_benchmark(
         src/ra.cpp
     INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
     LINK_LIBRARIES -qmkl=parallel
-    CATEGORIES imaging algorithms
+    CATEGORIES imaging
 )

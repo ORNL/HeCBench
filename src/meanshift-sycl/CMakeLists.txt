@@ -7,6 +7,6 @@ add_hecbench_benchmark(
     NAME meanshift
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES ml
     COMPILE_OPTIONS -ffast-math
 )

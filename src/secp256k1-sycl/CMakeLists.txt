@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME secp256k1
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES math
 )

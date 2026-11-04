@@ -6,5 +6,5 @@ add_hecbench_benchmark(
     NAME hypterm
     MODEL hip
     SOURCES kernels.cu ${INC_DIR}/main.cpp ${INC_DIR}/reference.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

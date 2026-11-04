@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME convolution3D
     MODEL omp
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

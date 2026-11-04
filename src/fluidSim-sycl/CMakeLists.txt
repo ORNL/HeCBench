@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME fluidSim
     MODEL sycl
     SOURCES kernels.cpp main.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
     COMPILE_OPTIONS -DVERIFY
 )

@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME ccl
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES bandwidth
     LINK_LIBRARIES rccl
 )

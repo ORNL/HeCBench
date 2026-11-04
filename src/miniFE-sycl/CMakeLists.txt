@@ -24,5 +24,5 @@ add_hecbench_benchmark(
                     -DMINIFE_INFO=1
                     -DMINIFE_KERNELS=0
     INCLUDE_DIRS src utils fem
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

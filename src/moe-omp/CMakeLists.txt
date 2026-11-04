@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME moe
     MODEL omp
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES ml
 )

@@ -6,7 +6,7 @@ add_hecbench_benchmark(
     NAME sptrsv
     MODEL omp
     SOURCES sptrsv_syncfree.cpp ${INC_DIR}/main.cpp
-    CATEGORIES algorithms
+    CATEGORIES math
     COMPILE_OPTIONS -DVALUE_TYPE=double
     INCLUDE_DIRS ${INC_DIR}
 )

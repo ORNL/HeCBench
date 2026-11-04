@@ -7,5 +7,5 @@ add_hecbench_benchmark(
     MODEL hip
     SOURCES attack.cu main.cu ${INC_DIR}/utils.cpp w_blocks.cu
     COMPILE_OPTIONS -ffast-math
-    CATEGORIES algorithms
+    CATEGORIES cryptography
 )

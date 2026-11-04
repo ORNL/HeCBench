@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME streamcluster
     MODEL omp
     SOURCES streamcluster.cpp
-    CATEGORIES algorithms
+    CATEGORIES ml
 )

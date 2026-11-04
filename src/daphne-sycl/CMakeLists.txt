@@ -10,5 +10,5 @@ add_hecbench_benchmark(
         src/common/main.cpp
         src/points2image/kernel.cpp
     INCLUDE_DIRS ${INC_DIR} ${SRC_DIR}
-    CATEGORIES imaging automotive
+    CATEGORIES automotive
 )

@@ -17,7 +17,7 @@ add_hecbench_benchmark(
             ${INC_DIR}/bzip/decompress.cpp
             ${INC_DIR}/bzip/huffman.cpp
             ${INC_DIR}/bzip/randtable.cpp
-    CATEGORIES algorithms
+    CATEGORIES rng
     INCLUDE_DIRS ${INC_DIR}
 
 )

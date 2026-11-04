@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME idivide
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES math
 )

@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME mlp
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES ml
     LINK_LIBRARIES hipblaslt
 )

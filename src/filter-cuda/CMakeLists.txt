@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME filter
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES compression
 )

@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME wsm5
     MODEL omp
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
     COMPILE_OPTIONS -DMKX=4
 )
