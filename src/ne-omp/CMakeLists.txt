@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME ne
     MODEL omp
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

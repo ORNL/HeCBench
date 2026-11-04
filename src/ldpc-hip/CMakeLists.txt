@@ -6,5 +6,5 @@ add_hecbench_benchmark(
     NAME ldpc
     MODEL hip
     SOURCES ${CPU_REFERENCE} main.cu
-    CATEGORIES algorithms
+    CATEGORIES encoding
 )

@@ -7,6 +7,6 @@ add_hecbench_benchmark(
     MODEL sycl
     SOURCES main.cpp ${INC_DIR}/svm.cpp
     INCLUDE_DIRS ${INC_DIR}
-    CATEGORIES algorithms
+    CATEGORIES ml
     LINK_LIBRARIES -qmkl=parallel
 )

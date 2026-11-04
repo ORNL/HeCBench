@@ -19,7 +19,7 @@ add_hecbench_benchmark(
             src/gerbil/gerbil.cpp
             src/gerbil/KmcWriter.cpp
             src/gerbil/SuperWriter.cpp
-    CATEGORIES algorithms
+    CATEGORIES bioinformatics
     COMPILE_OPTIONS -DGPU -fpermissive
 	            -DBOOST_ALL_NO_LIB -DBOOST_ATOMIC_DYN_LINK -DBOOST_FILESYSTEM_DYN_LINK
 	            -DBOOST_REGEX_DYN_LINK -DBOOST_SYSTEM_DYN_LINK -DBOOST_THREAD_DYN_LINK

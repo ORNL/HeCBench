@@ -8,5 +8,5 @@ add_hecbench_benchmark(
         src/ra.cu
     INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
     LINK_LIBRARIES cufft cublas cusolver
-    CATEGORIES imaging algorithms
+    CATEGORIES imaging
 )

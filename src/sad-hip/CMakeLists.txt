@@ -7,6 +7,6 @@ add_hecbench_benchmark(
     NAME sad
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES imaging
     INCLUDE_DIRS ${DATA_DIR}
 )

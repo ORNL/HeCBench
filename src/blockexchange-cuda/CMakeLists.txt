@@ -7,6 +7,6 @@ add_hecbench_benchmark(
     NAME blockexchange
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES language
     INCLUDE_DIRS ${INC_DIR} ${INC_DIR2}
 )

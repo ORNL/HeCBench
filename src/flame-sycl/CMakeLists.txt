@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME flame
     MODEL sycl
     SOURCES main.cpp utils.cpp
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

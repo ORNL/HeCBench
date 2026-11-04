@@ -6,5 +6,5 @@ add_hecbench_benchmark(
     NAME bwt
     MODEL sycl
     SOURCES bwt.cpp ${INC_DIR}/main.cpp
-    CATEGORIES algorithms
+    CATEGORIES compression
 )

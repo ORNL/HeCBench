@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME stsg
     MODEL hip
     SOURCES main.cu ${INC_DIR}/Filter.cu
-    CATEGORIES algorithms
+    CATEGORIES geoscience
     LINK_LIBRARIES gdal
 )

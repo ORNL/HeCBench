@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME bonds
     MODEL hip
     SOURCES bondsEngine.cu
-    CATEGORIES algorithms
+    CATEGORIES finance
 )

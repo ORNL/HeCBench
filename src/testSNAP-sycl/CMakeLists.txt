@@ -7,7 +7,7 @@ add_hecbench_benchmark(
     NAME testSNAP
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
     INCLUDE_DIRS ${DATA_DIR}
     COMPILE_OPTIONS -DREFDATA_TWOJ=14
 )

@@ -6,7 +6,7 @@ add_hecbench_benchmark(
     SOURCES main.c
             util/graphics/graphics.c
             util/graphics/resize.c
-    CATEGORIES algorithms
+    CATEGORIES imaging
     LINK_LIBRARIES m
     C_AS_CXX
 )

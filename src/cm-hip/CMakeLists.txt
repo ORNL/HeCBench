@@ -6,5 +6,5 @@ add_hecbench_benchmark(
     NAME cm
     MODEL hip
     SOURCES ${INC_DIR}/main.cpp process.cu ${INC_DIR}/io.cpp
-    CATEGORIES algorithms
+    CATEGORIES bioinformatics
 )

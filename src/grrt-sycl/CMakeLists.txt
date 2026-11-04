@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME grrt
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
     COMPILE_OPTIONS -ffast-math
 )

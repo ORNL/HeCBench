@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     SOURCES main.cpp
             util/graphics/graphics.c
             util/graphics/resize.c
-    CATEGORIES algorithms
+    CATEGORIES imaging
     C_AS_CXX
 )

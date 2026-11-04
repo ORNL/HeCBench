@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME vol2col
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES ml
 )

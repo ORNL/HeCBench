@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME qkv
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES ml
     LINK_LIBRARIES -qmkl=parallel -ldnnl
 )

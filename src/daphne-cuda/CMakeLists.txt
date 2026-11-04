@@ -7,5 +7,5 @@ add_hecbench_benchmark(
         src/common/main.cpp
         src/points2image/kernel.cu
     INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/include
-    CATEGORIES imaging automotive
+    CATEGORIES automotive
 )

@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME chemv
     MODEL cuda
     SOURCES kernel.cu main.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

@@ -6,7 +6,7 @@ add_hecbench_benchmark(
     NAME spnnz
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES math
     INCLUDE_DIRS ${INC_DIR}
     LINK_LIBRARIES cusparse
 )

@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME lud
     MODEL cuda
     SOURCES lud.cu common/common.cpp 
-    CATEGORIES algorithms
+    CATEGORIES math
     INCLUDE_DIRS common
 )

@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME haccmk
     MODEL hip
     SOURCES haccmk.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME jacobi
     MODEL omp
     SOURCES main.cpp
-    CATEGORIES simulation math
+    CATEGORIES math
 )

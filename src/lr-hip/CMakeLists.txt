@@ -6,5 +6,5 @@ add_hecbench_benchmark(
     NAME lr
     MODEL hip
     SOURCES linear_par.cu ${INC_DIR}/linear_iter.cu  ${INC_DIR}/main.cu 
-    CATEGORIES algorithms
+    CATEGORIES ml
 )

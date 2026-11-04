@@ -5,5 +5,5 @@ add_hecbench_benchmark(
     MODEL sycl
     SOURCES main.cpp
     INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR}/../sss-cuda
-    CATEGORIES algorithms
+    CATEGORIES search
 )

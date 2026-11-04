@@ -10,6 +10,6 @@ add_hecbench_benchmark(
             ${INC_DIR}/fbase.c
             ${INC_DIR}/fparam.c
             ${INC_DIR}/util.c
-    CATEGORIES algorithms
+    CATEGORIES bioinformatics
     COMPILE_OPTIONS -DINT -ffast-math
 )

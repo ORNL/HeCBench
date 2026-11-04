@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME haversine
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES geoscience
     COMPILE_OPTIONS -ffast-math
 )

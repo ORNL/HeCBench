@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME dxtc2
     MODEL hip
     SOURCES main.cu ${INC_DIR}/shrUtils.cpp
-    CATEGORIES algorithms
+    CATEGORIES compression
     INCLUDE_DIRS ${INC_DIR}
 )

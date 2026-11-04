@@ -6,5 +6,5 @@ add_hecbench_benchmark(
     NAME ldpc
     MODEL sycl
     SOURCES ${CPU_REFERENCE} main.cpp
-    CATEGORIES algorithms
+    CATEGORIES encoding
 )

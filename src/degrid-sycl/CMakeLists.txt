@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME degrid
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES imaging
     COMPILE_OPTIONS -DPRECISION=double
 )

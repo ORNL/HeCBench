@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME pcc
     MODEL hip
     SOURCES device.cu ${INC_DIR}/main.cpp
-    CATEGORIES algorithms
+    CATEGORIES bioinformatics
     LINK_LIBRARIES hipblas
 )

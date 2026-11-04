@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME word2vec
     MODEL hip
     SOURCES cbow.cu word2vec.cu
-    CATEGORIES algorithms
+    CATEGORIES ml
     LINK_LIBRARIES pthread
 )

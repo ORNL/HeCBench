@@ -6,5 +6,5 @@ add_hecbench_benchmark(
     SOURCES main.cpp
     INCLUDE_DIRS utils
     COMPILE_OPTIONS -fno-sycl-id-queries-fit-in-int
-    CATEGORIES algorithms
+    CATEGORIES language
 )

@@ -23,5 +23,5 @@ add_hecbench_benchmark(
         ${CMAKE_CURRENT_SOURCE_DIR}/Simulation/src/sim
         ${CMAKE_CURRENT_SOURCE_DIR}/Simulation/src/util
         ${CMAKE_CURRENT_SOURCE_DIR}/Simulation/src/wave
-    CATEGORIES simulation eda
+    CATEGORIES simulation
 )

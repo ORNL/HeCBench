@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME depixel
     MODEL omp
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

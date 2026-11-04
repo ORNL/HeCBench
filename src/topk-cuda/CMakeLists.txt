@@ -5,5 +5,5 @@ add_hecbench_benchmark(
     MODEL cuda
     SOURCES main.cu
     COMPILE_OPTIONS --expt-relaxed-constexpr
-    CATEGORIES algorithms
+    CATEGORIES sorting
 )

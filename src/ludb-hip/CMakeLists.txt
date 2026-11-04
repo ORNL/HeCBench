@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME ludb
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES math
     LINK_LIBRARIES hipblas
 )

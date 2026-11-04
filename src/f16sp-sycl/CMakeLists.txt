@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME f16sp
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES math
     LINK_LIBRARIES -qmkl=parallel
 )

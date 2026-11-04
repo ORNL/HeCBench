@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME dpid
     MODEL hip
     SOURCES kernels.cu main.cu
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

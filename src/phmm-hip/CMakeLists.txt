@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME phmm
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES math
 )

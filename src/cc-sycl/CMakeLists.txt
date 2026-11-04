@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME cc
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES graph
     INCLUDE_DIRS ${INC_DIR}
 )

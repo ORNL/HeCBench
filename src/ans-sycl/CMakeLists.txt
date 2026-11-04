@@ -13,5 +13,5 @@ add_hecbench_benchmark(
         src/multians_output_buffer.cc
         src/multians_util.cc
     INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
-    CATEGORIES compression algorithms
+    CATEGORIES encoding
 )

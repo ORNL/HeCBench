@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME particle-diffusion
     MODEL omp
     SOURCES motionsim.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

@@ -6,7 +6,7 @@ add_hecbench_benchmark(
     NAME openmp
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES language
     INCLUDE_DIRS ${INC_DIR}
     COMPILE_OPTIONS -Xcompiler -fopenmp
     LINK_LIBRARIES -fopenmp 

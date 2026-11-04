@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME qrg
     MODEL omp
     SOURCES main.cpp reference.cpp
-    CATEGORIES algorithms
+    CATEGORIES rng
 )

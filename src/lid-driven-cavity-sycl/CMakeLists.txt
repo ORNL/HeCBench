@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME lid-driven-cavity
     MODEL sycl
     SOURCES main.cpp set.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

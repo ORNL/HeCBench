@@ -4,7 +4,7 @@ add_hecbench_benchmark(
     NAME streamUM
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES language
     COMPILE_OPTIONS -Xcompiler -fopenmp 
     LINK_LIBRARIES cublas -fopenmp
 )

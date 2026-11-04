@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME all-pairs-distance
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES bioinformatics
 )

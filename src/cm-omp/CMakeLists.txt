@@ -6,5 +6,5 @@ add_hecbench_benchmark(
     NAME cm
     MODEL omp
     SOURCES ${INC_DIR}/main.cpp process.cpp ${INC_DIR}/io.cpp
-    CATEGORIES algorithms
+    CATEGORIES bioinformatics
 )

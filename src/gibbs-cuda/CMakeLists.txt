@@ -7,5 +7,5 @@ add_hecbench_benchmark(
     NAME gibbs
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

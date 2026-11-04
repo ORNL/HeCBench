@@ -7,6 +7,6 @@ add_hecbench_benchmark(
     NAME ced
     MODEL cuda
     SOURCES kernel_reference.cu main.cu
-    CATEGORIES algorithms
+    CATEGORIES imaging
     LINK_LIBRARIES pthread
 )

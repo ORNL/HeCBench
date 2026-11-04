@@ -8,5 +8,5 @@ add_hecbench_benchmark(
     SOURCES StructuredEikonal.cu fim.cu kernel.cu
             ${INC_DIR}/timer.cpp
             ${INC_DIR}/main.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

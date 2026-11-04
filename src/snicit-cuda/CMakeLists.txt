@@ -6,5 +6,5 @@ add_hecbench_benchmark(
     SOURCES src/beyond.cu
     INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rd-party
     COMPILE_OPTIONS --extended-lambda
-    CATEGORIES neuralnetwork algorithms
+    CATEGORIES ml
 )

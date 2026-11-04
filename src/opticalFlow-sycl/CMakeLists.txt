@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME opticalFlow
     MODEL sycl
     SOURCES flowSYCL.cpp flowGold.cpp main.cpp
-    CATEGORIES algorithms
+    CATEGORIES imaging
     INCLUDE_DIRS ${INC_DIR}/Common
 )

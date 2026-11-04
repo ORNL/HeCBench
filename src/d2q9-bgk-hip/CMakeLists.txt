@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME d2q9-bgk
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME langevin
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES math
     COMPILE_OPTIONS -ffast-math
 )

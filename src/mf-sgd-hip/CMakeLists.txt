@@ -8,5 +8,5 @@ add_hecbench_benchmark(
         src/sgd.cu
     INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
     LINK_LIBRARIES -lpthread
-    CATEGORIES machinelearning algorithms
+    CATEGORIES ml
 )

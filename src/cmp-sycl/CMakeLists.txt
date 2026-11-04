@@ -12,5 +12,5 @@ add_hecbench_benchmark(
             ${INC_DIR}/su_gather.cpp
             ${INC_DIR}/su_trace.cpp 
             ${INC_DIR}/reference.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

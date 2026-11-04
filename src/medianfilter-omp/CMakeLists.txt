@@ -8,5 +8,5 @@ add_hecbench_benchmark(
     MODEL omp
     SOURCES ${INC2_DIR}/MedianFilterHost.cpp main.cpp ${INC_DIR}/shrUtils.cpp
     INCLUDE_DIRS ${INC_DIR} ${INC2_DIR}
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME distort
     MODEL hip
     SOURCES distort.cu main.cu
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

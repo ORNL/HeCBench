@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME aobench
     MODEL sycl
     SOURCES ao.cpp
-    CATEGORIES algorithms
+    CATEGORIES imaging
     COMPILE_OPTIONS -ffast-math
 )

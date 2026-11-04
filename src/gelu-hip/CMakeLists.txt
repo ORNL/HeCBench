@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME gelu
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES ml
 )

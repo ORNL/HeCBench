@@ -9,6 +9,6 @@ add_hecbench_benchmark(
     SOURCES main.cpp
             ${INC_DIR}/shrUtils.cpp
             ${INC2_DIR}/RecursiveGaussianHost.cpp
-    CATEGORIES algorithms
+    CATEGORIES imaging
     INCLUDE_DIRS ${INC_DIR} ${INC2_DIR}
 )

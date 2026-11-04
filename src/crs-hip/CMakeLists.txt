@@ -9,5 +9,5 @@ add_hecbench_benchmark(
             ${INC_DIR}/galois.cu 
             ${INC_DIR}/jerasure.cu
             ${INC_DIR}/GCRSMatrix.cu
-    CATEGORIES algorithms
+    CATEGORIES encoding
 )

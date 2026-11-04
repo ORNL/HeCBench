@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME pcc
     MODEL sycl
     SOURCES device.cpp ${INC_DIR}/main.cpp
-    CATEGORIES algorithms
+    CATEGORIES bioinformatics
     LINK_LIBRARIES -qmkl=parallel
 )

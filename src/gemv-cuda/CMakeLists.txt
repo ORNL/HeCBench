@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME gemv
     MODEL cuda
     SOURCES gemv.cu main.cu
-    CATEGORIES algorithms
+    CATEGORIES math
 )

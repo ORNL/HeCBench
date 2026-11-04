@@ -7,5 +7,5 @@ add_hecbench_benchmark(
     MODEL hip
     SOURCES flowGold.cu flowHIP.cu main.cu
     INCLUDE_DIRS ${INC_DIR}
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

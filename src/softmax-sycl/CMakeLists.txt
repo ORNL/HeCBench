@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME softmax
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES ml math
+    CATEGORIES ml
     COMPILE_OPTIONS -ffast-math
 )

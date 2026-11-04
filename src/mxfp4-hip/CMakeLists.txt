@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME mxfp4
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

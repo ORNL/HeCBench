@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME lid-driven-cavity
     MODEL omp
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

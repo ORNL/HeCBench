@@ -19,6 +19,6 @@ add_hecbench_benchmark(
             numeric.cu
     INCLUDE_DIRS ${SRC}/include ${SRC}/src/nicslu/include ${SRC}/src/nicslu/util
     COMPILE_OPTIONS -DVERIFY
-    CATEGORIES algorithms
+    CATEGORIES math
     LINK_LIBRARIES nicslu_hip nicslu_util_hip
 )

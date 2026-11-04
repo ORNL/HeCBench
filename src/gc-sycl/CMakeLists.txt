@@ -7,5 +7,5 @@ add_hecbench_benchmark(
     MODEL sycl
     SOURCES main.cpp
     INCLUDE_DIRS ${INC_DIR}
-    CATEGORIES algorithms
+    CATEGORIES graph
 )

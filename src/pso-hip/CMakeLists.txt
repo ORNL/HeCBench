@@ -8,5 +8,5 @@ add_hecbench_benchmark(
     SOURCES kernel_gpu.cu
             ${INC_DIR}/kernel_cpu.cpp 
             ${INC_DIR}/main.cpp 
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

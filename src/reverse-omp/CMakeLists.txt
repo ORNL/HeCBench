@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME reverse
     MODEL omp
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES language
 )

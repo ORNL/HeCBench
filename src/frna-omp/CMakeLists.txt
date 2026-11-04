@@ -6,5 +6,5 @@ add_hecbench_benchmark(
     SOURCES frna.cpp main.c fbase.c fparam.c util.c
     COMPILE_OPTIONS -DINT
     ENABLE_FASTMATH true
-    CATEGORIES algorithms
+    CATEGORIES bioinformatics
 )

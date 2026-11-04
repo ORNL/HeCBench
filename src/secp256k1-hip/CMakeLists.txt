@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME secp256k1
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES math
 )

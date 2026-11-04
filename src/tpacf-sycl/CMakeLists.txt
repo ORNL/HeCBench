@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME tpacf
     MODEL sycl
     SOURCES args.cpp compute.cpp main.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

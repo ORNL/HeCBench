@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME s8n
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES search
 )
