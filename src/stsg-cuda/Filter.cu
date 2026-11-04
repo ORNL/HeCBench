@@ -619,7 +619,7 @@ __global__ void STSG_filter(const float *__restrict__ img_NDVI,
               u[n] = (y[n + 1] - y[n]) / (x[n + 1] - x[n]) - (y[n] - y[n - 1]) / (x[n] - x[n - 1]);
               u[n] = (6.f*u[n] / (x[n + 1] - x[n - 1]) - sig*u[n - 1]) / p;
             }
-            for (int n = 3; n >= 0; n--)
+            for (int n = 2; n >= 0; n--)
               y2[n] = y2[n] * y2[n + 1] + u[n];
 
             int klo = 0;
