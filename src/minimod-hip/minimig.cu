@@ -316,7 +316,7 @@ void target(uint nsteps, double *time_kernel,
           d_u, d_v, d_vp,
           d_phi, d_eta);
 
-      kernel_add_source_kernel<<<1, 1>>>(d_v, IDX3_grid(sx,sy,sz,grid), source[istep]);
+      kernel_add_source_kernel<<<1, 1>>>(d_v, IDX3_grid(sx,sy,sz,grid), source[istep-1]);
 
       float *t = d_u;
       d_u = d_v;

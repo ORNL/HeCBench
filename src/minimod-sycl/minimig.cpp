@@ -366,7 +366,7 @@ void target(sycl::queue &q,
       });
 
       q.submit([&](sycl::handler &h) {
-        float source_istep_ct2 = source[istep];
+        float source_istep_ct2 = source[istep-1];
         h.single_task<class add_source>([=]() {
           kernel_add_source_kernel(d_v, IDX3_grid(sx, sy, sz, grid),
                                    source_istep_ct2);
