@@ -13,7 +13,7 @@ add_hecbench_benchmark(
         --expt-relaxed-constexpr
         --expt-extended-lambda
         --generate-code=arch=compute_90a,code=sm_90a
-    LINK_LIBRARIES CUDA::cublas CUDA::cuda
+    LINK_LIBRARIES CUDA::cublas CUDA::cuda_driver
     CATEGORIES ml
     TEST_ARGS --reps 100
 )
