@@ -392,6 +392,7 @@ set(HECBENCH_POC_BENCHMARKS
     sheath
     shmembench
     shuffle
+    si
     simplemoc
     simpleMultiDevice
     simpleSpmv
