@@ -257,8 +257,8 @@ Jin, Z., 2021. The Rodinia Benchmarks in SYCL (No. ORNL/TM-2021/2338). Oak Ridge
 Early results are shown [here](results/README.md)
 
 # Reference
-### abacus (cuda, hip, sycl, omp)
-  Real spherical harmonics and cell-list neighbor counting from ABACUS (https://github.com/deepmodeling/abacus-develop)
+### abacus (cuda)
+  Spherical harmonics and cell-list neighbor counting from ABACUS (https://github.com/deepmodeling/abacus-develop)
 
 ### accuracy (cuda)
   Accuracy of prediction (https://pytorch.org/)
