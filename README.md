@@ -62,7 +62,7 @@ Each benchmark falls into a single category. While such classification is not ac
     all-pairs-distance, bsw, ccs, cm, deredundancy, diamond, epistasis, extend2, frna, fsm, ga, gerbil, local-ht, logan, minibude, minimap2, nbnxm, nw, pcc, prna, sa, snake
 
 ### Computer vision and image processing
-    affine, aobench, asmooth, background-subtract, bezier-surface, bilateral, bm3d, boxfilter, cbsfil, car, ced, colorwheel, convolution1D, convolution3D, convolutionDeformable, convolutionSeparable, dct8x8, debayer, depixel, degrid, distort, doh, dpid, dwt2d, egs, face, flame, gabor, gamma-correction, groupnorm, hogbom, mandelbrot, marchingCubes, match, medianfilter, morphology, mriQ, ne, nms, opticalFlow, perlin, score, sobel, tonemapping, recursiveGaussian, resize, sad, seam-carving, spm, srad, ssim, stencil1d, stencil3d, surfel, tgvnn, upsample, voxelization, zoom
+    affine, aobench, asmooth, background-subtract, bezier-surface, bilateral, bm3d, boxfilter, cbsfil, car, ced, colorwheel, convolution1D, convolution3D, convolutionDeformable, convolutionSeparable, dct8x8, debayer, depixel, degrid, distort, doh, dpid, dwt2d, egs, face, flame, gabor, gamma-correction, groupnorm, gsplat3d, hogbom, mandelbrot, marchingCubes, match, medianfilter, morphology, mriQ, ne, nms, opticalFlow, perlin, score, sobel, tonemapping, recursiveGaussian, resize, sad, seam-carving, spm, srad, ssim, stencil1d, stencil3d, surfel, tgvnn, upsample, voxelization, zoom
     
 ### Cryptography
     aes, bitcracker, bitpermute, chacha20, columnarSolver, ecdh, keccaktreehash, merkle, present
@@ -853,6 +853,9 @@ Early results are shown [here](results/README.md)
 
 ### gru2 (cuda)
   Forward operations of a multi-layer gated recurrent unit (https://pytorch.org/)
+
+### gsplat3d (cuda)
+  Backward pass of the 3D Gaussian splatting rasterizer in gsplat (https://github.com/nerfstudio-project/gsplat)
 
 ### gsplat4d (cuda)
   Physics-Aware 4D Dynamic Endoscopic Scene Simulations via MLLM-Guided Gaussian Splatting (https://arxiv.org/abs/2605.16022)

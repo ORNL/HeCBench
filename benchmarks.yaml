@@ -1222,6 +1222,14 @@ gru:
   models: [cuda, hip, sycl]
   # No test metadata available
 
+gsplat3d:
+  categories: [simulation]
+  models: [cuda, hip, sycl]
+  test:
+    regex: '(?:Average execution time of the optimized kernel: )([0-9.+-e]+)(?: \(us\))'
+    args: ["4096", "128", "128", "10"]
+    timeout: 300
+
 haccmk:
   categories: [algorithms]
   models: [cuda, hip, omp, sycl]

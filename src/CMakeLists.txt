@@ -185,6 +185,7 @@ set(HECBENCH_POC_BENCHMARKS
     grrt
     gru
     gru2
+    gsplat3d
     gsplat4d
     haccmk
     hausdorff
