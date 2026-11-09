@@ -19,35 +19,43 @@
 #include <cstdint>
 #include <random>
 #include <vector>
-#include <string>
 #include <hip/hip_runtime.h>
 #include <hip/hip_fp16.h>
 #include <hip/hip_fp8.h>
 #include "reference.h"
 
 // FP8 E4M3 encoding differs by GPU architecture:
-//   gfx940/gfx942 (MI300)  -> FNUZ  (__hip_fp8*_e4m3_fnuz)
-//   gfx950        (MI350)  -> OCP   (__hip_fp8*_e4m3)
-// The __gfx__ preprocessor macros are only defined during device compilation,
-// so the arch-specific FP8 type used inside the kernel is selected here at
-// compile time. Both formats share the same 1-byte storage layout, so the
-// host-side storage tag (see addBias) stays fixed and only the in-kernel
-// encode/decode differs.
-#if defined(__HIP_DEVICE_COMPILE__) && defined(__gfx950__)
+//   gfx940/gfx942 (MI300)                 -> FNUZ  (__hip_fp8*_e4m3_fnuz)
+//   gfx950 (MI350), gfx11.7, gfx12, ...   -> OCP   (__hip_fp8*_e4m3)
+// hip_fp8.h sets HIP_FP8_TYPE_FNUZ to 0 when compiling for a device that only
+// supports OCP; on such devices the FNUZ types are host-only. The macro is only
+// meaningful during device compilation, so the arch-specific FP8 type used
+// inside the kernel is selected here at compile time. Both formats share the
+// same 1-byte storage layout, so the host-side storage tag (see addBias) stays
+// fixed and only the in-kernel encode/decode differs.
+#if defined(__HIP_DEVICE_COMPILE__) && !HIP_FP8_TYPE_FNUZ
 using fp8_e4m3_t   = __hip_fp8_e4m3;
 using fp8x4_e4m3_t = __hip_fp8x4_e4m3;
+constexpr bool kDeviceFp8IsOcp = true;
 #else
 using fp8_e4m3_t   = __hip_fp8_e4m3_fnuz;
 using fp8x4_e4m3_t = __hip_fp8x4_e4m3_fnuz;
+constexpr bool kDeviceFp8IsOcp = false;
 #endif
 
-// Host-side detection of the FP8 format the current device uses (for logging).
+__global__ void fp8FormatKernel(int* is_ocp) {
+  *is_ocp = kDeviceFp8IsOcp;
+}
+
+// Host-side detection of the FP8 format the kernel was compiled for on the
+// current device. The host input data and reference must use the same format.
 static bool fp8IsOcp() {
-  int device = 0;
-  hipGetDevice(&device);
-  hipDeviceProp_t prop;
-  hipGetDeviceProperties(&prop, device);
-  return std::string(prop.gcnArchName).find("gfx95") != std::string::npos;
+  int *d_is_ocp, is_ocp = 0;
+  hipMalloc(&d_is_ocp, sizeof(int));
+  fp8FormatKernel<<<1, 1>>>(d_is_ocp);
+  hipMemcpy(&is_ocp, d_is_ocp, sizeof(int), hipMemcpyDeviceToHost);
+  hipFree(d_is_ocp);
+  return is_ocp != 0;
 }
 
 template<typename T1, typename T2>
