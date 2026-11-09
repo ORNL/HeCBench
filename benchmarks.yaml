@@ -1957,6 +1957,14 @@ mriQ:
   models: [cuda, hip, omp, sycl]
   # No test metadata available
 
+msm:
+  categories: [cryptography]
+  models: [cuda, hip, sycl]
+  test:
+    regex: '(?:Average execution time of the kernel: )([0-9.+-e]+)(?: \(us\))'
+    args: ["1"]
+    timeout: 300
+
 mt:
   categories: [algorithms]
   models: [cuda, hip, omp, sycl]

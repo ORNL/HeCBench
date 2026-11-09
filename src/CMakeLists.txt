@@ -292,6 +292,7 @@ set(HECBENCH_POC_BENCHMARKS
     mrc
     mrg32k3a
     mriQ
+    msm
     mt
     mtf
     multimaterial
