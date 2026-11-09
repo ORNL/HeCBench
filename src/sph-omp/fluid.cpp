@@ -2,7 +2,10 @@
 #include <stdlib.h>
 #include <math.h>
 #include <chrono>
+#include <omp.h>
 #include "sph.h"
+
+#define BLOCK_SIZE 256
 
 ////////////////////////////////////////////////////////////////////////////
 // B spline smoothing kernel
@@ -273,13 +276,12 @@ void initParams(AABB* water_volume, AABB* boundary_volume, param* params)
     water_volume->max_z = 0.8;
 
     // Simulation parameters
-    params->number_fluid_particles = 2048;
+    params->number_fluid_particles = NUM_FLUID_PARTICLES;
     params->rest_density = 1000.0;
     params->g = 9.8;
     params->alpha = 0.02;
     params->surface_tension =  0.01;
     params->number_steps = 500; // reduce from 5000
-    params->time_step = 0.00035;
 
     // Mass of each particle
     double volume = (water_volume->max_x - water_volume->min_x)
@@ -303,18 +305,19 @@ void initParams(AABB* water_volume, AABB* boundary_volume, param* params)
     // Total number of particles
     params->number_particles = params->number_boundary_particles + params->number_fluid_particles;
 
-    // Number of steps before frame needs to be written for 30 fps
-    params->steps_per_frame = (int)(1.0/(params->time_step*30.0));
-
     // Calculate speed of sound for simulation
     double max_height = water_volume->max_y;
     double max_velocity = sqrt(2.0*params->g*max_height);
     params->speed_sound = max_velocity/sqrt(0.01);
 
-    // Minimum stepsize from Courant-Friedrichs-Lewy condition
-    double recomend_step = 0.4 * params->smoothing_radius / (params->speed_sound
+    // Time step from the Courant-Friedrichs-Lewy condition
+    params->time_step = 0.4 * params->smoothing_radius / (params->speed_sound
                                                          * (1+ 0.6*params->alpha));
-    printf("Using time step: %f, Minimum recomended %f\n",params->time_step, recomend_step);
+
+    // Number of steps before frame needs to be written for 30 fps
+    params->steps_per_frame = (int)(1.0/(params->time_step*30.0));
+
+    printf("Using time step: %f\n", params->time_step);
 }
 
 void finalizeParticles(fluid_particle *fluid_particles, boundary_particle *boundary_particles)
@@ -339,11 +342,11 @@ int main(int argc, char *argv[])
 
   int num_fluid_particles = params.number_fluid_particles;
   int num_boundary_particles = params.number_boundary_particles;
-  int num_particles = (num_fluid_particles < num_boundary_particles) ? 
-                       num_fluid_particles : num_boundary_particles;
+  int num_teams_FP = (num_fluid_particles + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
 #pragma omp target data map(tofrom: fluid_particles[0:num_fluid_particles],\
-                            boundary_particles[0:num_boundary_particles]) 
+                            boundary_particles[0:num_boundary_particles])\
+                            map(to: params)
 {
   auto start = std::chrono::steady_clock::now();
 
@@ -351,75 +354,157 @@ int main(int argc, char *argv[])
   for(int n=0; n<params.number_steps; n++) {
 
     //updatePressures <<< dim3(grid1D_FP), dim3(block1D) >>> (d_fluid_particles, d_params);
-    #pragma omp target teams distribute parallel for simd thread_limit(256) 
-    for (int i = 0; i < num_fluid_particles; i++) {
-        double3 p_pos = fluid_particles[i].pos;
-        double3 p_v   = fluid_particles[i].v;
-        double density = fluid_particles[i].density;
-        for(int j=0; j< num_fluid_particles; j++) {
-    	  double3 q_pos = fluid_particles[j].pos;
-    	  double3 q_v   = fluid_particles[j].v;
-    	  density += computeDensity(p_pos,p_v,q_pos,q_v, &params);
+    #pragma omp target teams num_teams(num_teams_FP) thread_limit(BLOCK_SIZE)
+    {
+      double3 s_pos[BLOCK_SIZE];
+      double3 s_v[BLOCK_SIZE];
+      #pragma omp parallel
+      {
+        int lid = omp_get_thread_num();
+        int nt = omp_get_num_threads();
+        for (int blk = omp_get_team_num(); blk < num_teams_FP; blk += omp_get_num_teams())
+        for (int b = 0; b < BLOCK_SIZE; b += nt) {
+          int i = blk * BLOCK_SIZE + b + lid;
+          bool valid = (b + lid < BLOCK_SIZE) && (i < num_fluid_particles);
+          double3 p_pos, p_v;
+          double density = 0.0;
+          if (valid) {
+            p_pos = fluid_particles[i].pos;
+            p_v   = fluid_particles[i].v;
+            density = fluid_particles[i].density;
+          }
+          for (int t = 0; t < num_fluid_particles; t += BLOCK_SIZE) {
+            int tile_n = (num_fluid_particles - t < BLOCK_SIZE) ? num_fluid_particles - t : BLOCK_SIZE;
+            for (int l = lid; l < tile_n; l += nt) {
+              s_pos[l] = fluid_particles[t + l].pos;
+              s_v[l]   = fluid_particles[t + l].v;
+            }
+            #pragma omp barrier
+            if (valid) {
+              for (int k = 0; k < tile_n; k++)
+                density += computeDensity(p_pos,p_v,s_pos[k],s_v[k], &params);
+            }
+            #pragma omp barrier
+          }
+          if (valid) {
+            fluid_particles[i].density = density;
+            fluid_particles[i].pressure = computePressure(density, &params);
+          }
         }
-        fluid_particles[i].density = density;
-        fluid_particles[i].pressure = computePressure(density, &params);
+      }
     }
 
     //updateAccelerationsFP <<< dim3(grid1D_FP), dim3(block1D) >>> (d_fluid_particles, d_params);
-    #pragma omp target teams distribute parallel for simd thread_limit(256) 
-    for (int i = 0; i < num_fluid_particles; i++) {
+    #pragma omp target teams num_teams(num_teams_FP) thread_limit(BLOCK_SIZE)
+    {
+      double3 s_pos[BLOCK_SIZE];
+      double3 s_v[BLOCK_SIZE];
+      double s_density[BLOCK_SIZE];
+      double s_pressure[BLOCK_SIZE];
+      #pragma omp parallel
+      {
+        int lid = omp_get_thread_num();
+        int nt = omp_get_num_threads();
+        for (int blk = omp_get_team_num(); blk < num_teams_FP; blk += omp_get_num_teams())
+        for (int b = 0; b < BLOCK_SIZE; b += nt) {
+          int i = blk * BLOCK_SIZE + b + lid;
+          bool valid = (b + lid < BLOCK_SIZE) && (i < num_fluid_particles);
 
-      double ax = 0.0;
-      double ay = 0.0;
-      double az = -9.8;
+          double ax = 0.0;
+          double ay = 0.0;
+          double az = -9.8;
 
-      double3 p_pos = fluid_particles[i].pos;
-      double3 p_v   = fluid_particles[i].v;
-      double p_density = fluid_particles[i].density;
-      double p_pressure = fluid_particles[i].pressure;
-
-      for(int j=0; j<num_fluid_particles; j++) {
-          if (i!=j) {
-              double3 q_pos = fluid_particles[j].pos;
-              double3 q_v   = fluid_particles[j].v;
-              double q_density = fluid_particles[j].density;
-              double q_pressure = fluid_particles[j].pressure;
-              double3 tmp_a = computeAcceleration(p_pos, p_v, p_density,
-                                                  p_pressure, q_pos, q_v,
-                                                  q_density, q_pressure, &params);
-
-              ax += tmp_a.x;
-              ay += tmp_a.y;
-              az += tmp_a.z;
+          double3 p_pos, p_v;
+          double p_density = 0.0, p_pressure = 0.0;
+          if (valid) {
+            p_pos = fluid_particles[i].pos;
+            p_v   = fluid_particles[i].v;
+            p_density = fluid_particles[i].density;
+            p_pressure = fluid_particles[i].pressure;
           }
-      }
 
-      fluid_particles[i].a.x = ax;
-      fluid_particles[i].a.y = ay;
-      fluid_particles[i].a.z = az;
+          for (int t = 0; t < num_fluid_particles; t += BLOCK_SIZE) {
+            int tile_n = (num_fluid_particles - t < BLOCK_SIZE) ? num_fluid_particles - t : BLOCK_SIZE;
+            for (int l = lid; l < tile_n; l += nt) {
+              s_pos[l] = fluid_particles[t + l].pos;
+              s_v[l]   = fluid_particles[t + l].v;
+              s_density[l] = fluid_particles[t + l].density;
+              s_pressure[l] = fluid_particles[t + l].pressure;
+            }
+            #pragma omp barrier
+            if (valid) {
+              for (int k = 0; k < tile_n; k++) {
+                if (i != t + k) {
+                  double3 tmp_a = computeAcceleration(p_pos, p_v, p_density,
+                                                      p_pressure, s_pos[k], s_v[k],
+                                                      s_density[k], s_pressure[k], &params);
+                  ax += tmp_a.x;
+                  ay += tmp_a.y;
+                  az += tmp_a.z;
+                }
+              }
+            }
+            #pragma omp barrier
+          }
+
+          if (valid) {
+            fluid_particles[i].a.x = ax;
+            fluid_particles[i].a.y = ay;
+            fluid_particles[i].a.z = az;
+          }
+        }
+      }
     }
 
     //updateAccelerationsBP ()<<< dim3(grid1D_BP), dim3(block1D) >>> (d_fluid_particles, d_boundary_particles, d_params);
-    #pragma omp target teams distribute parallel for simd thread_limit(256) 
-    for (int i = 0; i < num_particles; i++) {
-      double ax = fluid_particles[i].a.x;
-      double ay = fluid_particles[i].a.y;
-      double az = fluid_particles[i].a.z;
-      double3 p_pos = fluid_particles[i].pos;
+    #pragma omp target teams num_teams(num_teams_FP) thread_limit(BLOCK_SIZE)
+    {
+      double3 s_pos[BLOCK_SIZE];
+      double3 s_n[BLOCK_SIZE];
+      #pragma omp parallel
+      {
+        int lid = omp_get_thread_num();
+        int nt = omp_get_num_threads();
+        for (int blk = omp_get_team_num(); blk < num_teams_FP; blk += omp_get_num_teams())
+        for (int b = 0; b < BLOCK_SIZE; b += nt) {
+          int i = blk * BLOCK_SIZE + b + lid;
+          bool valid = (b + lid < BLOCK_SIZE) && (i < num_fluid_particles);
 
-      for (int j=0; j<num_boundary_particles; j++) {
-        double3 k_pos = boundary_particles[j].pos;
-        double3 k_n   = boundary_particles[j].n;
-        double3 tmp_a = computeBoundaryAcceleration(p_pos,k_pos,k_n,
-            params.smoothing_radius, params.speed_sound);
-        ax += tmp_a.x;
-        ay += tmp_a.y;
-        az += tmp_a.z;
+          double ax = 0.0, ay = 0.0, az = 0.0;
+          double3 p_pos;
+          if (valid) {
+            ax = fluid_particles[i].a.x;
+            ay = fluid_particles[i].a.y;
+            az = fluid_particles[i].a.z;
+            p_pos = fluid_particles[i].pos;
+          }
+
+          for (int t = 0; t < num_boundary_particles; t += BLOCK_SIZE) {
+            int tile_n = (num_boundary_particles - t < BLOCK_SIZE) ? num_boundary_particles - t : BLOCK_SIZE;
+            for (int l = lid; l < tile_n; l += nt) {
+              s_pos[l] = boundary_particles[t + l].pos;
+              s_n[l]   = boundary_particles[t + l].n;
+            }
+            #pragma omp barrier
+            if (valid) {
+              for (int k = 0; k < tile_n; k++) {
+                double3 tmp_a = computeBoundaryAcceleration(p_pos,s_pos[k],s_n[k],
+                    params.smoothing_radius, params.speed_sound);
+                ax += tmp_a.x;
+                ay += tmp_a.y;
+                az += tmp_a.z;
+              }
+            }
+            #pragma omp barrier
+          }
+
+          if (valid) {
+            fluid_particles[i].a.x = ax;
+            fluid_particles[i].a.y = ay;
+            fluid_particles[i].a.z = az;
+          }
+        }
       }
-
-      fluid_particles[i].a.x = ax;
-      fluid_particles[i].a.y = ay;
-      fluid_particles[i].a.z = az;
     }
 
     //updatePositions <<< dim3(grid1D_FP), dim3(block1D) >>> (d_fluid_particles, d_params);

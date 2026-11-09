@@ -1,8 +1,19 @@
 #ifndef SPH_
 #define SPH_
 
-#include <sycl/sycl.hpp>
-using double3 = sycl::double3;
+#ifndef NUM_FLUID_PARTICLES
+#define NUM_FLUID_PARTICLES 2048
+#endif
+
+// Three doubles. sycl::vec<double, 3> is stored as four, which pads these particles.
+struct double3 {
+    double x;
+    double y;
+    double z;
+};
+
+static_assert(sizeof(double3) == 3 * sizeof(double));
+static_assert(alignof(double3) == alignof(double));
 
 ////////////////////////////////////////////////
 // Structures
