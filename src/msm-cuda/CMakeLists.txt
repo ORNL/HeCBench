@@ -5,4 +5,6 @@ add_hecbench_benchmark(
     MODEL cuda
     SOURCES main.cu
     CATEGORIES cryptography
+    TEST_REGEX "PASS"
+    TEST_ARGS 1 12
 )

@@ -1,7 +1,8 @@
 // Host reference for the BLS12-381 G1 Pippenger MSM.
-// The affine double-and-add does not share the bucket schedule, so
-// agreement checks the windows and the group law. pippenger_cpu walks
-// the same buckets as the device, one point at a time.
+// pippenger_ref reads unsigned c-bit windows straight from the scalar
+// bits, with c independent of the device window, so it shares neither
+// the signed recoding nor the bucket schedule. The affine double-and-add
+// checks it, the group law, and the windows on a small instance.
 
 #pragma once
 
@@ -51,6 +52,8 @@ inline bool aff_equal(aff_t a, jac_t j) {
   return fp_eq(a.x, b.x) && fp_eq(a.y, b.y);
 }
 
+inline bool jac_equal(jac_t a, jac_t b) { return aff_equal(jac_to_aff(a), b); }
+
 inline void print_aff(const char* tag, aff_t a) {
   printf("%s inf=%d", tag, a.inf ? 1 : 0);
   if (!a.inf) {
@@ -87,29 +90,43 @@ inline aff_t amul(aff_t p, scalar_t k) {
   return r;
 }
 
-inline point_t jac_to_point(jac_t p) {
-  fp iz = to_mont(ninv(from_mont(p.z)));
-  fp iz2 = fmul(iz, iz);
-  point_t o;
-  o.x = fmul(p.x, iz2);
-  o.y = fmul(fmul(p.y, iz), iz2);
-  return o;
+inline bool on_curve(point_t p) {
+  fp four = to_mont(fp_from_u64(4));
+  fp y2 = fmul(p.y, p.y);
+  fp x3 = fmul(fmul(p.x, p.x), p.x);
+  return fp_eq(y2, fadd(x3, four));
 }
 
-// P_i = (i+1) * G, scalars uniform in [0, 2^255).
+// P_i = (i+1) * G, scalars uniform in [0, 2^255). The Jacobian z of
+// every point is inverted at once with Montgomery's trick.
 inline void make_instance(size_t n, uint64_t seed, point_t* points, scalar_t* scalars) {
   point_t g{to_mont(gen_x()), to_mont(gen_y())};
-  jac_t G = jfrom(g);
-  jac_t p = G;
+  std::vector<jac_t> jp(n);
+  std::vector<fp> prefix(n);
+  jac_t p = jfrom(g);
+  fp run = mont_one();
   for (size_t i = 0; i < n; i++) {
-    points[i] = jac_to_point(p);
-    p = jadd(p, G);
+    jp[i] = p;
+    prefix[i] = run;
+    run = fmul(run, p.z);
+    p = jadd_mixed(p, g);
   }
-  uint64_t x = seed ? seed : 1;
+  fp inv = to_mont(ninv(from_mont(run)));
+  for (size_t i = n; i-- > 0;) {
+    fp iz = fmul(inv, prefix[i]);
+    inv = fmul(inv, jp[i].z);
+    fp iz2 = fmul(iz, iz);
+    points[i].x = fmul(jp[i].x, iz2);
+    points[i].y = fmul(fmul(jp[i].y, iz), iz2);
+  }
+  uint64_t x = seed;
   for (size_t i = 0; i < n; i++) {
     for (int k = 0; k < 4; k++) {
-      x = x * 6364136223846793005ull + 1;
-      scalars[i].v[k] = x;
+      x += 0x9e3779b97f4a7c15ull;
+      uint64_t z = x;
+      z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ull;
+      z = (z ^ (z >> 27)) * 0x94d049bb133111ebull;
+      scalars[i].v[k] = z ^ (z >> 31);
     }
     scalars[i].v[3] &= 0x7fffffffffffffffull;
   }
@@ -124,39 +141,36 @@ inline aff_t reference_msm(const point_t* points, const scalar_t* scalars, size_
   return sum;
 }
 
-inline jac_t pippenger_cpu(const point_t* points, const scalar_t* scalars, size_t n) {
-  sched_t s = choose_sched((uint32_t)n);
-  std::vector<jac_t> buckets((size_t)s.nwins * s.nbins, jinf());
-  std::vector<int32_t> digits(s.nwins);
-  for (size_t i = 0; i < n; i++) {
-    scalar_windows(scalars[i], digits.data(), s.wbits, s.nwins);
-    for (int w = 0; w < s.nwins; w++) {
-      int dig = digits[w];
-      if (dig == 0) continue;
-      point_t p = points[i];
-      int k = dig;
-      if (k < 0) {
-        p.y = fneg(p.y);
-        k = -k;
-      }
-      size_t slot = (size_t)w * s.nbins + (size_t)k;
-      buckets[slot] = jadd(buckets[slot], jfrom(p));
+inline uint32_t scalar_bits(const scalar_t& s, int pos, int c) {
+  uint32_t d = 0;
+  for (int b = 0; b < c && pos + b < kScalarBits; b++)
+    d |= (uint32_t)((s.v[(pos + b) >> 6] >> ((pos + b) & 63)) & 1ull) << b;
+  return d;
+}
+
+inline jac_t pippenger_ref(const point_t* points, const scalar_t* scalars, size_t n) {
+  int lg = 0;
+  while (((size_t)2 << lg) <= n) lg++;
+  int c = lg - 3;
+  if (c < 4) c = 4;
+  if (c > 16) c = 16;
+  const int nwins = (kScalarBits + c - 1) / c;
+  std::vector<jac_t> buckets((size_t)1 << c);
+  jac_t r = jinf();
+  for (int w = nwins - 1; w >= 0; --w) {
+    for (int i = 0; i < c; i++) r = jdbl(r);
+    for (auto& b : buckets) b = jinf();
+    for (size_t i = 0; i < n; i++) {
+      uint32_t d = scalar_bits(scalars[i], w * c, c);
+      if (d) buckets[d] = jadd_mixed(buckets[d], points[i]);
     }
-  }
-  std::vector<jac_t> wins(s.nwins);
-  for (int w = 0; w < s.nwins; w++) {
     jac_t acc = jinf();
     jac_t sum = jinf();
-    for (int k = s.max_digit; k >= 1; --k) {
-      acc = jadd(acc, buckets[(size_t)w * s.nbins + (size_t)k]);
+    for (size_t k = buckets.size() - 1; k >= 1; --k) {
+      acc = jadd(acc, buckets[k]);
       sum = jadd(sum, acc);
     }
-    wins[w] = sum;
-  }
-  jac_t r = wins[s.nwins - 1];
-  for (int w = s.nwins - 2; w >= 0; --w) {
-    for (int i = 0; i < s.wbits; i++) r = jdbl(r);
-    r = jadd(r, wins[w]);
+    r = jadd(r, sum);
   }
   return r;
 }
@@ -214,6 +228,7 @@ inline bool msm_self_test() {
   pm1.v[0] -= 1;
   if (!fp_eq(from_mont(to_mont(pm1)), pm1)) return false;
   if (!fp_eq(from_mont(fadd(to_mont(pm1), to_mont(two))), one)) return false;
+  if (!fp_eq(nmul(pm1, pm1), one)) return false;
 
   fp a = fp_from_u64(0x123456789abcdefull);
   fp b = fp_from_u64(0xfedcba987654321ull);
@@ -230,7 +245,8 @@ inline bool msm_self_test() {
   fp x3 = nmul(nmul(gen_x(), gen_x()), gen_x());
   if (!fp_eq(y2, fadd(x3, fp_from_u64(4)))) return false;
 
-  if (choose_wbits(32) != 10 || choose_wbits(1u << 20) != 12 || choose_wbits(1u << 23) != 15)
+  if (choose_wbits(32) != 10 || choose_wbits(1u << 18) != 10 || choose_wbits(1u << 20) != 12 ||
+      choose_wbits(1u << 23) != 15)
     return false;
 
   scalar_t edges[4];
@@ -259,22 +275,30 @@ inline bool msm_self_test() {
 
   aff_t g{gen_x(), gen_y(), false};
   aff_t two_g = aadd(g, g);
+  aff_t three_g = aadd(two_g, g);
   point_t gm{to_mont(gen_x()), to_mont(gen_y())};
   jac_t J = jfrom(gm);
   if (!aff_equal(two_g, jdbl(J))) return false;
   if (!aff_equal(two_g, jadd(J, J))) return false;
+  if (!aff_equal(two_g, jadd_mixed(J, gm))) return false;
+  if (!aff_equal(three_g, jadd_mixed(jdbl(J), gm))) return false;
+  if (!aff_equal(three_g, jmul(J, 3))) return false;
   point_t neg = gm;
   neg.y = fneg(neg.y);
   if (!j_is_inf(jadd(J, jfrom(neg)))) return false;
+  if (!j_is_inf(jadd_mixed(J, neg))) return false;
 
-  const size_t n = 4;
-  point_t points[4];
-  scalar_t scalars[4];
+  const size_t n = 6;
+  point_t points[n];
+  scalar_t scalars[n];
   make_instance(n, 0x9e37, points, scalars);
+  for (size_t i = 0; i < n; i++)
+    if (!on_curve(points[i])) return false;
+  if (!aff_equal(three_g, jfrom(points[2]))) return false;
   scalars[0] = edges[0];
   scalars[1] = edges[1];
   scalars[2] = edges[2];
+  scalars[3] = edges[3];
   aff_t naive = reference_msm(points, scalars, n);
-  jac_t pip = pippenger_cpu(points, scalars, n);
-  return aff_equal(naive, pip);
+  return aff_equal(naive, pippenger_ref(points, scalars, n));
 }

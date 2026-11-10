@@ -8,15 +8,26 @@
 // The running sum 1*B[1] + 2*B[2] + ... turns bucket k into k times its
 // sum, then each window is shifted by w doublings and added to the next,
 // which is the same window fold as sppark's collect().
+// Derived from sppark (Supranational LLC), Apache-2.0.
 
 #pragma once
 
 #include <cstdint>
 
+#if defined(SYCL_LANGUAGE_VERSION)
+#include <sycl/sycl.hpp>
+#endif
+
 #if defined(__HIPCC__) || defined(__CUDACC__)
 #define MSM_HD __host__ __device__
 #else
 #define MSM_HD
+#endif
+
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__) || defined(__SYCL_DEVICE_ONLY__)
+#define MSM_NOINLINE __attribute__((noinline))
+#else
+#define MSM_NOINLINE
 #endif
 
 static constexpr int kScalarBits = 255;
@@ -45,15 +56,24 @@ struct wide_t {
 };
 
 MSM_HD inline wide_t mul64(uint64_t a, uint64_t b) {
-  uint64_t a0 = (uint32_t)a, a1 = a >> 32;
-  uint64_t b0 = (uint32_t)b, b1 = b >> 32;
-  uint64_t p0 = a0 * b0, p1 = a0 * b1, p2 = a1 * b0, p3 = a1 * b1;
-  uint64_t mid = p1 + p2;
-  uint64_t mid_c = mid < p1 ? 1ull : 0ull;
-  uint64_t lo = p0 + (mid << 32);
-  uint64_t lo_c = lo < p0 ? 1ull : 0ull;
-  uint64_t hi = p3 + (mid >> 32) + (mid_c << 32) + lo_c;
-  return wide_t{lo, hi};
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+  return wide_t{a * b, __umul64hi(a, b)};
+#elif defined(__SYCL_DEVICE_ONLY__)
+  return wide_t{a * b, sycl::mul_hi(a, b)};
+#else
+  unsigned __int128 p = (unsigned __int128)a * b;
+  return wide_t{(uint64_t)p, (uint64_t)(p >> 64)};
+#endif
+}
+
+// a * b + c + d, which always fits in two words.
+MSM_HD inline uint64_t mac(uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t& hi) {
+  wide_t p = mul64(a, b);
+  uint64_t lo = p.lo + c;
+  uint64_t h = p.hi + (lo < c ? 1ull : 0ull);
+  uint64_t r = lo + d;
+  hi = h + (r < d ? 1ull : 0ull);
+  return r;
 }
 
 MSM_HD inline wide_t add3(uint64_t a, uint64_t b, uint64_t c) {
@@ -153,54 +173,23 @@ MSM_HD inline fp fneg(fp a) {
 }
 
 // CIOS Montgomery multiply. Inputs and output are in Montgomery form
-// and reduced mod p. A 64x64 product plus the running carry needs two
-// words; one uint64 drops the top bit.
-MSM_HD inline fp fmul(fp a, fp b) {
-  uint64_t t[8];
-  for (int k = 0; k < 8; k++) t[k] = 0;
+// and reduced mod p. The top limb of p is below 2^62, so the running
+// value fits in six words and the result is below 2p.
+MSM_HD inline MSM_NOINLINE fp fmul(fp a, fp b) {
+  fp t = fp_zero();
   for (int i = 0; i < 6; i++) {
-    uint64_t c0 = 0, c1 = 0;
-    for (int j = 0; j < 6; j++) {
-      wide_t p = mul64(a.v[j], b.v[i]);
-      wide_t s = add3(t[j], p.lo, c0);
-      t[j] = s.lo;
-      wide_t h = add3(c1, p.hi, s.hi);
-      c0 = h.lo;
-      c1 = h.hi;
+    uint64_t A, C;
+    t.v[0] = mac(a.v[0], b.v[i], t.v[0], 0, A);
+    uint64_t m = t.v[0] * kN0;
+    mac(m, prime_limb(0), t.v[0], 0, C);
+    for (int j = 1; j < 6; j++) {
+      t.v[j] = mac(a.v[j], b.v[i], t.v[j], A, A);
+      t.v[j - 1] = mac(m, prime_limb(j), t.v[j], C, C);
     }
-    // Add onto the limb carried in from the previous CIOS iteration.
-    wide_t u0 = add3(t[6], c0, 0);
-    wide_t v0 = add3(t[7], c1, u0.hi);
-    t[6] = u0.lo;
-    t[7] = v0.lo;
-
-    uint64_t m = t[0] * kN0;
-    c0 = 0;
-    c1 = 0;
-    for (int j = 0; j < 6; j++) {
-      wide_t p = mul64(m, prime_limb(j));
-      wide_t s = add3(t[j], p.lo, c0);
-      t[j] = s.lo;
-      wide_t h = add3(c1, p.hi, s.hi);
-      c0 = h.lo;
-      c1 = h.hi;
-    }
-    wide_t u = add3(t[6], c0, 0);
-    wide_t v = add3(t[7], c1, u.hi);
-    t[6] = u.lo;
-    t[7] = v.lo;
-
-    for (int j = 0; j < 7; j++) t[j] = t[j + 1];
-    t[7] = 0;
+    t.v[5] = C + A;
   }
-  fp r;
-  for (int i = 0; i < 6; i++) r.v[i] = t[i];
-  uint64_t extra = t[6];
-  for (int k = 0; k < 3 && (extra || fp_ge_p(r)); k++) {
-    uint64_t br = fp_sub_p(r);
-    if (br) extra--;
-  }
-  return r;
+  if (fp_ge_p(t)) fp_sub_p(t);
+  return t;
 }
 
 MSM_HD inline fp fp_load(const uint64_t src[6]) {
@@ -402,4 +391,47 @@ MSM_HD inline jac_t jadd(jac_t p, jac_t q) {
   o.y = Y3;
   o.z = Z3;
   return o;
+}
+
+// Jacobian plus affine (madd-2007-bl).
+MSM_HD inline jac_t jadd_mixed(jac_t p, point_t q) {
+  if (j_is_inf(p)) return jfrom(q);
+  fp Z1Z1 = fmul(p.z, p.z);
+  fp U2 = fmul(q.x, Z1Z1);
+  fp S2 = fmul(fmul(q.y, p.z), Z1Z1);
+  fp H = fsub(U2, p.x);
+  fp r = fadd(fsub(S2, p.y), fsub(S2, p.y));
+  if (fp_is0(H)) return fp_is0(r) ? jdbl(p) : jinf();
+  fp HH = fmul(H, H);
+  fp I = fadd(HH, HH);
+  I = fadd(I, I);
+  fp J = fmul(H, I);
+  fp V = fmul(p.x, I);
+  fp X3 = fsub(fmul(r, r), fadd(J, fadd(V, V)));
+  fp Y3 = fsub(fmul(r, fsub(V, X3)), fmul(fadd(p.y, p.y), J));
+  fp zh = fadd(p.z, H);
+  fp Z3 = fsub(fmul(zh, zh), fadd(Z1Z1, HH));
+  jac_t o;
+  o.x = X3;
+  o.y = Y3;
+  o.z = Z3;
+  return o;
+}
+
+MSM_HD inline jac_t jmul(jac_t p, uint32_t k) {
+  jac_t r = jinf();
+  for (int b = 31; b >= 0; --b) {
+    r = jdbl(r);
+    if ((k >> b) & 1u) r = jadd(r, p);
+  }
+  return r;
+}
+
+MSM_HD inline jac_t fold_windows(const jac_t* wins, int nwins, int wbits) {
+  jac_t r = wins[nwins - 1];
+  for (int w = nwins - 2; w >= 0; --w) {
+    for (int i = 0; i < wbits; i++) r = jdbl(r);
+    r = jadd(r, wins[w]);
+  }
+  return r;
 }
