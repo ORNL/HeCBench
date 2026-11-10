@@ -65,7 +65,7 @@ Each benchmark falls into a single category. While such classification is not ac
     affine, aobench, asmooth, background-subtract, bezier-surface, bilateral, bm3d, boxfilter, cbsfil, car, ced, colorwheel, convolution1D, convolution3D, convolutionDeformable, convolutionSeparable, dct8x8, debayer, depixel, degrid, distort, doh, dpid, dwt2d, egs, face, flame, gabor, gamma-correction, groupnorm, gsplat3d, hogbom, mandelbrot, marchingCubes, match, medianfilter, morphology, mriQ, ne, nms, opticalFlow, perlin, score, sobel, tonemapping, recursiveGaussian, resize, sad, seam-carving, spm, srad, ssim, stencil1d, stencil3d, surfel, tgvnn, upsample, voxelization, zoom
     
 ### Cryptography
-    aes, bitcracker, bitpermute, chacha20, columnarSolver, ecdh, keccaktreehash, merkle, present
+    aes, bitcracker, bitpermute, chacha20, columnarSolver, ecdh, keccaktreehash, merkle, msm, present
 
 ### Data compression and reduction
     atomicAggregate, atomicCAS, atomicCost, atomicIntrinsics, atomicPerf, atomicReduction, atomicSystemWide, bitpacking, bscan, bwt, compute-score, contract, dxtc2, f16atomic, filter, fma, fpc, fpdc, histogram, lzss, minmax, mpc, mtf, quantAQLM, quantBnB, quantVLLM, rle, sc, scan, scan2, scan3, scatter, scatterAdd, scatterThrust, segment-reduce, segment-reduce2
@@ -1252,6 +1252,9 @@ Early results are shown [here](results/README.md)
 
 ### mrg32k3a (cuda)
   Uniform mrg32k3a pseudorandom number generation using Host API (https://github.com/NVIDIA/CUDALibrarySamples/)
+
+### msm (cuda)
+  Pippenger multi-scalar multiplication on BLS12-381 G1 (https://github.com/supranational/sppark)
 
 ### mt (opencl)
   Mersenne Twister (http://developer.download.nvidia.com/compute/cuda/3_0/sdk/website/OpenCL/website/samples.html)
