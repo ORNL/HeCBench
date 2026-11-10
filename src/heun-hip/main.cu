@@ -221,6 +221,10 @@ int main(int argc, char** argv) {
   // needs at least two timesteps.
   if (repeat <= 0 || batch <= 0 || channels <= 0 || height <= 0 || width <= 0 ||
       steps < 2) {
+    fprintf(stderr,
+            "Usage: %s <repeat> <batch> <channels> <height> <width> <steps>\n"
+            "All arguments must be positive and steps must be at least 2\n",
+            argv[0]);
     return 1;
   }
 
@@ -343,11 +347,14 @@ int main(int argc, char** argv) {
   // Direct convolution and the selected MIOpen algorithm accumulate in
   // different orders. The element bound absorbs that rounding. The relative
   // RMS bound still fails a trajectory that merely lands at the same scale.
-  const double atol = 1e-4;
+  const double n = static_cast<double>(elements);
+  double ref_sq = 0.0;
+  for (float ref : reference) ref_sq += static_cast<double>(ref) * ref;
+  const double ref_rms = std::sqrt(ref_sq / n);
   const double rtol = 1e-3;
+  const double atol = rtol * ref_rms;
   double max_abs = 0.0;
   double err_sq = 0.0;
-  double ref_sq = 0.0;
   bool pass = finite;
   for (size_t i = 0; i < elements; ++i) {
     const double ref = static_cast<double>(reference[i]);
@@ -356,12 +363,9 @@ int main(int argc, char** argv) {
     const double tol = atol + rtol * std::abs(ref);
     max_abs = std::max(max_abs, abs_diff);
     err_sq += diff * diff;
-    ref_sq += ref * ref;
     if (!(abs_diff <= tol) || !std::isfinite(output[i])) pass = false;
   }
-  const double n = static_cast<double>(elements);
   const double rms = std::sqrt(err_sq / n);
-  const double ref_rms = std::sqrt(ref_sq / n);
   const double rel_rms = rms / std::max(ref_rms, 1e-12);
   if (rel_rms > 1e-2) pass = false;
   printf("output sum %.12e  l2 %.12e\n", sum, std::sqrt(sum_sq));

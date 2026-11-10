@@ -5,7 +5,7 @@ add_hecbench_benchmark(
     MODEL hip
     SOURCES main.cu
     CATEGORIES ml
-    LINK_LIBRARIES -lMIOpen
+    LINK_LIBRARIES -lMIOpen -pthread
     TEST_REGEX "PASS"
     TEST_ARGS 1 1 4 8 8 4
 )

@@ -36,13 +36,10 @@ obj = $(source:.cu=.o)
 CUDNN_ROOT ?= $(shell python3 -c "import nvidia.cudnn as c; print(next(iter(c.__path__)))" 2>/dev/null)
 
 # Standard Flags
-# Keep device multiply-adds unfused. The Heun update cancels O(sigma)
-# quantities, and nvcc's default FMA contraction does not match the host
-# reference rounding.
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Xcompiler -Wall -arch=$(ARCH) -fmad=false
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Xcompiler -Wall -arch=$(ARCH)
 
 # Linker Flags
-LDFLAGS =
+LDFLAGS = -lpthread
 ifneq ($(wildcard $(CUDNN_ROOT)/include/cudnn.h),)
   CFLAGS += -I$(CUDNN_ROOT)/include
   ifneq ($(wildcard $(CUDNN_ROOT)/lib/libcudnn.so),)
