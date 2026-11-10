@@ -13,6 +13,7 @@ set(HECBENCH_POC_BENCHMARKS
     softmax
     attention
     # Batch 1: A-F alphabetically (15 benchmarks)
+    abacus
     accuracy
     ace
     adam
