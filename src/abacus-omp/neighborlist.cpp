@@ -3,8 +3,6 @@
 #include "kernels.h"
 #include "reference.h"
 
-#include <omp.h>
-
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -12,12 +10,6 @@
 
 struct Particle {
     double x, y, z;
-};
-
-struct NeighborTask {
-    int slot_begin;
-    int slot_end;
-    int cell;
 };
 
 #pragma omp declare target
@@ -67,7 +59,7 @@ static void fill_cells(const Particle* positions, int particle_count,
 }
 
 // Cell-list order. Built once, outside the timed region, so the optimized
-// kernels stream neighbor positions instead of gathering them.
+// kernel streams neighbor positions instead of gathering them.
 static void pack_cell_positions(const Particle* positions, const int* cell_particles,
                                 int particle_count, Particle* cell_positions)
 {
@@ -113,102 +105,17 @@ static void count_neighbors(const Particle* positions, int particle_count,
     }
 }
 
-// Same counts as count_neighbors. Each team stages a neighbor cell once.
-// A short team still covers the task: every thread executes the same number
-// of rounds, and only scalars are private.
-static void count_neighbors_optimized(const NeighborTask* tasks, int task_count,
-                                      const Particle* cell_positions, int cells_per_axis,
-                                      double cutoff_squared, const int* offsets,
-                                      const int* cell_particles, int* neighbor_counts)
+// Same counts as count_neighbors. One thread per packed slot walks the packed
+// positions of the 27 neighboring cells.
+static void count_neighbors_optimized(const Particle* cell_positions, int particle_count,
+                                      int cells_per_axis, double cutoff_squared,
+                                      const int* offsets, const int* cell_particles,
+                                      int* neighbor_counts)
 {
-    if (task_count <= 0) return;
-    #pragma omp target teams distribute \
-        is_device_ptr(tasks, cell_positions, offsets, cell_particles, neighbor_counts) \
-        thread_limit(kNeighborBlock)
-    for (int task_index = 0; task_index < task_count; ++task_index) {
-        Particle tile[kNeighborBlock];
-        int tile_ids[kNeighborBlock];
-        const NeighborTask task = tasks[task_index];
-        const int plane = cells_per_axis * cells_per_axis;
-        const int x = task.cell / plane;
-        const int remainder = task.cell - x * plane;
-        const int y = remainder / cells_per_axis;
-        const int z = remainder - y * cells_per_axis;
-
-        #pragma omp parallel num_threads(kNeighborBlock) shared(tile, tile_ids)
-        {
-            const int thread = omp_get_thread_num();
-            const int threads = omp_get_num_threads() > 0 ? omp_get_num_threads() : 1;
-            const int span = task.slot_end - task.slot_begin;
-            const int rounds = (span + threads - 1) / threads;
-            int step = threads;
-            if (step > kNeighborBlock) step = kNeighborBlock;
-            for (int round = 0; round < rounds; ++round) {
-                const int local = round * threads + thread;
-                const bool active = local < span;
-                int particle = 0;
-                Particle center{0.0, 0.0, 0.0};
-                int count = 0;
-                if (active) {
-                    const int home_slot = task.slot_begin + local;
-                    particle = cell_particles[home_slot];
-                    center = cell_positions[home_slot];
-                }
-
-                for (int stencil = 0; stencil < 27; ++stencil) {
-                    const int dx = stencil / 9 - 1;
-                    const int dy = (stencil / 3) % 3 - 1;
-                    const int dz = stencil % 3 - 1;
-                    const int nx = x + dx;
-                    const int ny = y + dy;
-                    const int nz = z + dz;
-                    int begin = 0;
-                    int end = 0;
-                    if (nx >= 0 && nx < cells_per_axis && ny >= 0 &&
-                        ny < cells_per_axis && nz >= 0 && nz < cells_per_axis) {
-                        const int neighbor =
-                            (nx * cells_per_axis + ny) * cells_per_axis + nz;
-                        begin = offsets[neighbor];
-                        end = offsets[neighbor + 1];
-                    }
-                    for (int tile_base = begin; tile_base < end; tile_base += step) {
-                        const int remaining = end - tile_base;
-                        const int tile_count = remaining < step ? remaining : step;
-                        if (thread < tile_count) {
-                            tile_ids[thread] = cell_particles[tile_base + thread];
-                            tile[thread] = cell_positions[tile_base + thread];
-                        }
-                        #pragma omp barrier
-                        if (active) {
-                            for (int i = 0; i < tile_count; ++i) {
-                                if (tile_ids[i] == particle) continue;
-                                const double rx = center.x - tile[i].x;
-                                const double ry = center.y - tile[i].y;
-                                const double rz = center.z - tile[i].z;
-                                count += rx * rx + ry * ry + rz * rz <= cutoff_squared;
-                            }
-                        }
-                        #pragma omp barrier
-                    }
-                }
-                if (active) neighbor_counts[particle] = count;
-            }
-        }
-    }
-}
-
-// Same counts, for cells too small to reuse a staged tile.
-static void count_neighbors_streamed(const int* home_slots, int home_count,
-                                     const Particle* cell_positions, int cells_per_axis,
-                                     double cutoff_squared, const int* offsets,
-                                     const int* cell_particles, int* neighbor_counts)
-{
-    if (home_count <= 0) return;
     #pragma omp target teams distribute parallel for \
-        is_device_ptr(home_slots, cell_positions, offsets, cell_particles, neighbor_counts) \
+        is_device_ptr(cell_positions, offsets, cell_particles, neighbor_counts) \
         thread_limit(256)
-    for (int index = 0; index < home_count; ++index) {
-        const int home_slot = home_slots[index];
+    for (int home_slot = 0; home_slot < particle_count; ++home_slot) {
         const int particle = cell_particles[home_slot];
         const Particle center = cell_positions[home_slot];
         const int x = cell_axis(center.x, cells_per_axis);
@@ -273,8 +180,6 @@ int run_neighborlist(int particle_count, double cutoff, long long iterations)
     std::vector<Particle> host_cell_positions(particle_count);
     std::vector<int> host_baseline(particle_count, 0);
     std::vector<int> host_optimized(particle_count, 0);
-    std::vector<NeighborTask> host_task_storage(particle_count);
-    std::vector<int> host_slot_storage(particle_count);
     Particle* positions = host_positions.data();
     Particle* cell_positions = host_cell_positions.data();
     int* cell_counts = host_counts.data();
@@ -283,16 +188,13 @@ int run_neighborlist(int particle_count, double cutoff, long long iterations)
     int* cell_particles = host_particles.data();
     int* baseline_counts = host_baseline.data();
     int* optimized_counts = host_optimized.data();
-    NeighborTask* tasks = host_task_storage.data();
-    int* home_slots = host_slot_storage.data();
 
     #pragma omp target enter data \
         map(to: positions[0:particle_count], cell_counts[0:cell_count]) \
         map(alloc: cell_positions[0:particle_count], \
                    offsets[0:offset_count], cell_cursor[0:cell_count], \
                    cell_particles[0:particle_count], baseline_counts[0:particle_count], \
-                   optimized_counts[0:particle_count], tasks[0:particle_count], \
-                   home_slots[0:particle_count])
+                   optimized_counts[0:particle_count])
 
     #pragma omp target data use_device_ptr(positions, cell_counts)
     {
@@ -303,32 +205,7 @@ int run_neighborlist(int particle_count, double cutoff, long long iterations)
         host_offsets[cell + 1] = host_offsets[cell] + host_counts[cell];
     for (int cell = 0; cell < cell_count; ++cell)
         host_cursor[cell] = host_offsets[cell];
-    int shared_count = 0;
-    int streamed_count = 0;
-    for (int cell = 0; cell < cell_count; ++cell) {
-        const int begin = host_offsets[cell];
-        const int end = host_offsets[cell + 1];
-        if (end - begin >= kNeighborSharedMin) {
-            for (int slot = begin; slot < end; slot += kNeighborBlock) {
-                const int slot_end = slot + kNeighborBlock < end ? slot + kNeighborBlock : end;
-                if (slot_end - slot >= kNeighborSharedMin)
-                    host_task_storage[shared_count++] = NeighborTask{slot, slot_end, cell};
-                else
-                    for (int home = slot; home < slot_end; ++home)
-                        host_slot_storage[streamed_count++] = home;
-            }
-        } else {
-            for (int home = begin; home < end; ++home)
-                host_slot_storage[streamed_count++] = home;
-        }
-    }
     #pragma omp target update to(offsets[0:offset_count], cell_cursor[0:cell_count])
-    if (shared_count > 0) {
-        #pragma omp target update to(tasks[0:shared_count])
-    }
-    if (streamed_count > 0) {
-        #pragma omp target update to(home_slots[0:streamed_count])
-    }
 
     const double cutoff_squared = cutoff * cutoff;
     bool reference_ok = false;
@@ -337,18 +214,15 @@ int run_neighborlist(int particle_count, double cutoff, long long iterations)
     unsigned long long mismatches = 0;
     #pragma omp target data \
         use_device_ptr(positions, cell_positions, offsets, cell_cursor, \
-                       cell_particles, baseline_counts, optimized_counts, tasks, \
-                       home_slots)
+                       cell_particles, baseline_counts, optimized_counts)
     {
         fill_cells(positions, particle_count, cells_per_axis, cell_cursor, cell_particles);
         pack_cell_positions(positions, cell_particles, particle_count, cell_positions);
         // Untimed launches fill the buffers compared with the host reference.
         count_neighbors(positions, particle_count, cells_per_axis, cutoff_squared,
                         offsets, cell_particles, baseline_counts);
-        count_neighbors_optimized(tasks, shared_count, cell_positions, cells_per_axis,
+        count_neighbors_optimized(cell_positions, particle_count, cells_per_axis,
                                   cutoff_squared, offsets, cell_particles, optimized_counts);
-        count_neighbors_streamed(home_slots, streamed_count, cell_positions, cells_per_axis,
-                                 cutoff_squared, offsets, cell_particles, optimized_counts);
     }
     #pragma omp target update from(baseline_counts[0:particle_count], \
                                    optimized_counts[0:particle_count])
@@ -362,7 +236,7 @@ int run_neighborlist(int particle_count, double cutoff, long long iterations)
     if (reference_ok) {
         #pragma omp target data \
             use_device_ptr(positions, cell_positions, offsets, cell_particles, \
-                           baseline_counts, optimized_counts, tasks, home_slots)
+                           baseline_counts, optimized_counts)
         {
             const auto baseline_start = std::chrono::steady_clock::now();
             for (long long i = 0; i < iterations; ++i)
@@ -372,14 +246,10 @@ int run_neighborlist(int particle_count, double cutoff, long long iterations)
                 std::chrono::steady_clock::now() - baseline_start).count();
 
             const auto optimized_start = std::chrono::steady_clock::now();
-            for (long long i = 0; i < iterations; ++i) {
-                count_neighbors_optimized(tasks, shared_count, cell_positions, cells_per_axis,
+            for (long long i = 0; i < iterations; ++i)
+                count_neighbors_optimized(cell_positions, particle_count, cells_per_axis,
                                           cutoff_squared, offsets, cell_particles,
                                           optimized_counts);
-                count_neighbors_streamed(home_slots, streamed_count, cell_positions,
-                                         cells_per_axis, cutoff_squared, offsets,
-                                         cell_particles, optimized_counts);
-            }
             optimized_milliseconds = std::chrono::duration<double, std::milli>(
                 std::chrono::steady_clock::now() - optimized_start).count();
 
@@ -392,8 +262,7 @@ int run_neighborlist(int particle_count, double cutoff, long long iterations)
                      cell_counts[0:cell_count], offsets[0:offset_count], \
                      cell_cursor[0:cell_count], cell_particles[0:particle_count], \
                      baseline_counts[0:particle_count], \
-                     optimized_counts[0:particle_count], tasks[0:particle_count], \
-                     home_slots[0:particle_count])
+                     optimized_counts[0:particle_count])
 
     if (!reference_ok) {
         std::printf("ABACUS NEIGHBORLIST: FAIL  particles=%d cells=%d "

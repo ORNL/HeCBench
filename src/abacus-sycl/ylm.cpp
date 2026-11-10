@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+// Baseline spherical_harmonics derived from ABACUS cal_ylm_real (LGPL-3.0), commit 2d1da70.
 
 #include <chrono>
 #include <new>

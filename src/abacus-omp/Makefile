@@ -19,7 +19,7 @@ ITERS ?= 100
 
 program = main
 
-source = main.cpp ylm.cpp neighborlist.cpp reference.cpp
+source = ../abacus-cuda/main.cpp ylm.cpp neighborlist.cpp ../abacus-cuda/reference.cpp
 
 obj = main.o ylm.o neighborlist.o reference.o
 

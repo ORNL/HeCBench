@@ -1,10 +1,9 @@
 # ABACUS kernels
 
 One benchmark runs ABACUS spherical harmonics and neighbor counting in a
-single process. The implementations are independent BSD-3-Clause translations
-of the algorithms in ABACUS (`develop` commit
-`2d1da7056f74da36c7a3539d3416522e9da6e073`). ABACUS is LGPL-3.0-or-later. No
-ABACUS source is included here.
+single process. The baseline `spherical_harmonics` kernels are derived from
+ABACUS (LGPL-3.0), commit `2d1da7056f74da36c7a3539d3416522e9da6e073`
+(`2d1da70`). The other kernels implement the algorithms in that commit.
 
 ```sh
 ./abacus [iterations]
