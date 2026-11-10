@@ -71,7 +71,9 @@ endif
 
 all: $(program)
 
-deps:
+deps: external/.stamp
+
+external/.stamp:
 	mkdir -p external
 	test -d external/cxxopts || git clone --depth 1 --branch v3.3.1 https://github.com/jarro2783/cxxopts.git external/cxxopts
 	test -d external/fmt || git clone --depth 1 --branch 7.1.2 https://github.com/fmtlib/fmt.git external/fmt
@@ -79,11 +81,12 @@ deps:
 	git -C external/zipf checkout 6ae38ecf5dbeb1150b80ecf051cb43cb88ba697a
 	test -d external/progressbar || git clone https://github.com/prakhar1989/progress-cpp.git external/progressbar
 	git -C external/progressbar checkout 7bfba0d22d19c41323aa35541618b6ebec9d737c
+	touch $@
 
-$(program): deps $(source)
+$(program): $(source) | external/.stamp
 	$(CC) $(CFLAGS) $(source) -o $@ $(LDFLAGS)
 
-generate_dataset: deps src/generate_dataset.cpp
+generate_dataset: src/generate_dataset.cpp | external/.stamp
 	$(CC) -std=c++17 -O3 -DFMT_HEADER_ONLY -Iinclude -I$(CXXOPTS_INC) -I$(FMT_INC) -I$(ZIPF_INC) -I$(PROGRESS_INC) src/generate_dataset.cpp -o $@
 
 DATASET = out_asc_uniform_1000_1000_100.bin \
