@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME floydwarshall
     MODEL hip
     SOURCES main.cu
-    CATEGORIES cryptography graph
+    CATEGORIES graph
 )

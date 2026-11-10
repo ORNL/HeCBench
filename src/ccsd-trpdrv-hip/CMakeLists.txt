@@ -6,5 +6,5 @@ add_hecbench_benchmark(
     NAME ccsd-trpdrv
     MODEL hip
     SOURCES ccsd_tengy.cu ${INC_DIR}/ccsd_trpdrv.cu  ${INC_DIR}/main.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME bonds
     MODEL omp
     SOURCES bondsEngine.cpp
-    CATEGORIES algorithms
+    CATEGORIES finance
     INCLUDE_DIRS ${INC_DIR}
 )

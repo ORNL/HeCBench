@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME mcmd
     MODEL omp
     SOURCES force_kernel.cpp ${INC_DIR}/main.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
     COMPILE_OPTIONS -D_MWAITXINTRIN_H_INCLUDED -D_FORCE_INLINES -D__STRICT_ANSI__ -DGPU
 )

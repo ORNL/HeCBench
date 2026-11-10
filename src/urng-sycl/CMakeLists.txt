@@ -8,6 +8,6 @@ add_hecbench_benchmark(
     NAME urng
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES rng
     INCLUDE_DIRS ${SDK_DIR}
 )

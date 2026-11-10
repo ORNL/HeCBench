@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME aobench
     MODEL cuda
     SOURCES ao.cu
-    CATEGORIES algorithms
+    CATEGORIES imaging
     COMPILE_OPTIONS -use_fast_math
 )

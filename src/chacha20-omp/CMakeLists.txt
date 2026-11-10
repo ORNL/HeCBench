@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME chacha20
     MODEL omp
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES cryptography
 )

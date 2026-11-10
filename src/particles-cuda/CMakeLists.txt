@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME particles
     MODEL cuda
     SOURCES bitonicSort.cu main.cu particles.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

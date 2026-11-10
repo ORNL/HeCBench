@@ -7,5 +7,5 @@ add_hecbench_benchmark(
     MODEL omp
     SOURCES wc.cpp ${INC_DIR}/main.cpp
     INCLUDE_DIRS ${INC_DIR}
-    CATEGORIES algorithms
+    CATEGORIES language
 )

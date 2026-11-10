@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME dwt2d
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms imaging
+    CATEGORIES imaging
 )

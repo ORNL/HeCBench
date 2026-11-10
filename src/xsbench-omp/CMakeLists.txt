@@ -11,7 +11,7 @@ add_hecbench_benchmark(
             ${INC_DIR}/GridInit.cu
             ${INC_DIR}/Materials.cu
             ${INC_DIR}/XSutils.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )
 
 set_source_files_properties(${INC_DIR}/Main.cu       PROPERTIES LANGUAGE CXX)

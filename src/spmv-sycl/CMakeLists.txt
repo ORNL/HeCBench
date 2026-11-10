@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME spmv
     MODEL sycl
     SOURCES kernels.cpp ${INC_DIR}/utils.cpp ${INC_DIR}/main.cpp  
-    CATEGORIES algorithms
+    CATEGORIES math
     LINK_LIBRARIES -qmkl=parallel
 )

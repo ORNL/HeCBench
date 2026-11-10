@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME nw
     MODEL omp
     SOURCES nw.cpp
-    CATEGORIES algorithms
+    CATEGORIES bioinformatics
 )

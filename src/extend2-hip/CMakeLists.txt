@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME extend2
     MODEL hip
     SOURCES main.cu ${INC_DIR}/read_data.cpp
-    CATEGORIES algorithms
+    CATEGORIES bioinformatics
     INCLUDE_DIRS ${INC_DIR}
 )

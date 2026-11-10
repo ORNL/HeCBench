@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME crc64
     MODEL cuda
     SOURCES CRC64.cu CRC64Test.cu
-    CATEGORIES algorithms
+    CATEGORIES encoding
 )

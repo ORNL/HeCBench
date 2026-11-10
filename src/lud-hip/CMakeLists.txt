@@ -7,5 +7,5 @@ add_hecbench_benchmark(
     MODEL hip
     SOURCES lud.cu ${INC_DIR}/common.cpp
     INCLUDE_DIRS ${INC_DIR}
-    CATEGORIES algorithms
+    CATEGORIES math
 )

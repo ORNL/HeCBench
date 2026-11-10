@@ -6,5 +6,5 @@ add_hecbench_benchmark(
     NAME cm
     MODEL sycl
     SOURCES main.cpp process.cpp ${INC_DIR}/io.cpp
-    CATEGORIES algorithms
+    CATEGORIES bioinformatics
 )

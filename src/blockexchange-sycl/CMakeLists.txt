@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME blockexchange
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES language
     INCLUDE_DIRS ${INC_DIR}
 )

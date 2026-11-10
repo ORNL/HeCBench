@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME bitcracker
     MODEL sycl
     SOURCES attack.cpp main.cpp ${INC_DIR}/utils.cpp w_blocks.cpp
-    CATEGORIES algorithms
+    CATEGORIES cryptography
     COMPILE_OPTIONS -ffast-math
 )

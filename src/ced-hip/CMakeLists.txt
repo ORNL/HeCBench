@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME ced
     MODEL hip
     SOURCES kernel_reference.cu main.cu
-    CATEGORIES algorithms
+    CATEGORIES imaging
     LINK_LIBRARIES pthread
 )

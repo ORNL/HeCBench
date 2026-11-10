@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME projectile
     MODEL cuda
     SOURCES Projectile.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

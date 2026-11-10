@@ -25,5 +25,5 @@ add_hecbench_benchmark(
                     -DMINIFE_KERNELS=0
     INCLUDE_DIRS src utils fem
     ENABLE_FASTMATH true
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

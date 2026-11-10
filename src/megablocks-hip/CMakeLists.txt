@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME megablocks
     MODEL hip
     SOURCES main.cu
-    CATEGORIES math
+    CATEGORIES ml
     LINK_LIBRARIES hipblas hipblaslt
 )

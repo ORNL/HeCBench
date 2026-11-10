@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME reverse2D
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES math
 )

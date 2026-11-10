@@ -7,6 +7,6 @@ add_hecbench_benchmark(
 	    kernel/kernel_wrapper.c
 	    util/file/file.c
 	    util/num/num.c
-    CATEGORIES algorithms
+    CATEGORIES simulation
     C_AS_CXX
 )

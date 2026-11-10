@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME winograd
     MODEL omp
     SOURCES main.cpp utils.cpp
-    CATEGORIES algorithms
+    CATEGORIES ml
 )

@@ -42,7 +42,7 @@ add_hecbench_benchmark(
             avilib.c
             misc_math.c
     INCLUDE_DIRS meschach_lib
-    CATEGORIES algorithms
+    CATEGORIES math
     LINK_LIBRARIES meschach_omp 
     C_AS_CXX
 )

@@ -7,5 +7,5 @@ add_hecbench_benchmark(
     MODEL sycl
     SOURCES kernels.cpp main.cpp
             ${INC_DIR}/parse.cpp ${INC_DIR}/sequential.cpp ${INC_DIR}/util.cpp
-    CATEGORIES algorithms
+    CATEGORIES graph
 )

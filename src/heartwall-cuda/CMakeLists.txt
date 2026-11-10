@@ -8,6 +8,6 @@ add_hecbench_benchmark(
     NAME heartwall
     MODEL cuda
     SOURCES main.cu kernel/kernel.cu util/avi/avilib.c util/avi/avimod.c util/file/file.c
-    CATEGORIES algorithms
+    CATEGORIES simulation
     INCLUDE_DIRS  ${INC_DIR}/avi ${INC_DIR}/file
 )

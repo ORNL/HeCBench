@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME sssp
     MODEL cuda
     SOURCES kernel.cu main.cu
-    CATEGORIES algorithms
+    CATEGORIES graph
     LINK_LIBRARIES pthread
 )

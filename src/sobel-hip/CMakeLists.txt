@@ -7,5 +7,5 @@ add_hecbench_benchmark(
     MODEL hip
     SOURCES main.cu reference.cu
     INCLUDE_DIRS ${SDK_DIR}
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

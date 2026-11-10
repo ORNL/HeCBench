@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME p2p
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES bandwidth
 )

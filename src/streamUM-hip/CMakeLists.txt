@@ -4,7 +4,7 @@ add_hecbench_benchmark(
     NAME streamUM
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES language
     COMPILE_OPTIONS -fopenmp 
     LINK_LIBRARIES hipblas -fopenmp
 )

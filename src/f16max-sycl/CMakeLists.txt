@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME f16max
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES math
 )

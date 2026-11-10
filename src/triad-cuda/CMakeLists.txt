@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME triad
     MODEL cuda
     SOURCES Option.cpp OptionParser.cpp Timer.cpp main.cpp triad.cu
-    CATEGORIES algorithms
+    CATEGORIES bandwidth
 )

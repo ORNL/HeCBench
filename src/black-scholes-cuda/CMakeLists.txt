@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME black-scholes
     MODEL cuda
     SOURCES blackScholesAnalyticEngine.cu
-    CATEGORIES algorithms
+    CATEGORIES finance
 )

@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME pad
     MODEL hip
     SOURCES main.cu kernel.cu ${INC_DIR}/host_task.cpp
-    CATEGORIES algorithms
+    CATEGORIES language
     LINK_LIBRARIES pthread
 )

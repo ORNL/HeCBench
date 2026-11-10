@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME chi2
     MODEL cuda
     SOURCES chi2.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

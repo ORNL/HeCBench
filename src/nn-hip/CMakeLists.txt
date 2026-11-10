@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME nn
     MODEL hip
     SOURCES nearestNeighbor.cu utils.cu
-    CATEGORIES algorithms
+    CATEGORIES ml
 )

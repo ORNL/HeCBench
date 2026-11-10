@@ -7,6 +7,6 @@ add_hecbench_benchmark(
     NAME wenofv
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
     COMPILE_OPTIONS -fmad=false -Xcompiler=-ffp-contract=off
 )

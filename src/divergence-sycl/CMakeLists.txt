@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME divergence
     MODEL sycl
     SOURCES divergence.cpp
-    CATEGORIES algorithms
+    CATEGORIES math
 )

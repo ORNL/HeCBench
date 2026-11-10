@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME qkv
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES ml
     LINK_LIBRARIES cublas cublasLt
 )

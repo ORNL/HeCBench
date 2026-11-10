@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME distort
     MODEL cuda
     SOURCES distort.cu main.cu
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

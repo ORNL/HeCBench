@@ -9,5 +9,5 @@ add_hecbench_benchmark(
             ${INC_DIR}/main.cpp
             ${INC_DIR}/reference.cpp
             ${INC_DIR}/timer.cpp
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

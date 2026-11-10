@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME urng
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES rng
     INCLUDE_DIRS ${SDK_DIR}
 )

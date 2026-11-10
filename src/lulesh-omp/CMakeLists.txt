@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME lulesh
     MODEL omp
     SOURCES lulesh-init.cc lulesh-util.cc lulesh-viz.cc lulesh.cc
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME kmc
     MODEL hip
     SOURCES main.cu ${INC_DIR}/svm.cpp
-    CATEGORIES algorithms
+    CATEGORIES ml
     LINK_LIBRARIES hipblas
 )

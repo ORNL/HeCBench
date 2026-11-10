@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME haccmk
     MODEL omp
     SOURCES haccmk.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

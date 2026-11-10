@@ -7,5 +7,5 @@ add_hecbench_benchmark(
     MODEL cuda
     SOURCES main.cu
     INCLUDE_DIRS ${INC_DIR}
-    CATEGORIES algorithms
+    CATEGORIES ml
 )

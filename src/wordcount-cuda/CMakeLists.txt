@@ -6,5 +6,5 @@ add_hecbench_benchmark(
     NAME wordcount
     MODEL cuda
     SOURCES ${INC_DIR}/main.cpp wc.cu
-    CATEGORIES algorithms
+    CATEGORIES language
 )

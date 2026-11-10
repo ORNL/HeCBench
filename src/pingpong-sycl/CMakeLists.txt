@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME pingpong
     MODEL sycl
     SOURCES main-mpi.cpp
-    CATEGORIES algorithms
+    CATEGORIES bandwidth
 )

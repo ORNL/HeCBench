@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME debayer
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES imaging
     INCLUDE_DIRS ${INC_DIR}
 )

@@ -9,5 +9,5 @@ add_hecbench_benchmark(
     INCLUDE_DIRS
         ${CMAKE_SOURCE_DIR}/src/daphne-cuda/src/include
         ${CMAKE_SOURCE_DIR}/src/daphne-cuda/src/points2image
-    CATEGORIES imaging automotive
+    CATEGORIES automotive
 )

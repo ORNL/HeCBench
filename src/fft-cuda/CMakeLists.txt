@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME fft
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES math
+    CATEGORIES signal
 )

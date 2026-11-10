@@ -7,5 +7,5 @@ add_hecbench_benchmark(
     MODEL hip
     SOURCES main.cu ${INC_DIR}/utils.cpp
     COMPILE_OPTIONS -munsafe-fp-atomics
-    CATEGORIES algorithms
+    CATEGORIES ml
 )

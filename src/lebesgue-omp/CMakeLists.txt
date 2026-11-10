@@ -8,5 +8,5 @@ add_hecbench_benchmark(
     SOURCES kernels.cpp
             ${INC_DIR}/main.cpp
             ${INC_DIR}/utils.cpp
-    CATEGORIES algorithms
+    CATEGORIES math
 )

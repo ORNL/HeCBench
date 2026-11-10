@@ -5,5 +5,5 @@ add_hecbench_benchmark(
     MODEL hip
     SOURCES main.cu
     COMPILE_OPTIONS -ffast-math
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

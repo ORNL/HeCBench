@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME urng
     MODEL omp
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES rng
     INCLUDE_DIRS ${SDK_DIR}
 )

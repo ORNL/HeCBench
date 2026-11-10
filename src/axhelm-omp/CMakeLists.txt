@@ -21,7 +21,7 @@ add_hecbench_benchmark(
     NAME axhelm
     MODEL omp
     SOURCES main.cpp meshBasis.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
     COMPILE_OPTIONS -Ddfloat=float -Ddlong=int
     LINK_LIBRARIES BlasLapack
 )

@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME base64e
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES encoding
 )

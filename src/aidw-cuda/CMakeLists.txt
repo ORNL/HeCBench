@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME aidw
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES geoscience
     COMPILE_OPTIONS -use_fast_math
 )

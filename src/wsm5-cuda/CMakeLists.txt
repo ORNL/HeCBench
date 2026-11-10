@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME wsm5
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
     COMPILE_OPTIONS -DMKX=4
 )

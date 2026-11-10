@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME md5hash
     MODEL cuda
     SOURCES MD5Hash.cu
-    CATEGORIES cryptography
+    CATEGORIES encoding
 )

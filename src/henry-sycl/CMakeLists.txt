@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME henry
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
     COMPILE_OPTIONS -ffast-math
 )

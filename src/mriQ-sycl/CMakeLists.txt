@@ -6,7 +6,7 @@ add_hecbench_benchmark(
     NAME mriQ
     MODEL sycl
     SOURCES main.cpp ${INC_DIR}/file.cc
-    CATEGORIES algorithms
+    CATEGORIES imaging
     INCLUDE_DIRS ${INC_DIR}
     COMPILE_OPTIONS -ffast-math
 )

@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME rayleighBenardConvection
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
     LINK_LIBRARIES -qmkl=parallel
 )

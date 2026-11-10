@@ -4,6 +4,6 @@ add_hecbench_benchmark(
     NAME degrid
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES imaging
     COMPILE_OPTIONS -DPRECISION=double
 )

@@ -4,7 +4,7 @@ add_hecbench_benchmark(
     NAME bincount
     MODEL omp
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES ml
 )
 
 # Exact histogram validation requires the host reference and Intel GPU kernel

@@ -59,16 +59,16 @@ Each benchmark falls into a single category. While such classification is not ac
     allreduce, cmembench, babelstream, ccl, memcpy, memtest, p2p, pingpong, putget, randomAccess, reshapeKVCache, sdma, shmembench, storeKVCache, threadcpy, triad, vadd
 
 ### Bioinformatics
-    all-pairs-distance, bsw, ccs, cm, deredundancy, diamond, epistasis, extend2, frna, fsm, ga, local-ht, logan, minibude, minimap2, nbnxm, nw, pcc, prna, sa, snake
+    all-pairs-distance, bsw, ccs, cm, deredundancy, diamond, epistasis, extend2, frna, fsm, ga, gerbil, local-ht, logan, minibude, minimap2, nbnxm, nw, pcc, prna, sa, snake
 
 ### Computer vision and image processing
-    affine, aobench, asmooth, background-subtract, bezier-surface, bilateral, bm3d, boxfilter, cbsfil, car, ced, colorwheel, convolution1D, convolution3D, convolutionDeformable, convolutionSeperable, dct8x8, debayer, depixel, degrid, doh, dpid, egs, face, flame, gabor, gamma-correction, groupnorm, hogbom, mandelbrot, marchCubes, match, medianfilter, morphology, mriQ, ne, opticalFlow, perlin, sobel, tonemapping, recursiveGaussian, resize, sad, seam-carving, spm, srad, ssim, stencil1d, stencil3d, surfel, tgvnn, upsample, voxelization, zoom
+    affine, aobench, asmooth, background-subtract, bezier-surface, bilateral, bm3d, boxfilter, cbsfil, car, ced, colorwheel, convolution1D, convolution3D, convolutionDeformable, convolutionSeparable, dct8x8, debayer, depixel, degrid, distort, doh, dpid, dwt2d, egs, face, flame, gabor, gamma-correction, groupnorm, hogbom, mandelbrot, marchingCubes, match, medianfilter, morphology, mriQ, ne, nms, opticalFlow, perlin, score, sobel, tonemapping, recursiveGaussian, resize, sad, seam-carving, spm, srad, ssim, stencil1d, stencil3d, surfel, tgvnn, upsample, voxelization, zoom
     
 ### Cryptography
-    aes, bitcracker, bitpermute, chacha20, columnarSolver, ecdh, keccaktreehash, merkle, present  
+    aes, bitcracker, bitpermute, chacha20, columnarSolver, ecdh, keccaktreehash, merkle, present
 
 ### Data compression and reduction
-    atomicAggregate, atomicCAS, atomicCost, atomicIntrinsics, atomicPerf, atomicSystemWide, bitpacking, bscan, bwt, compute-score, contract, dxtc2, filter, fma, fpc, histogram, lzss, minmax, mpc, mtf, quantAQLM, quantBnB, quantVLLM, rle, sc, scan, scan2, scan3, scatter, scatterAdd, scatterThrust, segment-reduce, segment-reduce2
+    atomicAggregate, atomicCAS, atomicCost, atomicIntrinsics, atomicPerf, atomicReduction, atomicSystemWide, bitpacking, bscan, bwt, compute-score, contract, dxtc2, f16atomic, filter, fma, fpc, fpdc, histogram, lzss, minmax, mpc, mtf, quantAQLM, quantBnB, quantVLLM, rle, sc, scan, scan2, scan3, scatter, scatterAdd, scatterThrust, segment-reduce, segment-reduce2
 
 ### Data encoding, decoding, or verification
     ans, base64e, crc64, crs, entropy, jenkins-hash, kiss, ldpc, md5hash, murmurhash3
@@ -80,31 +80,31 @@ Each benchmark falls into a single category. While such classification is not ac
     aidw, coordinates, geodesic, hausdorff, haversine, stsg
 
 ### Graph and Tree
-    cc, floydwarshall, floydwarshall2, gc, hbc, hungarian, mis, sssp, rsmt
+    cc, floydwarshall, floydwarshall2, gc, graphB+, hbc, hungarian, mis, sssp, rsmt
 
 ### Language and kernel features
-    adjacent, aligned-types, asta, asyncAllocation, awbarrier, blockAccess, blockexchange, blockScan, collision, concurrentKernels, conversion, dispatch, dp4a, graphExecution, ert, interleave, intrinsics-cast, kernelLaunch, layout, mallocFree, maxFlops, mixbench, nosync, openmp, overlap, pad, pitch, popcount, pointerchase, prefetch, reverse, ring, saxpy-ompt, shuffle, simpleMultiDevice, streamCreateCopyDestroy, streamOrderedAllocation, streamPriority, streamUM, tensorAccessor, threadfence, warpexchange, vote, wmma, wordcount, zerocopy 
+    adjacent, aligned-types, assert, asta, asyncAllocation, awbarrier, blockAccess, blockexchange, blockScan, clock, collision, concurrentKernels, conversion, dispatch, dp4a, graphExecution, ert, interleave, intrinsics-cast, intrinsics-simd, kernelLaunch, layout, mallocFree, maxFlops, mixbench, nosync, openmp, overlap, pad, pitch, popcount, pointerchase, prefetch, reverse, ring, saxpy-ompt, shuffle, simpleMultiDevice, streamCreateCopyDestroy, streamOrderedAllocation, streamPriority, streamUM, tensorAccessor, threadfence, warpexchange, vote, wmma, wordcount, zerocopy
 
 ### Machine learning  
-    accuracy, adam, adamw, addBiasQKV, addBiasResidualLayerNorm, attention, attention-paged, attentionMergeState, attentionMultiHead, attentionMultiHeadKVCache, backprop, bincount, bn, channelShuffle, channelSum, clink, concat, crossEntropy, dense-embedding, dropout, dwconv, dwconv1d, expdist, flip, gd, gelu, ge-spmm, geglu, glu, gmm, gru, gru2, index-shuffle, kalman, kda, kmc, kmeans, knn, layernorm, lda, lif, logprob, lr, lrn, mace, mask, matern, maxpool3d, mcpr, meanshift, megablocks, mergeVS, mf-sgd, mlaDecode, mlp, mmcsf, mnist, moe, moe-align, moe-combine, moe-sum, mrc, multinomial, muon, nlll, nonzero, overlay, p4, page-rank, permute, perplexity, pointwise, pool, qkv, qtclustering, remap, relu, resnet-kernels, rmsnorm, rmsnorm-quant, rmsnorm-rope, rowwiseMoments, rotary, sampling, scel, shampoo, silu, snicit, softmax, softmax-fused, softmax-online, ssm, ssm2, stddev, streamcluster, swiglu-oai, tbe, trimul, tsne, twell, unfold, vol2col, wedford, winograd, word2vec
+    accuracy, adam, adamw, addBiasQKV, addBiasResidualLayerNorm, attention, attention-paged, attentionMergeState, attentionMultiHead, attentionMultiHeadKVCache, backprop, bincount, bmf, bn, channelShuffle, channelSum, clink, concat, crossEntropy, dense-embedding, dropout, dwconv, dwconv1d, expdist, flip, gd, gelu, ge-spmm, geglu, gis, glu, gmm, gru, gru2, index-shuffle, kalman, kda, kmc, kmeans, knn, layernorm, lda, lif, logprob, lr, lrn, mace, mask, matern, maxpool3d, mcpr, meanshift, megablocks, mergeVS, mf-sgd, mlaDecode, mlp, mmcsf, mnist, moe, moe-align, moe-combine, moe-sum, mrc, multinomial, muon, nlll, nn, nonzero, overlay, p4, page-rank, permute, perplexity, pointwise, pool, qkv, qtclustering, remap, relu, resnet-kernels, rmsnorm, rmsnorm-quant, rmsnorm-rope, rowwiseMoments, rotary, sampling, scel, shampoo, silu, snicit, softmax, softmax-fused, softmax-online, ssm, ssm2, stddev, streamcluster, swiglu-oai, tbe, trimul, tsne, twell, unfold, vol2col, wedford, winograd, word2vec
 
 ### Math
-    atan2, axpby, bgmv, blas-dot, blas-fp4gemm, blas-fp8gemm, blas-gemm, blas-gemmBatched, blas-gemmStridedBatched, blas-gemmEx, blas-gemmEx2, blas-groupgemm, blas-mxfp6gemm, blas-mxfp8gemm, braycurtis, complex, cross, determinant, divergence, dp, eigenvalue, f16max, f16sp, f8cast, fresnel, fwt, gaussian, geam, gels, gemv, hadamard, hellinger, hmm, idivide, interval, jaccard, jacobi, jacobian, kurtosis, lanczos, langford, lci, lebesgue, leukocyte, lfib4, log2, lud, ludb, lut-gemm, michalewicz, matrix-rotate, matrixT, minkowski, mr, mrg32k3a, norm2, nqueen, ntt, oziMMU, phmm, pnpoly, quant3MatMul, reverse2D, rfs, romberg, rsc, schur-complement, sddmm-batch, secp256k1, simpleSpmv, slu, spd2s, spgeam, spgemm, spmm, spmv, spnnz, sps2d, spsort, sptrsv, thomas, vdi, wyllie, zeropoint
+    atan2, axpby, bgmv, bicgstab, blas-dot, blas-fp4gemm, blas-fp8gemm, blas-gemm, blas-gemmBatched, blas-gemmStridedBatched, blas-gemmEx, blas-gemmEx2, blas-groupgemm, blas-mxfp6gemm, blas-mxfp8gemm, braycurtis, complex, cross, determinant, divergence, dp, eigenvalue, f16max, f16sp, f8cast, fresnel, fwt, gaussian, geam, gels, gemv, hadamard, hellinger, hmm, idivide, interval, jaccard, jacobi, jacobian, kurtosis, lanczos, langevin, langford, lci, lebesgue, leukocyte, lfib4, log2, lud, ludb, lut-gemm, michalewicz, matrix-rotate, matrixT, minkowski, mr, mrg32k3a, norm2, nqueen, ntt, oziMMU, phmm, pnpoly, quant3MatMul, reverse2D, rfs, romberg, rsc, schur-complement, sddmm-batch, secp256k1, simpleSpmv, slu, spaxpby, spd2s, spgeam, spgemm, spmm, spmv, spnnz, sps2d, spsm, spsort, sptrsv, svd3x3, thomas, vdi, wyllie, zeropoint
    
 ### Random number generation
     mt, permutate, qrg, rng-wallace, sobol, urng
 
 ### Search
-    bfs, bsearch, b+tree, grep, keogh, s8n, ss, sss, tsp
+    bfs, bsearch, b+tree, btree, grep, keogh, linearprobing, s8n, si, ss, sss, tsp
 
 ### Signal processing
     extrema, fft, lombscargle, sosfil, zmddft
 
 ### Simulation
-    ace, adv, amgmk, axhelm, bh, bspline-vgh, burger, cooling, ccsd-trpdrv, che, chemv, chi2, clenergy, cmp, cobahh, condor, d2q9_bgk, d3q19_bgk, damage, ddbp, dslash, easyWave, eikonal, fdtd3d, feynman-kac, fhd, fluidSim, gibbs, goulash, gpp, grrt, gsplat4d, haccmk, halo-finder, heartwall, heat, heat2d, henry, hexicton, hotspot, hotspot3D, hpl, hwt1d, hypterm, ising, iso2dfd, laghos-force, laplace, laplace3d, lavaMD, lid-driven-cavity, logic-resim, logic-rewrite, loopback, lsqt, lulesh, mcmd, md, mdh, metropolis, miniFE, minimod, minisweep, miniWeather, multimaterial, mxfp4, myocte, nbody, particle-diffusion, particlefilter, particles, pathfinder, pns, projectile, pso, qem, rainflow, rayleighBenardConvection, reaction, rsbench, rtm8, rushlarsen, s3d, su3, sundials, sheath, simplemoc, slit, sparkler, sph, stiff-ode, svt, sw4ck, tensorT, testSNAP, tissue, tpacf, tqs, tridiagonal, tsa, vanGenuchten, vmc, wenofv, wlcpow, wsm5, xlqc, xsbench
+    ace, adv, amgmk, axhelm, bh, bspline-vgh, burger, cfd, cooling, ccsd-trpdrv, che, chemv, chi2, clenergy, cmp, cobahh, condor, d2q9-bgk, d3q19-bgk, damage, ddbp, dslash, easyWave, eikonal, fdtd3d, feynman-kac, fhd, fluidSim, gibbs, goulash, gpp, grrt, gsplat4d, haccmk, halo-finder, heartwall, heat, heat2d, henry, hexciton, hotspot, hotspot3D, hpl, hwt1d, hypterm, ising, iso2dfd, laghos-force, laplace, laplace3d, lavaMD, lid-driven-cavity, logic-resim, logic-rewrite, loopback, lsqt, lulesh, mcmd, md, mdh, metropolis, miniDGS, miniFE, minimod, minisweep, miniWeather, multimaterial, mxfp4, myocyte, nbody, particle-diffusion, particlefilter, particles, pathfinder, pns, projectile, pso, qem, rainflow, rayleighBenardConvection, reaction, rsbench, rtm8, rushlarsen, s3d, su3, sundials, sheath, simplemoc, slit, sparkler, sph, stiff-ode, svt, sw4ck, tensorT, testSNAP, tissue, tpacf, tqs, tridiagonal, tsa, vanGenuchten, vmc, wenofv, wlcpow, wsm5, xlqc, xsbench
 
 ### Sorting
-    bitonic-sort, hybridsort, is, merge, quicksort, radixsort, segsort, sort, sortKV, split, topk, warpsort
+    bitonic-sort, hybridsort, is, merge, quicksort, radixsort, radixsort2, segsort, sort, sortKV, split, topk, warpsort
 
 ### Robotics
     inversek2j, rodrigues

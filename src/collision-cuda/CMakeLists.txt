@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME collision
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES language
 )

@@ -14,6 +14,6 @@ add_hecbench_benchmark(
     NAME wenofv
     MODEL omp
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
     COMPILE_OPTIONS ${WENOFV_FP_CONTRACT}
 )

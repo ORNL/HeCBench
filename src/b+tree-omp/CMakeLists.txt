@@ -9,7 +9,7 @@ add_hecbench_benchmark(
             util/num/num.c
     INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/util/num
                  ${CMAKE_CURRENT_SOURCE_DIR}/kernel
-    CATEGORIES algorithms
+    CATEGORIES search
     LINK_LIBRARIES m
     C_AS_CXX
 )

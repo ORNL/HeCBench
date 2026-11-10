@@ -6,5 +6,5 @@ add_hecbench_benchmark(
     NAME sundials
     MODEL omp
     SOURCES kernels.cpp ${INC_DIR}/utils.cpp ${INC_DIR}/main.cpp
-    CATEGORIES simulation algorithms math
+    CATEGORIES simulation
 )

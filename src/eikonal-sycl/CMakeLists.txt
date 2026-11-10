@@ -6,5 +6,5 @@ add_hecbench_benchmark(
     NAME eikonal
     MODEL sycl
     SOURCES StructuredEikonal.cpp fim.cpp kernel.cpp main.cpp ${INC_DIR}/timer.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

@@ -11,5 +11,5 @@ add_hecbench_benchmark(
             ${INC_DIR}/GridInit.cu
             ${INC_DIR}/Materials.cu
             ${INC_DIR}/XSutils.cu
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

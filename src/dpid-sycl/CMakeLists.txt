@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME dpid
     MODEL sycl
     SOURCES kernels.cpp main.cpp
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

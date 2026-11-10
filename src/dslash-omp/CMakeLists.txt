@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME dslash
     MODEL omp
     SOURCES dslash.cpp kernels.cpp main.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

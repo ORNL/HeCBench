@@ -8,5 +8,5 @@ add_hecbench_benchmark(
     MODEL hip
     SOURCES ${INC_DIR2}/RecursiveGaussianHost.cpp main.cu ${INC_DIR}/shrUtils.cpp
     INCLUDE_DIRS ${INC_DIR}
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME popcount
     MODEL sycl
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES language
 )

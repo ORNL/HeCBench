@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME atomicReduction
     MODEL cuda
     SOURCES reduction.cu
-    CATEGORIES algorithms
+    CATEGORIES compression
 )

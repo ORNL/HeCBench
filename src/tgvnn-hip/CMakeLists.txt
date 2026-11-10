@@ -8,5 +8,5 @@ add_hecbench_benchmark(
         src/ra.cu
     INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
     LINK_LIBRARIES hipfft hipblas hipsolver
-    CATEGORIES imaging algorithms
+    CATEGORIES imaging
 )

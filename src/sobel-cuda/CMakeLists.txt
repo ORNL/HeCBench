@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME sobel
     MODEL cuda
     SOURCES main.cu reference.cu
-    CATEGORIES algorithms
+    CATEGORIES imaging
     INCLUDE_DIRS ${SDK_DIR}
 )

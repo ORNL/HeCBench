@@ -7,5 +7,5 @@ add_hecbench_benchmark(
     MODEL omp
     SOURCES flowGold.cpp flowOMP.cpp main.cpp
     INCLUDE_DIRS ${INC_DIR}
-    CATEGORIES algorithms
+    CATEGORIES imaging
 )

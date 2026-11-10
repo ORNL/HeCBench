@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME burger
     MODEL omp
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )

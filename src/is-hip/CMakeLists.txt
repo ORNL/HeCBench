@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME is
     MODEL hip
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES sorting
 )

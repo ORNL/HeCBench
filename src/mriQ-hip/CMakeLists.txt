@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME mriQ
     MODEL hip
     SOURCES main.cu ${INC_DIR}/file.cc
-    CATEGORIES algorithms
+    CATEGORIES imaging
     COMPILE_OPTIONS -ffast-math
 )

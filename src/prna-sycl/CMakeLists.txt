@@ -4,7 +4,7 @@ add_hecbench_benchmark(
     NAME prna
     MODEL sycl
     SOURCES prna.cpp main.c base.c param.c util.c
-    CATEGORIES algorithms
+    CATEGORIES bioinformatics
     COMPILE_OPTIONS -D__CUDACC__ -DFLOAT -ffast-math
     C_AS_CXX
 )

@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME extend2
     MODEL omp
     SOURCES main.cpp ${INC_DIR}/read_data.cpp
-    CATEGORIES algorithms
+    CATEGORIES bioinformatics
     INCLUDE_DIRS ${INC_DIR}
 )

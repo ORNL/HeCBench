@@ -4,7 +4,7 @@ add_hecbench_benchmark(
     NAME ssm
     MODEL cuda
     SOURCES main.cu
-    CATEGORIES algorithms
+    CATEGORIES ml
 )
 
 # Suite default is C++17. This target is built as C++20.

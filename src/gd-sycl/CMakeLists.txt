@@ -6,6 +6,6 @@ add_hecbench_benchmark(
     NAME gd
     MODEL sycl
     SOURCES main.cpp ${INC_DIR}/utils.cpp
-    CATEGORIES algorithms
+    CATEGORIES ml
     INCLUDE_DIRS ${INC_DIR}
 )

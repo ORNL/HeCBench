@@ -6,5 +6,5 @@ add_hecbench_benchmark(
     SOURCES src/main.cu
     COMPILE_OPTIONS --default-stream=per-thread
     LINK_LIBRARIES -lgomp
-    CATEGORIES algorithms matrix
+    CATEGORIES ml
 )

@@ -4,5 +4,5 @@ add_hecbench_benchmark(
     NAME f16sp
     MODEL omp
     SOURCES main.cpp
-    CATEGORIES algorithms
+    CATEGORIES math
 )

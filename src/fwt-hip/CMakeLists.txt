@@ -6,5 +6,5 @@ add_hecbench_benchmark(
     NAME fwt
     MODEL hip
     SOURCES main.cu ${INC_DIR}/reference.cu
-    CATEGORIES algorithms
+    CATEGORIES math
 )

@@ -14,5 +14,5 @@ add_hecbench_benchmark(
             truth.cpp
             command_manager.cpp
             main.cpp
-    CATEGORIES algorithms
+    CATEGORIES simulation
 )
