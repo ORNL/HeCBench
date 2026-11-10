@@ -4,6 +4,8 @@
 #include <chrono>
 #include "common.h"
 
+#define BLOCK_SIZE 256
+
 ////////////////////////////////////////////////////////////////////////////
 // B spline smoothing kernel
 ////////////////////////////////////////////////////////////////////////////
@@ -124,20 +126,42 @@ __global__
 void updatePressures(fluid_particle *__restrict__ fluid_particles,
                      const param *__restrict__ params)
 {
-    int num_fluid_particles = params->number_fluid_particles;
-    int i = blockDim.x * blockIdx.x + threadIdx.x;
-    if (i >= num_fluid_particles) return;
-    double3 p_pos = fluid_particles[i].pos;
-    double3 p_v   = fluid_particles[i].v;
-    double density = fluid_particles[i].density;
+    __shared__ double3 s_pos[BLOCK_SIZE];
+    __shared__ double3 s_v[BLOCK_SIZE];
 
-    for(int j=0; j< num_fluid_particles; j++) {
-        double3 q_pos = fluid_particles[j].pos;
-        double3 q_v   = fluid_particles[j].v;
-        density += computeDensity(p_pos,p_v,q_pos,q_v, params);
+    int num_fluid_particles = params->number_fluid_particles;
+    int tid = threadIdx.x;
+    int i = blockDim.x * blockIdx.x + tid;
+    bool valid = i < num_fluid_particles;
+
+    double3 p_pos, p_v;
+    double density = 0.0;
+    if (valid) {
+        p_pos = fluid_particles[i].pos;
+        p_v   = fluid_particles[i].v;
+        density = fluid_particles[i].density;
     }
-    fluid_particles[i].density = density;
-    fluid_particles[i].pressure = computePressure(density, params);
+
+    for (int t = 0; t < num_fluid_particles; t += BLOCK_SIZE) {
+        int j = t + tid;
+        if (j < num_fluid_particles) {
+            s_pos[tid] = fluid_particles[j].pos;
+            s_v[tid]   = fluid_particles[j].v;
+        }
+        __syncthreads();
+
+        if (valid) {
+            int tile = min(BLOCK_SIZE, num_fluid_particles - t);
+            for (int k = 0; k < tile; k++)
+                density += computeDensity(p_pos,p_v,s_pos[k],s_v[k], params);
+        }
+        __syncthreads();
+    }
+
+    if (valid) {
+        fluid_particles[i].density = density;
+        fluid_particles[i].pressure = computePressure(density, params);
+    }
 }
 
 __device__
@@ -206,39 +230,62 @@ __global__
 void updateAccelerationsFP(fluid_particle *__restrict__ fluid_particles,
                            const param *__restrict__ params)
 {
+    __shared__ double3 s_pos[BLOCK_SIZE];
+    __shared__ double3 s_v[BLOCK_SIZE];
+    __shared__ double s_density[BLOCK_SIZE];
+    __shared__ double s_pressure[BLOCK_SIZE];
+
     int num_fluid_particles = params->number_fluid_particles;
 
-    int i = blockDim.x * blockIdx.x + threadIdx.x;
-    if (i >= num_fluid_particles) return;
+    int tid = threadIdx.x;
+    int i = blockDim.x * blockIdx.x + tid;
+    bool valid = i < num_fluid_particles;
 
-        double ax = 0.0;
-        double ay = 0.0;
-        double az = -9.8;
+    double ax = 0.0;
+    double ay = 0.0;
+    double az = -9.8;
 
-        double3 p_pos = fluid_particles[i].pos;
-        double3 p_v   = fluid_particles[i].v;
-        double p_density = fluid_particles[i].density;
-        double p_pressure = fluid_particles[i].pressure;
+    double3 p_pos, p_v;
+    double p_density = 0.0, p_pressure = 0.0;
+    if (valid) {
+        p_pos = fluid_particles[i].pos;
+        p_v   = fluid_particles[i].v;
+        p_density = fluid_particles[i].density;
+        p_pressure = fluid_particles[i].pressure;
+    }
 
-        for(int j=0; j<num_fluid_particles; j++) {
-            if (i!=j) {
-                double3 q_pos = fluid_particles[j].pos;
-                double3 q_v   = fluid_particles[j].v;
-                double q_density = fluid_particles[j].density;
-                double q_pressure = fluid_particles[j].pressure;
-                double3 tmp_a = computeAcceleration(p_pos, p_v, p_density,
-                                                    p_pressure, q_pos, q_v,
-                                                    q_density, q_pressure, params);
+    for (int t = 0; t < num_fluid_particles; t += BLOCK_SIZE) {
+        int j = t + tid;
+        if (j < num_fluid_particles) {
+            s_pos[tid]      = fluid_particles[j].pos;
+            s_v[tid]        = fluid_particles[j].v;
+            s_density[tid]  = fluid_particles[j].density;
+            s_pressure[tid] = fluid_particles[j].pressure;
+        }
+        __syncthreads();
 
-                ax += tmp_a.x;
-                ay += tmp_a.y;
-                az += tmp_a.z;
+        if (valid) {
+            int tile = min(BLOCK_SIZE, num_fluid_particles - t);
+            for (int k = 0; k < tile; k++) {
+                if (i != t + k) {
+                    double3 tmp_a = computeAcceleration(p_pos, p_v, p_density,
+                                                        p_pressure, s_pos[k], s_v[k],
+                                                        s_density[k], s_pressure[k], params);
+
+                    ax += tmp_a.x;
+                    ay += tmp_a.y;
+                    az += tmp_a.z;
+                }
             }
         }
+        __syncthreads();
+    }
 
+    if (valid) {
         fluid_particles[i].a.x = ax;
         fluid_particles[i].a.y = ay;
         fluid_particles[i].a.z = az;
+    }
 }
 
 __global__
@@ -246,30 +293,51 @@ void updateAccelerationsBP(fluid_particle *__restrict__ fluid_particles,
                            const boundary_particle *__restrict__ boundary_particles, 
                            const param *__restrict__ params)
 {
+    __shared__ double3 s_pos[BLOCK_SIZE];
+    __shared__ double3 s_n[BLOCK_SIZE];
+
     int num_fluid_particles = params->number_fluid_particles;
     int num_boundary_particles = params->number_boundary_particles;
-    int i = blockDim.x * blockIdx.x + threadIdx.x;
-    if (i >= num_fluid_particles) return;
+    int tid = threadIdx.x;
+    int i = blockDim.x * blockIdx.x + tid;
+    bool valid = i < num_fluid_particles;
 
-    double ax = fluid_particles[i].a.x;
-    double ay = fluid_particles[i].a.y;
-    double az = fluid_particles[i].a.z;
-    double3 p_pos = fluid_particles[i].pos;
-
-    for (int j=0; j<num_boundary_particles; j++) {
-      double3 k_pos = boundary_particles[j].pos;
-      double3 k_n   = boundary_particles[j].n;
-      double3 tmp_a = computeBoundaryAcceleration(p_pos,k_pos,k_n,
-          params->smoothing_radius,
-          params->speed_sound);
-      ax += tmp_a.x;
-      ay += tmp_a.y;
-      az += tmp_a.z;
+    double ax = 0.0, ay = 0.0, az = 0.0;
+    double3 p_pos;
+    if (valid) {
+        ax = fluid_particles[i].a.x;
+        ay = fluid_particles[i].a.y;
+        az = fluid_particles[i].a.z;
+        p_pos = fluid_particles[i].pos;
     }
 
-    fluid_particles[i].a.x = ax;
-    fluid_particles[i].a.y = ay;
-    fluid_particles[i].a.z = az;
+    for (int t = 0; t < num_boundary_particles; t += BLOCK_SIZE) {
+        int j = t + tid;
+        if (j < num_boundary_particles) {
+            s_pos[tid] = boundary_particles[j].pos;
+            s_n[tid]   = boundary_particles[j].n;
+        }
+        __syncthreads();
+
+        if (valid) {
+            int tile = min(BLOCK_SIZE, num_boundary_particles - t);
+            for (int k = 0; k < tile; k++) {
+                double3 tmp_a = computeBoundaryAcceleration(p_pos,s_pos[k],s_n[k],
+                    params->smoothing_radius,
+                    params->speed_sound);
+                ax += tmp_a.x;
+                ay += tmp_a.y;
+                az += tmp_a.z;
+            }
+        }
+        __syncthreads();
+    }
+
+    if (valid) {
+        fluid_particles[i].a.x = ax;
+        fluid_particles[i].a.y = ay;
+        fluid_particles[i].a.z = az;
+    }
 }
 
 // Update particle positions
@@ -393,13 +461,12 @@ void initParams(AABB* water_volume, AABB* boundary_volume, param* params)
     water_volume->max_z = 0.8;
 
     // Simulation parameters
-    params->number_fluid_particles = 2048;
+    params->number_fluid_particles = NUM_FLUID_PARTICLES;
     params->rest_density = 1000.0;
     params->g = 9.8;
     params->alpha = 0.02;
     params->surface_tension =  0.01;
     params->number_steps = 500; // reduce from 5000
-    params->time_step = 0.00035;
 
     // Mass of each particle
     double volume = (water_volume->max_x - water_volume->min_x)
@@ -423,18 +490,19 @@ void initParams(AABB* water_volume, AABB* boundary_volume, param* params)
     // Total number of particles
     params->number_particles = params->number_boundary_particles + params->number_fluid_particles;
 
-    // Number of steps before frame needs to be written for 30 fps
-    params->steps_per_frame = (int)(1.0/(params->time_step*30.0));
-
     // Calculate speed of sound for simulation
     double max_height = water_volume->max_y;
     double max_velocity = sqrt(2.0*params->g*max_height);
     params->speed_sound = max_velocity/sqrt(0.01);
 
-    // Minimum stepsize from Courant-Friedrichs-Lewy condition
-    double recomend_step = 0.4 * params->smoothing_radius / (params->speed_sound
+    // Time step from the Courant-Friedrichs-Lewy condition
+    params->time_step = 0.4 * params->smoothing_radius / (params->speed_sound
                                                          * (1+ 0.6*params->alpha));
-    printf("Using time step: %f, Minimum recomended %f\n",params->time_step, recomend_step);
+
+    // Number of steps before frame needs to be written for 30 fps
+    params->steps_per_frame = (int)(1.0/(params->time_step*30.0));
+
+    printf("Using time step: %f\n", params->time_step);
 }
 
 void finalizeParticles(fluid_particle *fluid_particles, boundary_particle *boundary_particles)
@@ -472,9 +540,8 @@ int main(int argc, char *argv[])
         num_boundary_particles * sizeof(boundary_particle), cudaMemcpyHostToDevice);
     cudaMemcpy(d_params, &params, sizeof(param), cudaMemcpyHostToDevice);
 
-    dim3 block1D(256);
-    dim3 grid1D_FP((num_fluid_particles + 255)/256);
-    dim3 grid1D_BP((num_boundary_particles + 255)/256);
+    dim3 block1D(BLOCK_SIZE);
+    dim3 grid1D_FP((num_fluid_particles + BLOCK_SIZE - 1)/BLOCK_SIZE);
 
     cudaDeviceSynchronize();
     auto start = std::chrono::steady_clock::now();
@@ -483,7 +550,7 @@ int main(int argc, char *argv[])
     for(int n=0; n<params.number_steps; n++) {
         updatePressures <<< dim3(grid1D_FP), dim3(block1D) >>> (d_fluid_particles, d_params);
         updateAccelerationsFP <<< dim3(grid1D_FP), dim3(block1D) >>> (d_fluid_particles, d_params);
-        updateAccelerationsBP <<< dim3(grid1D_BP), dim3(block1D) >>> (d_fluid_particles, d_boundary_particles, d_params);
+        updateAccelerationsBP <<< dim3(grid1D_FP), dim3(block1D) >>> (d_fluid_particles, d_boundary_particles, d_params);
         updatePositions <<< dim3(grid1D_FP), dim3(block1D) >>> (d_fluid_particles, d_params);
     }
 

@@ -4,6 +4,7 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "sph.h"
 
 static int fileNum = 0;
@@ -24,7 +25,7 @@ void writeFile(fluid_particle *particles, param *params)
     }
     for(i=0; i<params->number_fluid_particles; i++) {
         p = &particles[i];
-        fprintf(fp,"%f,%f,%f\n",p->pos.x(),p->pos.y(),p->pos.z());
+        fprintf(fp,"%f,%f,%f\n",p->pos.x,p->pos.y,p->pos.z);
     }
     fclose(fp);
     fileNum++;
@@ -46,7 +47,7 @@ void writeBoundaryFile(boundary_particle *boundary, param *params)
     }
     for(i=0; i<params->number_boundary_particles; i++) {
         k = &boundary[i];
-        fprintf(fp,"%f,%f,%f\n",k->pos.x(),k->pos.y(),k->pos.z());
+        fprintf(fp,"%f,%f,%f\n",k->pos.x,k->pos.y,k->pos.z);
     }
     fclose(fp);
     printf("wrote file: %s\n", name);

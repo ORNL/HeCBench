@@ -4,7 +4,7 @@
 
 
 #include <stdio.h>
-#include <math.h>
+#include <cmath>
 #include "sph.h"
 
 ///////////////////////////////////////////////////////////////
@@ -35,225 +35,225 @@ void constructBoundaryBox(boundary_particle *boundary_particles, AABB* boundary,
     double recip_root_two   = 1.0/std::sqrt(2.0);
     i = 0;
     // Corner front bottom left
-    boundary_particles[i].pos.x() = min_x;
-    boundary_particles[i].pos.y() = max_y;
-    boundary_particles[i].pos.z() = min_z;
-    boundary_particles[i].n.x() = recip_root_three;
-    boundary_particles[i].n.y() = -recip_root_three;
-    boundary_particles[i].n.z() = recip_root_three;
+    boundary_particles[i].pos.x = min_x;
+    boundary_particles[i].pos.y = max_y;
+    boundary_particles[i].pos.z = min_z;
+    boundary_particles[i].n.x = recip_root_three;
+    boundary_particles[i].n.y = -recip_root_three;
+    boundary_particles[i].n.z = recip_root_three;
     i++;
     // Corner front bottom right
-    boundary_particles[i].pos.x() = max_x;
-    boundary_particles[i].pos.y() = max_y;
-    boundary_particles[i].pos.z() = min_z;
-    boundary_particles[i].n.x() = -recip_root_three;
-    boundary_particles[i].n.y() = -recip_root_three;
-    boundary_particles[i].n.z() = recip_root_three;
+    boundary_particles[i].pos.x = max_x;
+    boundary_particles[i].pos.y = max_y;
+    boundary_particles[i].pos.z = min_z;
+    boundary_particles[i].n.x = -recip_root_three;
+    boundary_particles[i].n.y = -recip_root_three;
+    boundary_particles[i].n.z = recip_root_three;
     i++;
     // Corner front top left
-    boundary_particles[i].pos.x() = min_x;
-    boundary_particles[i].pos.y() = max_y;
-    boundary_particles[i].pos.z() = max_z;
-    boundary_particles[i].n.x() = recip_root_three;
-    boundary_particles[i].n.y() = -recip_root_three;
-    boundary_particles[i].n.z() = -recip_root_three;
+    boundary_particles[i].pos.x = min_x;
+    boundary_particles[i].pos.y = max_y;
+    boundary_particles[i].pos.z = max_z;
+    boundary_particles[i].n.x = recip_root_three;
+    boundary_particles[i].n.y = -recip_root_three;
+    boundary_particles[i].n.z = -recip_root_three;
     i++;
     // Corner front top right
-    boundary_particles[i].pos.x() = max_x;
-    boundary_particles[i].pos.y() = max_y;
-    boundary_particles[i].pos.z() = max_z;
-    boundary_particles[i].n.x() = -recip_root_three;
-    boundary_particles[i].n.y() = -recip_root_three;
-    boundary_particles[i].n.z() = -recip_root_three;
+    boundary_particles[i].pos.x = max_x;
+    boundary_particles[i].pos.y = max_y;
+    boundary_particles[i].pos.z = max_z;
+    boundary_particles[i].n.x = -recip_root_three;
+    boundary_particles[i].n.y = -recip_root_three;
+    boundary_particles[i].n.z = -recip_root_three;
     i++;
     
     // Corner back bottom left
-    boundary_particles[i].pos.x() = min_x;
-    boundary_particles[i].pos.y() = min_y;
-    boundary_particles[i].pos.z() = min_z;
-    boundary_particles[i].n.x() = recip_root_three;
-    boundary_particles[i].n.y() = recip_root_three;
-    boundary_particles[i].n.z() = recip_root_three;
+    boundary_particles[i].pos.x = min_x;
+    boundary_particles[i].pos.y = min_y;
+    boundary_particles[i].pos.z = min_z;
+    boundary_particles[i].n.x = recip_root_three;
+    boundary_particles[i].n.y = recip_root_three;
+    boundary_particles[i].n.z = recip_root_three;
     i++;
     // Corner back bottom right
-    boundary_particles[i].pos.x() = max_x;
-    boundary_particles[i].pos.y() = min_y;
-    boundary_particles[i].pos.z() = min_z;
-    boundary_particles[i].n.x() = -recip_root_three;
-    boundary_particles[i].n.y() = recip_root_three;
-    boundary_particles[i].n.z() = recip_root_three;
+    boundary_particles[i].pos.x = max_x;
+    boundary_particles[i].pos.y = min_y;
+    boundary_particles[i].pos.z = min_z;
+    boundary_particles[i].n.x = -recip_root_three;
+    boundary_particles[i].n.y = recip_root_three;
+    boundary_particles[i].n.z = recip_root_three;
     i++;
     // Corner back top left
-    boundary_particles[i].pos.x() = min_x;
-    boundary_particles[i].pos.y() = min_y;
-    boundary_particles[i].pos.z() = max_z;
-    boundary_particles[i].n.x() = recip_root_three;
-    boundary_particles[i].n.y() = recip_root_three;
-    boundary_particles[i].n.z() = -recip_root_three;
+    boundary_particles[i].pos.x = min_x;
+    boundary_particles[i].pos.y = min_y;
+    boundary_particles[i].pos.z = max_z;
+    boundary_particles[i].n.x = recip_root_three;
+    boundary_particles[i].n.y = recip_root_three;
+    boundary_particles[i].n.z = -recip_root_three;
     i++;
     // Corner back top right
-    boundary_particles[i].pos.x() = max_x;
-    boundary_particles[i].pos.y() = min_y;
-    boundary_particles[i].pos.z() = max_z;
-    boundary_particles[i].n.x() = -recip_root_three;
-    boundary_particles[i].n.y() = recip_root_three;
-    boundary_particles[i].n.z() = -recip_root_three;
+    boundary_particles[i].pos.x = max_x;
+    boundary_particles[i].pos.y = min_y;
+    boundary_particles[i].pos.z = max_z;
+    boundary_particles[i].n.x = -recip_root_three;
+    boundary_particles[i].n.y = recip_root_three;
+    boundary_particles[i].n.z = -recip_root_three;
     i++;
     
     for (nx=0; nx<num_x-2; nx++) {
         // Bottom right row
-        boundary_particles[i].pos.x() = min_x + spacing + nx*spacing;
-        boundary_particles[i].pos.y() = max_y;
-        boundary_particles[i].pos.z() = min_z;
-        boundary_particles[i].n.x() = 0.0;
-        boundary_particles[i].n.y() = -recip_root_two;
-        boundary_particles[i].n.z() = recip_root_two;
+        boundary_particles[i].pos.x = min_x + spacing + nx*spacing;
+        boundary_particles[i].pos.y = max_y;
+        boundary_particles[i].pos.z = min_z;
+        boundary_particles[i].n.x = 0.0;
+        boundary_particles[i].n.y = -recip_root_two;
+        boundary_particles[i].n.z = recip_root_two;
         i++;
         // Top right row
-        boundary_particles[i].pos.x() = min_x + spacing + nx*spacing;
-        boundary_particles[i].pos.y() = max_y;
-        boundary_particles[i].pos.z() = max_z;
-        boundary_particles[i].n.x() = 0.0;
-        boundary_particles[i].n.y() = -recip_root_two;
-        boundary_particles[i].n.z() = -recip_root_two;
+        boundary_particles[i].pos.x = min_x + spacing + nx*spacing;
+        boundary_particles[i].pos.y = max_y;
+        boundary_particles[i].pos.z = max_z;
+        boundary_particles[i].n.x = 0.0;
+        boundary_particles[i].n.y = -recip_root_two;
+        boundary_particles[i].n.z = -recip_root_two;
         i++;
         // Bottom left row
-        boundary_particles[i].pos.x() = min_x + spacing + nx*spacing;
-        boundary_particles[i].pos.y() = min_y;
-        boundary_particles[i].pos.z() = min_z;
-        boundary_particles[i].n.x() = 0.0;
-        boundary_particles[i].n.y() = recip_root_two;
-        boundary_particles[i].n.z() = recip_root_two;
+        boundary_particles[i].pos.x = min_x + spacing + nx*spacing;
+        boundary_particles[i].pos.y = min_y;
+        boundary_particles[i].pos.z = min_z;
+        boundary_particles[i].n.x = 0.0;
+        boundary_particles[i].n.y = recip_root_two;
+        boundary_particles[i].n.z = recip_root_two;
         i++;
         // Top left row
-        boundary_particles[i].pos.x() = min_x + spacing + nx*spacing;
-        boundary_particles[i].pos.y() = min_y;
-        boundary_particles[i].pos.z() = max_z;
-        boundary_particles[i].n.x() = 0.0;
-        boundary_particles[i].n.y() = recip_root_two;
-        boundary_particles[i].n.z() = -recip_root_two;
+        boundary_particles[i].pos.x = min_x + spacing + nx*spacing;
+        boundary_particles[i].pos.y = min_y;
+        boundary_particles[i].pos.z = max_z;
+        boundary_particles[i].n.x = 0.0;
+        boundary_particles[i].n.y = recip_root_two;
+        boundary_particles[i].n.z = -recip_root_two;
         i++;
     }
     for (ny=0; ny<num_y-2; ny++) {
         // Bottom front row
-        boundary_particles[i].pos.x() = max_x;
-        boundary_particles[i].pos.y() = min_y + spacing + ny*spacing;
-        boundary_particles[i].pos.z() = min_z;
-        boundary_particles[i].n.x() = -recip_root_two;
-        boundary_particles[i].n.y() = 0.0;
-        boundary_particles[i].n.z() = recip_root_two;
+        boundary_particles[i].pos.x = max_x;
+        boundary_particles[i].pos.y = min_y + spacing + ny*spacing;
+        boundary_particles[i].pos.z = min_z;
+        boundary_particles[i].n.x = -recip_root_two;
+        boundary_particles[i].n.y = 0.0;
+        boundary_particles[i].n.z = recip_root_two;
         i++;
         // Top front row
-        boundary_particles[i].pos.x() = max_x;
-        boundary_particles[i].pos.y() = min_y + spacing + ny*spacing;
-        boundary_particles[i].pos.z() = max_z;
-        boundary_particles[i].n.x() = -recip_root_two;
-        boundary_particles[i].n.y() = 0.0;
-        boundary_particles[i].n.z() = -recip_root_two;
+        boundary_particles[i].pos.x = max_x;
+        boundary_particles[i].pos.y = min_y + spacing + ny*spacing;
+        boundary_particles[i].pos.z = max_z;
+        boundary_particles[i].n.x = -recip_root_two;
+        boundary_particles[i].n.y = 0.0;
+        boundary_particles[i].n.z = -recip_root_two;
         i++;
         // Bottom back row
-        boundary_particles[i].pos.x() = min_x;
-        boundary_particles[i].pos.y() = min_y + spacing + ny*spacing;
-        boundary_particles[i].pos.z() = min_z;
-        boundary_particles[i].n.x() = recip_root_two;
-        boundary_particles[i].n.y() = 0.0;
-        boundary_particles[i].n.z() = recip_root_two;
+        boundary_particles[i].pos.x = min_x;
+        boundary_particles[i].pos.y = min_y + spacing + ny*spacing;
+        boundary_particles[i].pos.z = min_z;
+        boundary_particles[i].n.x = recip_root_two;
+        boundary_particles[i].n.y = 0.0;
+        boundary_particles[i].n.z = recip_root_two;
         i++;
         // Top back row
-        boundary_particles[i].pos.x() = min_x;
-        boundary_particles[i].pos.y() = min_y + spacing + ny*spacing;
-        boundary_particles[i].pos.z() = max_z;
-        boundary_particles[i].n.x() = recip_root_two;
-        boundary_particles[i].n.y() = 0.0;
-        boundary_particles[i].n.z() = -recip_root_two;
+        boundary_particles[i].pos.x = min_x;
+        boundary_particles[i].pos.y = min_y + spacing + ny*spacing;
+        boundary_particles[i].pos.z = max_z;
+        boundary_particles[i].n.x = recip_root_two;
+        boundary_particles[i].n.y = 0.0;
+        boundary_particles[i].n.z = -recip_root_two;
         i++;
         
         for (nx=0; nx<num_x-2; nx++) {
             // Top face
-            boundary_particles[i].pos.x() = min_x + spacing + nx*spacing;
-            boundary_particles[i].pos.y() = min_y + spacing + ny*spacing;
-            boundary_particles[i].pos.z() = max_z;
-            boundary_particles[i].n.x() = 0.0;
-            boundary_particles[i].n.y() = 0.0;
-            boundary_particles[i].n.z() = -1.0;
+            boundary_particles[i].pos.x = min_x + spacing + nx*spacing;
+            boundary_particles[i].pos.y = min_y + spacing + ny*spacing;
+            boundary_particles[i].pos.z = max_z;
+            boundary_particles[i].n.x = 0.0;
+            boundary_particles[i].n.y = 0.0;
+            boundary_particles[i].n.z = -1.0;
             i++;
             // Bottom face
-            boundary_particles[i].pos.x() = min_x + spacing + nx*spacing;
-            boundary_particles[i].pos.y() = min_y + spacing + ny*spacing;
-            boundary_particles[i].pos.z() = min_z;
-            boundary_particles[i].n.x() = 0.0;
-            boundary_particles[i].n.y() = 0.0;
-            boundary_particles[i].n.z() = 1.0;
+            boundary_particles[i].pos.x = min_x + spacing + nx*spacing;
+            boundary_particles[i].pos.y = min_y + spacing + ny*spacing;
+            boundary_particles[i].pos.z = min_z;
+            boundary_particles[i].n.x = 0.0;
+            boundary_particles[i].n.y = 0.0;
+            boundary_particles[i].n.z = 1.0;
             i++;
         }
     }
     for (nz=0; nz<num_z-2; nz++) {
         // left front column
-        boundary_particles[i].pos.x() = min_x;
-        boundary_particles[i].pos.y() = max_y;
-        boundary_particles[i].pos.z() = min_z + spacing + nz*spacing;
-        boundary_particles[i].n.x() = recip_root_two;
-        boundary_particles[i].n.y() = -recip_root_two;
-        boundary_particles[i].n.z() = 0.0;
+        boundary_particles[i].pos.x = min_x;
+        boundary_particles[i].pos.y = max_y;
+        boundary_particles[i].pos.z = min_z + spacing + nz*spacing;
+        boundary_particles[i].n.x = recip_root_two;
+        boundary_particles[i].n.y = -recip_root_two;
+        boundary_particles[i].n.z = 0.0;
         i++;
         // right front column
-        boundary_particles[i].pos.x() = max_x;
-        boundary_particles[i].pos.y() = max_y;
-        boundary_particles[i].pos.z() = min_z + spacing + nz*spacing;
-        boundary_particles[i].n.x() = -recip_root_two;
-        boundary_particles[i].n.y() = -recip_root_two;
-        boundary_particles[i].n.z() = 0.0;
+        boundary_particles[i].pos.x = max_x;
+        boundary_particles[i].pos.y = max_y;
+        boundary_particles[i].pos.z = min_z + spacing + nz*spacing;
+        boundary_particles[i].n.x = -recip_root_two;
+        boundary_particles[i].n.y = -recip_root_two;
+        boundary_particles[i].n.z = 0.0;
         i++;
         // left back column
-        boundary_particles[i].pos.x() = min_x;
-        boundary_particles[i].pos.y() = min_y;
-        boundary_particles[i].pos.z() = min_z + spacing + nz*spacing;
-        boundary_particles[i].n.x() = recip_root_two;
-        boundary_particles[i].n.y() = recip_root_two;
-        boundary_particles[i].n.z() = 0.0;
+        boundary_particles[i].pos.x = min_x;
+        boundary_particles[i].pos.y = min_y;
+        boundary_particles[i].pos.z = min_z + spacing + nz*spacing;
+        boundary_particles[i].n.x = recip_root_two;
+        boundary_particles[i].n.y = recip_root_two;
+        boundary_particles[i].n.z = 0.0;
         i++;
         // right back column
-        boundary_particles[i].pos.x() = max_x;
-        boundary_particles[i].pos.y() = min_y;
-        boundary_particles[i].pos.z() = min_z + spacing + nz*spacing;
-        boundary_particles[i].n.x() = -recip_root_two;
-        boundary_particles[i].n.y() = recip_root_two;
-        boundary_particles[i].n.z() = 0.0;
+        boundary_particles[i].pos.x = max_x;
+        boundary_particles[i].pos.y = min_y;
+        boundary_particles[i].pos.z = min_z + spacing + nz*spacing;
+        boundary_particles[i].n.x = -recip_root_two;
+        boundary_particles[i].n.y = recip_root_two;
+        boundary_particles[i].n.z = 0.0;
         i++;
         for (nx=0; nx<num_x-2; nx++) {
             // Front face
-            boundary_particles[i].pos.x() = min_x + spacing + nx*spacing;
-            boundary_particles[i].pos.y() = max_y;
-            boundary_particles[i].pos.z() = min_z + spacing + nz*spacing;
-            boundary_particles[i].n.x() = 0.0;
-            boundary_particles[i].n.y() = -1.0;
-            boundary_particles[i].n.z() = 0.0;
+            boundary_particles[i].pos.x = min_x + spacing + nx*spacing;
+            boundary_particles[i].pos.y = max_y;
+            boundary_particles[i].pos.z = min_z + spacing + nz*spacing;
+            boundary_particles[i].n.x = 0.0;
+            boundary_particles[i].n.y = -1.0;
+            boundary_particles[i].n.z = 0.0;
             i++;
             // Back face
-            boundary_particles[i].pos.x() = min_x + spacing + nx*spacing;
-            boundary_particles[i].pos.y() = min_y;
-            boundary_particles[i].pos.z() = min_z + spacing + nz*spacing;
-            boundary_particles[i].n.x() = 0.0;
-            boundary_particles[i].n.y() = 1.0;
-            boundary_particles[i].n.z() = 0.0;
+            boundary_particles[i].pos.x = min_x + spacing + nx*spacing;
+            boundary_particles[i].pos.y = min_y;
+            boundary_particles[i].pos.z = min_z + spacing + nz*spacing;
+            boundary_particles[i].n.x = 0.0;
+            boundary_particles[i].n.y = 1.0;
+            boundary_particles[i].n.z = 0.0;
             i++;
         }
         for (ny=0; ny<num_y-2; ny++) {
             // Left face
-            boundary_particles[i].pos.x() = min_x;
-            boundary_particles[i].pos.y() = min_y + spacing + ny*spacing;
-            boundary_particles[i].pos.z() = min_z + spacing + nz*spacing;
-            boundary_particles[i].n.x() = 1.0;
-            boundary_particles[i].n.y() = 0.0;
-            boundary_particles[i].n.z() = 0.0;
+            boundary_particles[i].pos.x = min_x;
+            boundary_particles[i].pos.y = min_y + spacing + ny*spacing;
+            boundary_particles[i].pos.z = min_z + spacing + nz*spacing;
+            boundary_particles[i].n.x = 1.0;
+            boundary_particles[i].n.y = 0.0;
+            boundary_particles[i].n.z = 0.0;
             i++;
             // Right face
-            boundary_particles[i].pos.x() = max_x;
-            boundary_particles[i].pos.y() = min_y + spacing + ny*spacing;
-            boundary_particles[i].pos.z() = min_z + spacing + nz*spacing;
-            boundary_particles[i].n.x() = -1.0;
-            boundary_particles[i].n.y() = 0.0;
-            boundary_particles[i].n.z() = 0.0;
+            boundary_particles[i].pos.x = max_x;
+            boundary_particles[i].pos.y = min_y + spacing + ny*spacing;
+            boundary_particles[i].pos.z = min_z + spacing + nz*spacing;
+            boundary_particles[i].n.x = -1.0;
+            boundary_particles[i].n.y = 0.0;
+            boundary_particles[i].n.z = 0.0;
             i++;
         }
     }

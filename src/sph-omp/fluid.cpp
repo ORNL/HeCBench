@@ -273,13 +273,12 @@ void initParams(AABB* water_volume, AABB* boundary_volume, param* params)
     water_volume->max_z = 0.8;
 
     // Simulation parameters
-    params->number_fluid_particles = 2048;
+    params->number_fluid_particles = NUM_FLUID_PARTICLES;
     params->rest_density = 1000.0;
     params->g = 9.8;
     params->alpha = 0.02;
     params->surface_tension =  0.01;
     params->number_steps = 500; // reduce from 5000
-    params->time_step = 0.00035;
 
     // Mass of each particle
     double volume = (water_volume->max_x - water_volume->min_x)
@@ -303,18 +302,19 @@ void initParams(AABB* water_volume, AABB* boundary_volume, param* params)
     // Total number of particles
     params->number_particles = params->number_boundary_particles + params->number_fluid_particles;
 
-    // Number of steps before frame needs to be written for 30 fps
-    params->steps_per_frame = (int)(1.0/(params->time_step*30.0));
-
     // Calculate speed of sound for simulation
     double max_height = water_volume->max_y;
     double max_velocity = sqrt(2.0*params->g*max_height);
     params->speed_sound = max_velocity/sqrt(0.01);
 
-    // Minimum stepsize from Courant-Friedrichs-Lewy condition
-    double recomend_step = 0.4 * params->smoothing_radius / (params->speed_sound
+    // Time step from the Courant-Friedrichs-Lewy condition
+    params->time_step = 0.4 * params->smoothing_radius / (params->speed_sound
                                                          * (1+ 0.6*params->alpha));
-    printf("Using time step: %f, Minimum recomended %f\n",params->time_step, recomend_step);
+
+    // Number of steps before frame needs to be written for 30 fps
+    params->steps_per_frame = (int)(1.0/(params->time_step*30.0));
+
+    printf("Using time step: %f\n", params->time_step);
 }
 
 void finalizeParticles(fluid_particle *fluid_particles, boundary_particle *boundary_particles)
@@ -339,11 +339,10 @@ int main(int argc, char *argv[])
 
   int num_fluid_particles = params.number_fluid_particles;
   int num_boundary_particles = params.number_boundary_particles;
-  int num_particles = (num_fluid_particles < num_boundary_particles) ? 
-                       num_fluid_particles : num_boundary_particles;
 
 #pragma omp target data map(tofrom: fluid_particles[0:num_fluid_particles],\
-                            boundary_particles[0:num_boundary_particles]) 
+                            boundary_particles[0:num_boundary_particles])\
+                            map(to: params)
 {
   auto start = std::chrono::steady_clock::now();
 
@@ -401,7 +400,7 @@ int main(int argc, char *argv[])
 
     //updateAccelerationsBP ()<<< dim3(grid1D_BP), dim3(block1D) >>> (d_fluid_particles, d_boundary_particles, d_params);
     #pragma omp target teams distribute parallel for simd thread_limit(256) 
-    for (int i = 0; i < num_particles; i++) {
+    for (int i = 0; i < num_fluid_particles; i++) {
       double ax = fluid_particles[i].a.x;
       double ay = fluid_particles[i].a.y;
       double az = fluid_particles[i].a.z;

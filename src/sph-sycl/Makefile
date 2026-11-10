@@ -30,7 +30,10 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
+# Fluid particle count (boundary count scales with it through the box spacing)
+NUM_PARTICLES ?= 2048
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl --gcc-toolchain=$(GCC_TOOLCHAIN)
+CFLAGS += -DNUM_FLUID_PARTICLES=$(NUM_PARTICLES)
 
 ifeq ($(VENDOR), AdaptiveCpp)
     CFLAGS_TMP := $(CFLAGS)
@@ -71,11 +74,22 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp
+%.o: %.cpp particles.stamp
 	$(CC) $(CFLAGS) -c $< -o $@
 
+particles.stamp: FORCE
+	@echo $(NUM_PARTICLES) | cmp -s - $@ || echo $(NUM_PARTICLES) > $@
+
+FORCE:
+
 clean:
-	rm -rf $(program) $(obj)
+	rm -rf $(program) $(obj) particles.stamp
 
 run: $(program)
 	$(LAUNCHER) ./$(program)
+
+# Production problem size: 8x the fluid particles (about 64x the pair interactions)
+PRODUCTION_PARTICLES ?= 16384
+
+production:
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) NUM_PARTICLES=$(PRODUCTION_PARTICLES)

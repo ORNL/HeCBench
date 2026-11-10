@@ -1,6 +1,10 @@
 #ifndef common_
 #define common_
 
+#ifndef NUM_FLUID_PARTICLES
+#define NUM_FLUID_PARTICLES 2048
+#endif
+
 #include <cuda.h>
 ////////////////////////////////////////////////
 // Structures
