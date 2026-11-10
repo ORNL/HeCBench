@@ -6,7 +6,7 @@ add_hecbench_benchmark(
     NAME gsplat3d
     MODEL sycl
     SOURCES ${CPU_REFERENCE} main.cpp forward.cpp baseline.cpp optimized.cpp
-    CATEGORIES simulation
+    CATEGORIES imaging
     COMPILE_OPTIONS -Wno-incorrect-sub-group-size
     TEST_ARGS 4096 128 128 10
     TEST_REGEX "Rasterize backward: PASS"

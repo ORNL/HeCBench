@@ -1,3 +1,7 @@
+// Derived from the 3DGS rasterization kernels in gsplat
+// (https://github.com/nerfstudio-project/gsplat), Apache-2.0, see LICENSE.
+// SPDX-License-Identifier: Apache-2.0
+
 #include <hip/hip_cooperative_groups.h>
 #include <hip/hip_runtime.h>
 

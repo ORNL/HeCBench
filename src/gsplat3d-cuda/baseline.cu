@@ -1,3 +1,7 @@
+// Derived from the 3DGS rasterization kernels in gsplat
+// (https://github.com/nerfstudio-project/gsplat), Apache-2.0, see LICENSE.
+// SPDX-License-Identifier: Apache-2.0
+
 #include <cooperative_groups.h>
 #include <cuda_runtime.h>
 

@@ -1,3 +1,7 @@
+// Derived from the 3DGS rasterization kernels in gsplat
+// (https://github.com/nerfstudio-project/gsplat), Apache-2.0, see LICENSE.
+// SPDX-License-Identifier: Apache-2.0
+
 #include <cstdint>
 
 #include <hip/hip_cooperative_groups.h>
@@ -345,7 +349,8 @@ __global__ void rasterize_to_pixels_3dgs_bwd_optimized(
     }
     if (num_batches > 0) {
         block.sync();
-        if (tr < batch_allocation_size) {
+        const int last_batch_size = range_end - range_start - max_batch_size * (num_batches - 1);
+        if (tr < last_batch_size) {
             GradLdsSink<CDIM>::flush(grad_acc, tr, id_batch[tr], v_colors, (float*)v_conics,
                                      (float*)v_means2d, v_opacities);
         }
