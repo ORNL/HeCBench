@@ -1,60 +1,35 @@
-cmake_minimum_required(VERSION 3.18)
-project(set_intersection_eval CUDA CXX)
+# si-cuda/CMakeLists.txt
+
+if(HECBENCH_ENABLE_CUDA)
+    include(FetchContent)
+    if(NOT TARGET cxxopts)
+        FetchContent_Declare(
+            cxxopts
+            GIT_REPOSITORY https://github.com/jarro2783/cxxopts.git
+            GIT_TAG        v3.3.1
+        )
+        FetchContent_MakeAvailable(cxxopts)
+    endif()
+    if(NOT TARGET fmt::fmt-header-only)
+        set(FMT_DOC OFF CACHE BOOL "" FORCE)
+        set(FMT_INSTALL OFF CACHE BOOL "" FORCE)
+        set(FMT_TEST OFF CACHE BOOL "" FORCE)
+        FetchContent_Declare(
+            fmt
+            GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+            GIT_TAG        7.1.2
+        )
+        FetchContent_MakeAvailable(fmt)
+    endif()
+endif()
 
 set(CMAKE_CUDA_STANDARD 17)
-set(CMAKE_CXX_STANDARD 17)
 
-set(SM_ARCH 60 CACHE STRING "CUDA SM architecture e.g. 60, 70, 80, 90")
-
-include(FetchContent)
-
-# CXX options library
-FetchContent_Declare(
-        cxxopts
-        GIT_REPOSITORY https://github.com/jarro2783/cxxopts.git
-        GIT_TAG        v3.3.1
+add_hecbench_benchmark(
+    NAME si
+    MODEL cuda
+    SOURCES src/main.cu
+    INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
+    CATEGORIES search
+    LINK_LIBRARIES cxxopts fmt::fmt-header-only cublas
 )
-FetchContent_MakeAvailable(cxxopts)
-# Adds cxxopts
-
-# Formatting library
-FetchContent_Declare(
-        fmt
-        GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-        GIT_TAG        7.1.2
-)
-FetchContent_MakeAvailable(fmt)
-# Adds fmt::fmt
-
-# Zipf header library
-FetchContent_Declare(
-        zipf
-        GIT_REPOSITORY https://github.com/llersch/cpp_random_distributions.git
-        GIT_TAG        "6ae38ecf5dbeb1150b80ecf051cb43cb88ba697a"
-)
-FetchContent_MakeAvailable(zipf)
-
-# Progress bar library
-FetchContent_Declare(
-        progressbar
-        GIT_REPOSITORY https://github.com/prakhar1989/progress-cpp.git
-        GIT_TAG        "7bfba0d22d19c41323aa35541618b6ebec9d737c"
-)
-FetchContent_MakeAvailable(progressbar)
-
-
-# Generate dataset binary
-add_executable(generate_dataset src/generate_dataset.cpp)
-target_include_directories(generate_dataset PRIVATE include ${zipf_SOURCE_DIR} ${progressbar_SOURCE_DIR}/include/progresscpp/)
-target_link_libraries(generate_dataset PRIVATE cxxopts fmt::fmt)
-
-# Optimized binary search binary using matrix multiplication
-add_executable(main src/main.cu)
-target_link_libraries(main PRIVATE cxxopts fmt::fmt -lcublas)
-target_include_directories(main PRIVATE include)
-set_target_properties(
-        main
-        PROPERTIES
-        CUDA_SEPARABLE_COMPILATION ON
-        CUDA_ARCHITECTURES ${SM_ARCH})
-target_compile_options(main PRIVATE -m64)
