@@ -11,7 +11,7 @@ constexpr int BLOCK_SIZE = 256;
 // B spline smoothing kernel
 ////////////////////////////////////////////////////////////////////////////
 
-double W(double3 p_pos, double3 q_pos, double h)
+double W(vec3d p_pos, vec3d q_pos, double h)
 {
   double r = sycl::sqrt((p_pos.x-q_pos.x)*(p_pos.x-q_pos.x)
       + (p_pos.y-q_pos.y)*(p_pos.y-q_pos.y)
@@ -32,7 +32,7 @@ double W(double3 p_pos, double3 q_pos, double h)
 
 // Gradient of B spline kernel
 
-double del_W(double3 p_pos, double3 q_pos, double h)
+double del_W(vec3d p_pos, vec3d q_pos, double h)
 {
   double r = sycl::sqrt((p_pos.x-q_pos.x)*(p_pos.x-q_pos.x)
       + (p_pos.y-q_pos.y)*(p_pos.y-q_pos.y)
@@ -57,7 +57,7 @@ double del_W(double3 p_pos, double3 q_pos, double h)
 ////////////////////////////////////////////////////////////////////////////
 
 
-double boundaryGamma(double3 p_pos, double3 k_pos, double3 k_n, double h, double speed_sound)
+double boundaryGamma(vec3d p_pos, vec3d k_pos, vec3d k_n, double h, double speed_sound)
 {
   // Radial distance between p,q
   double r = sycl::sqrt((p_pos.x-k_pos.x)*(p_pos.x-k_pos.x)
@@ -94,7 +94,7 @@ double boundaryGamma(double3 p_pos, double3 k_pos, double3 k_n, double h, double
 ////////////////////////////////////////////////////////////////////////////
 
 
-double computeDensity(double3 p_pos, double3 p_v, double3 q_pos, double3 q_v,
+double computeDensity(vec3d p_pos, vec3d p_v, vec3d q_pos, vec3d q_v,
     param *params)
 {
   double v_x = (p_v.x - q_v.x);
@@ -123,10 +123,10 @@ double computePressure(double p_density, param *params)
 }
 
 
-double3 computeBoundaryAcceleration(double3 p_pos, double3 k_pos, double3 k_n,
+vec3d computeBoundaryAcceleration(vec3d p_pos, vec3d k_pos, vec3d k_n,
     double h, double speed_sound)
 {
-  double3 p_a;
+  vec3d p_a;
   double bGamma = boundaryGamma(p_pos,k_pos,k_n,h,speed_sound);
   p_a.x = bGamma * k_n.x;
   p_a.y = bGamma * k_n.y;
@@ -136,17 +136,17 @@ double3 computeBoundaryAcceleration(double3 p_pos, double3 k_pos, double3 k_n,
 }
 
 
-double3 computeAcceleration(double3 p_pos,
-    double3 p_v,
+vec3d computeAcceleration(vec3d p_pos,
+    vec3d p_v,
     double p_density,
     double p_pressure,
-    double3 q_pos,
-    double3 q_v,
+    vec3d q_pos,
+    vec3d q_v,
     double q_density,
     double q_pressure,
     param *params)
 {
-  double3 a;
+  vec3d a;
   double accel;
   double h = params->smoothing_radius;
   double alpha = params->alpha;
@@ -202,8 +202,8 @@ void eulerStart(fluid_particle* fluid_particles,
   for(int i=0; i<params->number_fluid_particles; i++)
   {
     // Velocity at t + dt/2
-    double3 v      = fluid_particles[i].v;
-    double3 v_half;
+    vec3d v      = fluid_particles[i].v;
+    vec3d v_half;
 
     v_half.x = v.x;
     v_half.y = v.y;
@@ -371,16 +371,16 @@ int main(int argc, char *argv[])
   // Main simulation loop
   for(int n=0; n<params.number_steps; n++) {
     q.submit([&](sycl::handler& cgh) {
-      sycl::local_accessor<double3, 1> s_pos (sycl::range<1>(BLOCK_SIZE), cgh);
-      sycl::local_accessor<double3, 1> s_v (sycl::range<1>(BLOCK_SIZE), cgh);
+      sycl::local_accessor<vec3d, 1> s_pos (sycl::range<1>(BLOCK_SIZE), cgh);
+      sycl::local_accessor<vec3d, 1> s_v (sycl::range<1>(BLOCK_SIZE), cgh);
       cgh.parallel_for<class updatePressure>(
         sycl::nd_range<1>(gws_FP, lws), [=] (sycl::nd_item<1> item) {
           int num_d_fluid_particles = d_params[0].number_fluid_particles;
           int i = item.get_global_id(0);
           int lid = item.get_local_id(0);
           bool valid = i < num_d_fluid_particles;
-          double3 p_pos = {0.0, 0.0, 0.0};
-          double3 p_v   = {0.0, 0.0, 0.0};
+          vec3d p_pos = {0.0, 0.0, 0.0};
+          vec3d p_v   = {0.0, 0.0, 0.0};
           double density = 0.0;
           if (valid) {
             p_pos = d_fluid_particles[i].pos;
@@ -412,8 +412,8 @@ int main(int argc, char *argv[])
     });
 
     q.submit([&](sycl::handler& cgh) {
-      sycl::local_accessor<double3, 1> s_pos (sycl::range<1>(BLOCK_SIZE), cgh);
-      sycl::local_accessor<double3, 1> s_v (sycl::range<1>(BLOCK_SIZE), cgh);
+      sycl::local_accessor<vec3d, 1> s_pos (sycl::range<1>(BLOCK_SIZE), cgh);
+      sycl::local_accessor<vec3d, 1> s_v (sycl::range<1>(BLOCK_SIZE), cgh);
       sycl::local_accessor<double, 1> s_density (sycl::range<1>(BLOCK_SIZE), cgh);
       sycl::local_accessor<double, 1> s_pressure (sycl::range<1>(BLOCK_SIZE), cgh);
       cgh.parallel_for<class updateAccelerationFP>(
@@ -428,8 +428,8 @@ int main(int argc, char *argv[])
         double ay = 0.0;
         double az = -9.8;
 
-        double3 p_pos = {0.0, 0.0, 0.0};
-        double3 p_v   = {0.0, 0.0, 0.0};
+        vec3d p_pos = {0.0, 0.0, 0.0};
+        vec3d p_v   = {0.0, 0.0, 0.0};
         double p_density = 0.0;
         double p_pressure = 0.0;
         if (valid) {
@@ -453,7 +453,7 @@ int main(int argc, char *argv[])
             int tile = sycl::min(BLOCK_SIZE, num_d_fluid_particles - t);
             for (int k = 0; k < tile; k++) {
               if (i != t + k) {
-                double3 tmp_a = computeAcceleration(p_pos, p_v, p_density,
+                vec3d tmp_a = computeAcceleration(p_pos, p_v, p_density,
                                 p_pressure, s_pos[k], s_v[k],
                                 s_density[k], s_pressure[k], d_params);
 
@@ -475,8 +475,8 @@ int main(int argc, char *argv[])
     });
 
     q.submit([&](sycl::handler& cgh) {
-      sycl::local_accessor<double3, 1> s_pos (sycl::range<1>(BLOCK_SIZE), cgh);
-      sycl::local_accessor<double3, 1> s_n (sycl::range<1>(BLOCK_SIZE), cgh);
+      sycl::local_accessor<vec3d, 1> s_pos (sycl::range<1>(BLOCK_SIZE), cgh);
+      sycl::local_accessor<vec3d, 1> s_n (sycl::range<1>(BLOCK_SIZE), cgh);
       cgh.parallel_for<class updateAccelerationBP>(
         sycl::nd_range<1>(gws_FP, lws), [=] (sycl::nd_item<1> item) {
         int num_d_fluid_particles = d_params[0].number_fluid_particles;
@@ -487,7 +487,7 @@ int main(int argc, char *argv[])
         double ax = 0.0;
         double ay = 0.0;
         double az = 0.0;
-        double3 p_pos = {0.0, 0.0, 0.0};
+        vec3d p_pos = {0.0, 0.0, 0.0};
         if (valid) {
           ax = d_fluid_particles[i].a.x;
           ay = d_fluid_particles[i].a.y;
@@ -506,7 +506,7 @@ int main(int argc, char *argv[])
           if (valid) {
             int tile = sycl::min(BLOCK_SIZE, num_boundary_particles - t);
             for (int k = 0; k < tile; k++) {
-              double3 tmp_a = computeBoundaryAcceleration(p_pos,s_pos[k],s_n[k],
+              vec3d tmp_a = computeBoundaryAcceleration(p_pos,s_pos[k],s_n[k],
                               d_params[0].smoothing_radius,
                               d_params[0].speed_sound);
               ax += tmp_a.x;
@@ -534,10 +534,10 @@ int main(int argc, char *argv[])
         double dt = d_params[0].time_step;
 
         // Velocity at t + dt/2
-        double3 v_half = d_fluid_particles[i].v_half;
-        double3 v      = d_fluid_particles[i].v;
-        double3 pos    = d_fluid_particles[i].pos;
-        double3 a      = d_fluid_particles[i].a;
+        vec3d v_half = d_fluid_particles[i].v_half;
+        vec3d v      = d_fluid_particles[i].v;
+        vec3d pos    = d_fluid_particles[i].pos;
+        vec3d a      = d_fluid_particles[i].a;
 
         v_half.x = v_half.x + dt * a.x;
         v_half.y = v_half.y + dt * a.y;

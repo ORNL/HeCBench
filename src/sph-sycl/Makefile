@@ -74,11 +74,16 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp
+%.o: %.cpp particles.stamp
 	$(CC) $(CFLAGS) -c $< -o $@
 
+particles.stamp: FORCE
+	@echo $(NUM_PARTICLES) | cmp -s - $@ || echo $(NUM_PARTICLES) > $@
+
+FORCE:
+
 clean:
-	rm -rf $(program) $(obj)
+	rm -rf $(program) $(obj) particles.stamp
 
 run: $(program)
 	$(LAUNCHER) ./$(program)
@@ -87,5 +92,4 @@ run: $(program)
 PRODUCTION_PARTICLES ?= 16384
 
 production:
-	$(MAKE) clean
-	$(MAKE) NUM_PARTICLES=$(PRODUCTION_PARTICLES)
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) NUM_PARTICLES=$(PRODUCTION_PARTICLES)

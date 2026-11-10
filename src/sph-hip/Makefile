@@ -48,17 +48,22 @@ endif
 $(program): fileio.o fluid.o geometry.o
 	$(CC) $(CFLAGS) $+ -o $@ $(LDFLAGS)
 
-fileio.o : fileio.cu
+fileio.o : fileio.cu particles.stamp
 	$(CC) $(CFLAGS) -c $< -o $@
 
-fluid.o : fluid.cu  
+fluid.o : fluid.cu particles.stamp
 	$(CC) $(CFLAGS) -c $< -o $@
 
-geometry.o : geometry.cu
+geometry.o : geometry.cu particles.stamp
 	$(CC) $(CFLAGS) -c $< -o $@
+
+particles.stamp: FORCE
+	@echo $(NUM_PARTICLES) | cmp -s - $@ || echo $(NUM_PARTICLES) > $@
+
+FORCE:
 
 clean:
-	rm -rf $(program) fileio.o fluid.o geometry.o *.csv
+	rm -rf $(program) fileio.o fluid.o geometry.o particles.stamp *.csv
 
 run: $(program)
 	$(LAUNCHER) ./$(program)
@@ -67,5 +72,4 @@ run: $(program)
 PRODUCTION_PARTICLES ?= 16384
 
 production:
-	$(MAKE) clean
-	$(MAKE) NUM_PARTICLES=$(PRODUCTION_PARTICLES)
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) NUM_PARTICLES=$(PRODUCTION_PARTICLES)
