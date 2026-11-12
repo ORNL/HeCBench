@@ -3,6 +3,8 @@
 #include <random>
 #include <hip/hip_runtime.h>
 #include <hipcub/hipcub.hpp>
+#include <rocprim/iterator/counting_iterator.hpp>
+#include <rocprim/iterator/transform_iterator.hpp>
 
 // Reference
 // https://pytorch.org/docs/stable/generated/torch.nonzero.html#torch.nonzero
@@ -90,7 +92,7 @@ void nonzero (int nrows, int ncols, int repeat) {
     NonZero<scalar_t> conversion_op;
 
     // Create an iterator wrapper
-    hipcub::TransformInputIterator<bool, NonZero<scalar_t>, scalar_t*> itr (d_in, conversion_op);
+    rocprim::transform_iterator<scalar_t*, NonZero<scalar_t>> itr(d_in, conversion_op);
 
     // Determine temporary device storage requirements
     void     *d_temp_storage;
@@ -129,7 +131,7 @@ void nonzero (int nrows, int ncols, int repeat) {
       // Time the index operations on a device
       auto start = std::chrono::steady_clock::now();
 
-      hipcub::CountingInputIterator<int64_t> counting_itr(0);
+      rocprim::counting_iterator<int64_t> counting_itr(0);
 
       hipcub::DeviceSelect::Flagged(nullptr, temp_storage_bytes, counting_itr, itr, d_out, d_nzeros, num_items);
 
