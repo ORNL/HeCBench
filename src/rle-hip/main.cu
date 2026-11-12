@@ -37,6 +37,7 @@
 #include <cstdio>
 #include <random>
 #include <hipcub/hipcub.hpp>
+#include <rocprim/iterator/constant_iterator.hpp>
 #include "test_util.h"
 
 using namespace hipcub;
@@ -383,7 +384,7 @@ void TestIterator(int num_items)
   LengthT *h_lengths_reference = new LengthT[num_items];
 
   T one_val = 1;
-  ConstantInputIterator<T, int> h_in(one_val);
+  rocprim::constant_iterator<T> h_in(one_val);
 
   // Initialize problem and solution
   int num_runs = Solve(h_in,
