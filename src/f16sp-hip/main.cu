@@ -15,6 +15,8 @@
 #include <hip/hip_runtime.h>
 #include <hip/hip_fp16.h>
 #include <hipcub/hipcub.hpp>
+#include <rocprim/iterator/counting_iterator.hpp>
+#include <rocprim/iterator/transform_iterator.hpp>
 #include <hipblas/hipblas.h>
 #include "kernels.h"
 
@@ -183,9 +185,8 @@ int main(int argc, char *argv[])
       hipDeviceSynchronize();
       start = std::chrono::steady_clock::now();
     }
-    hipcub::CountingInputIterator<size_t> counting(0);
-    hipcub::TransformInputIterator<float, Half2Mul,
-                                   hipcub::CountingInputIterator<size_t>>
+    rocprim::counting_iterator<size_t> counting(0);
+    rocprim::transform_iterator<rocprim::counting_iterator<size_t>, Half2Mul>
         iter(counting, Half2Mul(d_a, d_b));
 
     void* d_temp = nullptr; size_t temp_bytes = 0;
