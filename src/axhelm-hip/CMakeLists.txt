@@ -16,6 +16,8 @@ endif()
 # BlasLapack is Fortran; require a Fortran compiler only once its sources are present
 enable_language(Fortran)
 add_library(BlasLapack_hip STATIC ${FORTRAN_SOURCES})
+# hipcc links a PIE. lld rejects the non-PIC relocations gfortran emits by default.
+set_target_properties(BlasLapack_hip PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 add_hecbench_benchmark(
     NAME axhelm

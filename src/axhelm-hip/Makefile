@@ -64,7 +64,7 @@ meshBasis.o : meshBasis.cpp meshBasis.hpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
 BlasLapack/libBlasLapack.a: $(BLAS_MK)
-	$(MAKE) -C BlasLapack -j8
+	$(MAKE) -C BlasLapack -j8 FCOPTIONS=-fPIC
 
 $(BLAS_MK): $(wildcard $(BLAS_TGZ))
 	@test -f $(BLAS_TGZ) || { \
