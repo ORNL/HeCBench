@@ -27,7 +27,10 @@ if(HECBENCH_ENABLE_HIP)
     set_source_files_properties(${MESCHACH_LIB} PROPERTIES
         LANGUAGE CXX
         INCLUDE_DIRECTORIES "${CMAKE_CURRENT_LIST_DIR}/meschach_lib")
-    set_target_properties(meschach_hip PROPERTIES LANGUAGE CXX)
+    # hipcc links a PIE. lld rejects the non-PIC relocations g++ emits by default.
+    set_target_properties(meschach_hip PROPERTIES
+        LANGUAGE CXX
+        POSITION_INDEPENDENT_CODE ON)
     target_compile_options(meschach_hip BEFORE PUBLIC "-DHAVE_CONFIG_H" "-DANSI_C")
     target_link_options(meschach_hip BEFORE PRIVATE "-lm")
 endif()
