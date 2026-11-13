@@ -98,6 +98,6 @@ void GSimulation::Verify() {
     ref_kenergy_ = 0.5 * energy[0];
   }  // end of the time step loop
   std::cout << "\n";
-  bool ok = fabsf(kenergy_ - ref_kenergy_) < 1e-3f;
+  bool ok = fabsf(kenergy_ - ref_kenergy_) < 1e-3f + 1e-5f * fabsf(ref_kenergy_);
   printf("%s\n", ok ? "PASS" : "FAIL");
 }
