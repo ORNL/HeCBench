@@ -8,6 +8,8 @@ add_library(nicslu_hip STATIC ${NICSLU_LIB})
 FILE(GLOB NICSLU_UTIL "${SRC}/src/nicslu/util/nicslu_readfile.c")
 add_library(nicslu_util_hip STATIC ${NICSLU_UTIL})
 target_include_directories(nicslu_util_hip AFTER PRIVATE "${SRC}/src/nicslu/source")
+# hipcc links a PIE. lld rejects the non-PIC relocations gcc emits by default.
+set_target_properties(nicslu_hip nicslu_util_hip PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 add_hecbench_benchmark(
     NAME slu
