@@ -5,6 +5,7 @@
 #include <thrust/copy.h>
 #include <thrust/reduce.h>
 #include <thrust/remove.h>
+#include <rocprim/functional.hpp>
 #include "robin_hood.h"
 #include "aig_manager.h"
 #include "strash.cuh"
@@ -235,7 +236,7 @@ Aig::strash(const int * pFanin0, const int * pFanin1, const int * pOuts, int * p
     if (nDangling > 0) {
         pNewGlobalListEnd = thrust::remove_if(
             thrust::device, vRemainNodes, vRemainNodes + nNodes, 
-            vMarks, thrust::identity<int>()
+            vMarks, rocprim::identity<int>()
         );
         nRemain = pNewGlobalListEnd - vRemainNodes;
         assert(nRemain + nDangling == nNodes);
@@ -252,13 +253,13 @@ Aig::strash(const int * pFanin0, const int * pFanin1, const int * pOuts, int * p
 
         pNewGlobalListEnd = thrust::copy_if(
             thrust::device, vRemainNodes, vRemainNodes + nRemain, 
-            vMarks, vReadyNodes, thrust::identity<int>()
+            vMarks, vReadyNodes, rocprim::identity<int>()
         );
         nReady = pNewGlobalListEnd - vReadyNodes;
 
         pNewGlobalListEnd = thrust::remove_if(
             thrust::device, vRemainNodes, vRemainNodes + nRemain, 
-            vMarks, thrust::identity<int>()
+            vMarks, rocprim::identity<int>()
         );
         assert((pNewGlobalListEnd - vRemainNodes) + nReady == nRemain);
         nRemain = pNewGlobalListEnd - vRemainNodes;

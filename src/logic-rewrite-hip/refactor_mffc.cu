@@ -10,6 +10,7 @@
 #include <thrust/replace.h>
 #include <thrust/scan.h>
 #include <thrust/remove.h>
+#include <rocprim/functional.hpp>
 #include "refactor.h"
 #include "mffc.cuh"
 #include "truth.cuh"
@@ -507,7 +508,7 @@ int insertMFFCs(uint64 * htDestKeys, uint32 * htDestValues, int htDestCapacity,
     );
     hipDeviceSynchronize();
     pNewListEnd = thrust::remove_if(thrust::device, vResynIdSeq, vResynIdSeq + nResyn, 
-                                    vFinishedMark, thrust::identity<int>());
+                                    vFinishedMark, rocprim::identity<int>());
     assert(pNewListEnd - vResynIdSeq <= nResyn);
     int nReplace = pNewListEnd - vResynIdSeq;
     printf("Number of subgraphs to be inserted: %d\n", nReplace);
@@ -533,7 +534,7 @@ int insertMFFCs(uint64 * htDestKeys, uint32 * htDestValues, int htDestCapacity,
 
         // shrink according to vFinishedMark
         pNewListEnd = thrust::remove_if(thrust::device, vResynIdSeq, vResynIdSeq + nReplace, 
-                                        vFinishedMark, thrust::identity<int>());
+                                        vFinishedMark, rocprim::identity<int>());
         hipDeviceSynchronize();
         assert(pNewListEnd - vResynIdSeq <= nReplace);
         nReplace = pNewListEnd - vResynIdSeq;
