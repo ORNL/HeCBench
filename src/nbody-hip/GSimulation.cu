@@ -94,9 +94,6 @@ void GSimulation::Start() {
 
   total_time_ = 0.;
 
-  constexpr float kSofteningSquared = 1e-3f;
-  // prevents explosion in the case the particles are really close to each other
-  constexpr float kG = 6.67259e-11f;
   double gflops = 1e-9 * ((11. + 10.) * n * n + n * 19.);
   int nf = 0;
   double av = 0.0, dev = 0.0;
@@ -109,9 +106,6 @@ void GSimulation::Start() {
   hipMalloc((void**)&e, sizeof(RealType) * n);
   hipMemcpy(e, energy.data(), sizeof(RealType) * n, hipMemcpyHostToDevice);
 
-  dim3 grids((n+255)/256);
-  dim3 threads(256);
-
   int nsteps = get_nsteps();
 
   TimeInterval t0;
@@ -119,9 +113,7 @@ void GSimulation::Start() {
   for (int s = 1; s <= nsteps; ++s) {
     TimeInterval ts0;
 
-    accelerate_particles<<<grids, threads>>>(p, n, kSofteningSquared, kG);
-    update_particles<<<grids, threads>>>(p, e, n, dt);
-    accumulate_energy<<<1,1>>>(e, n);
+    nbody_step(p, e, n, dt);
 
     hipDeviceSynchronize();
     double elapsed_seconds = ts0.Elapsed();
@@ -161,6 +153,33 @@ void GSimulation::Start() {
 
   hipFree(p);
   hipFree(e);
+}
+
+RealType GSimulation::Integrate(int n, int steps) {
+  set_npart(n);
+  particles_.resize(n);
+  InitPos();
+  InitVel();
+  InitAcc();
+  InitMass();
+
+  Particle *p = nullptr;
+  RealType *e = nullptr;
+  hipMalloc((void**)&p, sizeof(Particle) * n);
+  hipMemcpy(p, particles_.data(), sizeof(Particle) * n, hipMemcpyHostToDevice);
+  hipMalloc((void**)&e, sizeof(RealType) * n);
+  hipMemset(e, 0, sizeof(RealType) * n);
+
+  const RealType dt = get_tstep();
+  for (int s = 0; s < steps; ++s)
+    nbody_step(p, e, n, dt);
+  hipDeviceSynchronize();
+
+  RealType sum = 0.f;
+  hipMemcpy(&sum, e, sizeof(RealType), hipMemcpyDeviceToHost);
+  hipFree(p);
+  hipFree(e);
+  return 0.5f * sum;
 }
 
 #ifdef DEBUG

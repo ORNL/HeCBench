@@ -1,4 +1,8 @@
 #include <cmath>
+#include <iomanip>
+#include <sstream>
+
+#include "nbody_constants.hpp"
 
 void accelerate_particles_ref( Particle* p, const int n, const float kSofteningSquared, const float kG )
 {
@@ -64,40 +68,69 @@ accumulate_energy_ref(RealType *e, const int n)
   for (int i = 1; i < n; i++) e[0] += e[i];
 }
 
-void GSimulation::Verify() {
-  RealType dt = get_tstep();
-  int n = get_npart();
-  std::vector<RealType> energy(n, 0.f);
-  // allocate particles
-  particles_.resize(n);
+// Short integrations stay in the rounding regime. A long run does not:
+// the same two correct integrators drift apart as the step count grows.
+constexpr int kFixedVerifyParticles = 2048;
+constexpr int kFixedVerifySteps = 10;
+constexpr float kRelativeTolerance = 4e-6f;
 
+RealType GSimulation::ReferenceEnergy(int n, int steps) {
+  set_npart(n);
+  particles_.resize(n);
   InitPos();
   InitVel();
   InitAcc();
   InitMass();
 
-#ifdef DEBUG
-  PrintHeader();
-#endif
-
-  constexpr float kSofteningSquared = 1e-3f;
-  // prevents explosion in the case the particles are really close to each other
-  constexpr float kG = 6.67259e-11f;
-  Particle *p = particles_.data();;
-
+  const RealType dt = get_tstep();
+  std::vector<RealType> energy(n, 0.f);
+  Particle *p = particles_.data();
   RealType *e = energy.data();
 
-  int nsteps = get_nsteps();
-  // Looping across integration steps
-  for (int s = 1; s <= nsteps; ++s) {
-
+  for (int s = 0; s < steps; ++s) {
     accelerate_particles_ref(p, n, kSofteningSquared, kG);
     update_particles_ref(p, e, n, dt);
     accumulate_energy_ref(e, n);
+  }
+  return 0.5f * e[0];
+}
 
-    ref_kenergy_ = 0.5 * energy[0];
-  }  // end of the time step loop
-  std::cout << "\n";
-  bool ok = fabsf(kenergy_ - ref_kenergy_) < 1e-3f;
-  printf("%s\n", ok ? "PASS" : "FAIL");
+// Device and host each start from the seeded initial conditions.
+// Both results must be finite and agree to kRelativeTolerance.
+bool GSimulation::Verify() {
+  const int npart = get_npart();
+  const int cases[][2] = {{npart, 1}, {kFixedVerifyParticles, kFixedVerifySteps}};
+  bool ok = true;
+
+  for (const auto &check : cases) {
+    const int n = check[0];
+    const int steps = check[1];
+    const RealType device = Integrate(n, steps);
+    const RealType reference = ReferenceEnergy(n, steps);
+    const float difference = fabsf(device - reference);
+    const bool finite = std::isfinite(device) && std::isfinite(reference);
+    const bool close = difference <= kRelativeTolerance * fabsf(reference);
+    if (!finite || !close) {
+      ok = false;
+      std::ostringstream message;
+      message << std::setprecision(9) << "n=" << n << " steps=" << steps
+              << " device=" << device << " reference=" << reference;
+      if (!finite) {
+        message << " non-finite";
+      } else if (reference == 0.f) {
+        message << " rel=inf";
+      } else {
+        const double relative =
+            std::fabs(static_cast<double>(device) - reference) /
+            std::fabs(static_cast<double>(reference));
+        message << std::scientific << std::setprecision(3)
+                << " rel=" << relative;
+      }
+      std::cout << message.str() << "\n";
+    }
+  }
+
+  set_npart(npart);
+  std::cout << (ok ? "PASS" : "FAIL") << "\n";
+  return ok;
 }

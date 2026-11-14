@@ -27,8 +27,8 @@ int main(int argc, char** argv) {
     }
   }
 
+  if (!sim.Verify())
+    return 1;
   sim.Start();
-  sim.Verify();
-
   return 0;
 }
