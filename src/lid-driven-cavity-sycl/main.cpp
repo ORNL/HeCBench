@@ -22,6 +22,7 @@
 #include <chrono>
 #include <sycl/sycl.hpp>
 #include "constants.h"
+#include "../lid-driven-cavity-cuda/reference.h"
 
 /** Mesh sizes */
 const Real dx = xLength / NUM;
@@ -175,6 +176,12 @@ int main (int argc, char *argv[])
   Real *max_u_d = sycl::malloc_device<Real>(size_max, q);
   Real *max_v_d = sycl::malloc_device<Real>(size_max, q);
 
+  // state at the start of the last time step, for verification
+  Real *u0_d = sycl::malloc_device<Real>(size, q);
+  Real *v0_d = sycl::malloc_device<Real>(size, q);
+  Real *pres_red0_d = sycl::malloc_device<Real>(size_pres, q);
+  Real *pres_black0_d = sycl::malloc_device<Real>(size_pres, q);
+
   Real time = time_start;
 
   // time-step size based on grid and Reynolds number
@@ -192,6 +199,12 @@ int main (int argc, char *argv[])
 
     if ((time + dt) >= time_end) {
       dt = time_end - time;
+
+      // snapshot the state for verify_last_step; the final step always takes this branch
+      q.memcpy (u0_d, u_d, size * sizeof(Real));
+      q.memcpy (v0_d, v_d, size * sizeof(Real));
+      q.memcpy (pres_red0_d, pres_red_d, size_pres * sizeof(Real));
+      q.memcpy (pres_black0_d, pres_black_d, size_pres * sizeof(Real));
     }
 
     // calculate F and G
@@ -371,7 +384,23 @@ int main (int argc, char *argv[])
   q.memcpy (v, v_d, size * sizeof(Real));
   q.memcpy (pres_red, pres_red_d, size_pres * sizeof(Real));
   q.memcpy (pres_black, pres_black_d, size_pres * sizeof(Real));
+  q.memcpy (F, F_d, size * sizeof(Real));
+  q.memcpy (G, G_d, size * sizeof(Real));
+
+  Real* u0 = (Real *) malloc (size * sizeof(Real));
+  Real* v0 = (Real *) malloc (size * sizeof(Real));
+  Real* pres_red0 = (Real *) malloc (size_pres * sizeof(Real));
+  Real* pres_black0 = (Real *) malloc (size_pres * sizeof(Real));
+  q.memcpy (u0, u0_d, size * sizeof(Real));
+  q.memcpy (v0, v0_d, size * sizeof(Real));
+  q.memcpy (pres_red0, pres_red0_d, size_pres * sizeof(Real));
+  q.memcpy (pres_black0, pres_black0_d, size_pres * sizeof(Real));
   q.wait();
+
+  bool ok = verify_last_step<Real>(NUM, dx, dy, dt, Re_num, mix_param, gx, gy, tol,
+                                   u0, v0, pres_red0, pres_black0,
+                                   F, G, pres_red, pres_black, u, v);
+  printf("%s\n", ok ? "PASS" : "FAIL");
 
   // write data to file
   FILE * pfile;
@@ -419,6 +448,15 @@ int main (int argc, char *argv[])
   sycl::free(max_v_d, q);
   sycl::free(pres_sum_d, q);
   sycl::free(res_d, q);
+  sycl::free(u0_d, q);
+  sycl::free(v0_d, q);
+  sycl::free(pres_red0_d, q);
+  sycl::free(pres_black0_d, q);
+
+  free(u0);
+  free(v0);
+  free(pres_red0);
+  free(pres_black0);
 
   free(pres_red);
   free(pres_black);
@@ -430,5 +468,5 @@ int main (int argc, char *argv[])
   free(max_v_arr);
   free(res);
   free(pres_sum);
-  return 0;
+  return ok ? 0 : 1;
 }

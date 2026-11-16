@@ -24,6 +24,7 @@
 #include <math.h>
 #include <chrono>
 #include <cuda.h>
+#include "reference.h"
 
 /** Problem size along one side; total number of cells is this squared */
 #define NUM 512
@@ -877,6 +878,16 @@ int main (int argc, char *argv[])
   cudaMalloc ((void**) &max_u_d, size_max * sizeof(Real));
   cudaMalloc ((void**) &max_v_d, size_max * sizeof(Real));
 
+  // state at the start of the last time step, for verification
+  Real* u0_d;
+  Real* v0_d;
+  Real* pres_red0_d;
+  Real* pres_black0_d;
+  cudaMalloc ((void**) &u0_d, size * sizeof(Real));
+  cudaMalloc ((void**) &v0_d, size * sizeof(Real));
+  cudaMalloc ((void**) &pres_red0_d, size_pres * sizeof(Real));
+  cudaMalloc ((void**) &pres_black0_d, size_pres * sizeof(Real));
+
   // copy to device memory
   cudaMemcpy (u_d, u, size * sizeof(Real), cudaMemcpyHostToDevice);
   cudaMemcpy (F_d, F, size * sizeof(Real), cudaMemcpyHostToDevice);
@@ -902,6 +913,12 @@ int main (int argc, char *argv[])
 
     if ((time + dt) >= time_end) {
       dt = time_end - time;
+
+      // snapshot the state for verify_last_step; the final step always takes this branch
+      cudaMemcpy (u0_d, u_d, size * sizeof(Real), cudaMemcpyDeviceToDevice);
+      cudaMemcpy (v0_d, v_d, size * sizeof(Real), cudaMemcpyDeviceToDevice);
+      cudaMemcpy (pres_red0_d, pres_red_d, size_pres * sizeof(Real), cudaMemcpyDeviceToDevice);
+      cudaMemcpy (pres_black0_d, pres_black_d, size_pres * sizeof(Real), cudaMemcpyDeviceToDevice);
     }
 
     // calculate F and G    
@@ -1016,6 +1033,22 @@ int main (int argc, char *argv[])
   cudaMemcpy (v, v_d, size * sizeof(Real), cudaMemcpyDeviceToHost);
   cudaMemcpy (pres_red, pres_red_d, size_pres * sizeof(Real), cudaMemcpyDeviceToHost);
   cudaMemcpy (pres_black, pres_black_d, size_pres * sizeof(Real), cudaMemcpyDeviceToHost);
+  cudaMemcpy (F, F_d, size * sizeof(Real), cudaMemcpyDeviceToHost);
+  cudaMemcpy (G, G_d, size * sizeof(Real), cudaMemcpyDeviceToHost);
+
+  Real* u0 = (Real *) malloc (size * sizeof(Real));
+  Real* v0 = (Real *) malloc (size * sizeof(Real));
+  Real* pres_red0 = (Real *) malloc (size_pres * sizeof(Real));
+  Real* pres_black0 = (Real *) malloc (size_pres * sizeof(Real));
+  cudaMemcpy (u0, u0_d, size * sizeof(Real), cudaMemcpyDeviceToHost);
+  cudaMemcpy (v0, v0_d, size * sizeof(Real), cudaMemcpyDeviceToHost);
+  cudaMemcpy (pres_red0, pres_red0_d, size_pres * sizeof(Real), cudaMemcpyDeviceToHost);
+  cudaMemcpy (pres_black0, pres_black0_d, size_pres * sizeof(Real), cudaMemcpyDeviceToHost);
+
+  bool ok = verify_last_step<Real>(NUM, dx, dy, dt, Re_num, mix_param, gx, gy, tol,
+                                   u0, v0, pres_red0, pres_black0,
+                                   F, G, pres_red, pres_black, u, v);
+  printf("%s\n", ok ? "PASS" : "FAIL");
 
   // write data to file
   FILE * pfile;
@@ -1063,7 +1096,15 @@ int main (int argc, char *argv[])
   cudaFree(max_v_d);
   cudaFree(pres_sum_d);
   cudaFree(res_d);
+  cudaFree(u0_d);
+  cudaFree(v0_d);
+  cudaFree(pres_red0_d);
+  cudaFree(pres_black0_d);
 
+  free(u0);
+  free(v0);
+  free(pres_red0);
+  free(pres_black0);
   free(pres_red);
   free(pres_black);
   free(u);
@@ -1075,5 +1116,5 @@ int main (int argc, char *argv[])
   free(res);
   free(pres_sum);
 
-  return 0;
+  return ok ? 0 : 1;
 }

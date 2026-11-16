@@ -20,7 +20,9 @@
 #include <stdio.h>
 #include <math.h>
 #include <chrono>
+#include <string.h>
 #include <omp.h>
+#include "../lid-driven-cavity-cuda/reference.h"
 
 /** Problem size along one side; total number of cells is this squared */
 #define NUM 512
@@ -247,6 +249,12 @@ int main (int argc, char *argv[])
   Real* pres_sum;
   pres_sum = (Real *) calloc (size_res, sizeof(Real));
 
+  // state at the start of the last time step, for verification
+  Real* u0 = (Real *) malloc (size * sizeof(Real));
+  Real* v0 = (Real *) malloc (size * sizeof(Real));
+  Real* pres_red0 = (Real *) malloc (size_pres * sizeof(Real));
+  Real* pres_black0 = (Real *) malloc (size_pres * sizeof(Real));
+
   // set initial BCs
   set_BCs_host (u, v);
 
@@ -295,6 +303,14 @@ int main (int argc, char *argv[])
 
       if ((time + dt) >= time_end) {
         dt = time_end - time;
+
+        // snapshot the state for verify_last_step; the final step always takes this branch
+        #pragma omp target update from(u[0:size], v[0:size], \
+                                       pres_red[0:size_pres], pres_black[0:size_pres])
+        memcpy (u0, u, size * sizeof(Real));
+        memcpy (v0, v, size * sizeof(Real));
+        memcpy (pres_red0, pres_red, size_pres * sizeof(Real));
+        memcpy (pres_black0, pres_black, size_pres * sizeof(Real));
       }
 
       // calculate F and G    
@@ -414,8 +430,15 @@ int main (int argc, char *argv[])
     auto end = std::chrono::steady_clock::now();
     auto elapsed_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     printf("\nTotal execution time of the iteration loop: %f (s)\n", elapsed_time * 1e-9f);
+
+    #pragma omp target update from(F[0:size], G[0:size])
   }
   // transfer final temperature values back implicitly
+
+  bool ok = verify_last_step<Real>(NUM, dx, dy, dt, Re_num, mix_param, gx, gy, tol,
+                                   u0, v0, pres_red0, pres_black0,
+                                   F, G, pres_red, pres_black, u, v);
+  printf("%s\n", ok ? "PASS" : "FAIL");
 
   // write data to file
   FILE * pfile;
@@ -462,5 +485,9 @@ int main (int argc, char *argv[])
   free(max_v_arr);
   free(res_arr);
   free(pres_sum);
-  return 0;
+  free(u0);
+  free(v0);
+  free(pres_red0);
+  free(pres_black0);
+  return ok ? 0 : 1;
 }

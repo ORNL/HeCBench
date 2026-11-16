@@ -73,7 +73,8 @@ $(program): $(obj)
 
 main.o: main.cpp black_kernel.sycl calculate_F.sycl calculate_u.sycl set_BCs.sycl \
  	set_vert_pres_BCs.sycl calc_residual.sycl calculate_G.sycl calculate_v.sycl  \
-	red_kernel.sycl set_horz_pres_BCs.sycl sum_pressure.sycl constants.h
+	red_kernel.sycl set_horz_pres_BCs.sycl sum_pressure.sycl constants.h \
+	../lid-driven-cavity-cuda/reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 set.o: set.cpp constants.h

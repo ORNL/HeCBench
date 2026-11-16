@@ -54,7 +54,8 @@ $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
 %.o: %.cpp black_kernel.h   calculate_F.h  calculate_u.h  red_kernel.h  set_horz_pres_BCs.h  sum_pressure.h \
-           calc_residual.h  calculate_G.h  calculate_v.h  set_BCs.h     set_vert_pres_BCs.h Makefile
+           calc_residual.h  calculate_G.h  calculate_v.h  set_BCs.h     set_vert_pres_BCs.h \
+           ../lid-driven-cavity-cuda/reference.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
