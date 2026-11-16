@@ -56,8 +56,19 @@ MedianFilterHost.o : $(SPATH)/MedianFilterHost.cpp
 shrUtils.o : $(UPATH)/shrUtils.cpp $(UPATH)/shrUtils.h 
 	$(CC) $(CFLAGS) -c $< -o $@
 
-clean:
-	rm -rf $(program) $(obj)
+# 2161 is not a multiple of the 4-row work group. The output buffer is sized
+# to the image, so this run stores one row past the end if the restored Y
+# bounds check is off by one.
+LARGE_W = 3840
+LARGE_H = 2161
+LARGE_PPM = large-$(LARGE_W)x$(LARGE_H).ppm
 
-run: $(program)
+$(LARGE_PPM):
+	python3 -c 'w=$(LARGE_W); h=$(LARGE_H); p="$@"; row=bytes((x*17+c*3)&255 for x in range(w) for c in range(3)); f=open(p,"wb"); f.write(("P6\n%d %d\n255\n"%(w,h)).encode()); [f.write(bytes((b+y)&255 for b in row)) for y in range(h)]; f.close()'
+
+clean:
+	rm -rf $(program) $(obj) $(LARGE_PPM)
+
+run: $(program) $(LARGE_PPM)
 	$(LAUNCHER) ./$(program) ../medianfilter-sycl/data/SierrasRGB.ppm 1000
+	$(LAUNCHER) ./$(program) $(LARGE_PPM) 100

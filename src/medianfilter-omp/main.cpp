@@ -47,38 +47,40 @@ int main(int argc, char** argv)
 
   const int iCycles = atoi(argv[2]);
 
-  const unsigned int uiMaxImageWidth = 1920;   // Image width
-  const unsigned int uiMaxImageHeight = 1080;  // Image height
+  // Matches the large Makefile image. Height is not a multiple of the
+  // 4-row work group, so an off-by-one store lands past an image-sized buffer.
+  const unsigned int uiMaxImageWidth = 3840;   // Image width
+  const unsigned int uiMaxImageHeight = 2161;  // Image height
 
-  unsigned int uiImageWidth;
-  unsigned int uiImageHeight;
+  unsigned int uiImageWidth = 0;
+  unsigned int uiImageHeight = 0;
 
   size_t szBuffBytes;                 // Size of main image buffers
   size_t szBuffWords;
 
-  unsigned int* uiInput;              // Host input buffer
+  unsigned int* uiInput = NULL;       // Host input buffer
   unsigned int* uiOutput;             // Host output buffer
-
-  // One device processes the whole image
-  szBuffWords = uiMaxImageHeight * uiMaxImageWidth;
-  szBuffBytes = szBuffWords * sizeof (unsigned int);
-
-  uiInput = (unsigned int*) malloc (szBuffBytes);
-  uchar4* uc4Source = (uchar4*) uiInput;
 
   bool status = shrLoadPPM4ub(cPathAndName, (unsigned char **)&uiInput, &uiImageWidth, &uiImageHeight);
 
   printf("Image File\t = %s\nImage Dimensions = %u w x %u h x %lu bpp\n\n",
          cPathAndName, uiImageWidth, uiImageHeight, sizeof(unsigned int)<<3);
 
-  if (uiImageWidth > uiMaxImageWidth || uiImageHeight > uiMaxImageHeight) {
-    printf("Error: Image Dimensions exceed the maximum values");
-    status = 0;
-  }
   if (!status) {
      free(uiInput);
      return 1;
   }
+  if (uiImageWidth > uiMaxImageWidth || uiImageHeight > uiMaxImageHeight) {
+    printf("Error: Image Dimensions exceed the maximum values\n");
+    free(uiInput);
+    return 1;
+  }
+
+  // Size both buffers to the image. A fixed 1920x1080 allocation hides a
+  // store one row past the image when height is not a multiple of 4.
+  szBuffWords = (size_t)uiImageWidth * uiImageHeight;
+  szBuffBytes = szBuffWords * sizeof (unsigned int);
+  uchar4* uc4Source = (uchar4*) uiInput;
 
   uiOutput = (unsigned int*) malloc (szBuffBytes);
 
@@ -119,7 +121,7 @@ int main(int argc, char** argv)
   else
     printf("FAIL\n");
 
-  return EXIT_SUCCESS;
+  return (bMatch == shrTRUE) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 // Copies input data from host buf to the device, runs kernel,
@@ -381,10 +383,12 @@ double MedianFilterGPU(
      uiPackedPix |= 0x0000FF00 & (((unsigned int)(fMedianEstimate[1] + 0.5f)) << 8);
      uiPackedPix |= 0x00FF0000 & (((unsigned int)(fMedianEstimate[2] + 0.5f)) << 16);
 
-     // Write out to GMEM with restored offset
-     if((iDevYPrime < iImageHeight) && (iImagePosX < iImageWidth))
+     // The apron load shifted Y up by one row. Restore it before the bounds check,
+     // otherwise a thread on row (height) stores one row past the image.
+     const int iDevY = iDevYPrime + 1;
+     if((iDevY >= 0) && (iDevY < iImageHeight) && (iImagePosX < iImageWidth))
      {
-       uiDest[iDevGMEMOffset + iImageX] = uiPackedPix;
+       uiDest[iDevY * iImageX + iImagePosX] = uiPackedPix;
      }
     }
   }
