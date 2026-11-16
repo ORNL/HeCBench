@@ -115,7 +115,7 @@ int main(int argc, char** argv)
   else
   {
     printf("Usage: %s <column length> <row length> <pyramid_height>\n", argv[0]);
-    exit(0);
+    exit(1);
   }
 
   if (rows < 1 || cols < 1 || pyramid_height < 1) {
@@ -228,5 +228,5 @@ int main(int argc, char** argv)
   delete[] result;
   delete[] ref;
 
-  return EXIT_SUCCESS;
+  return unequal ? EXIT_FAILURE : EXIT_SUCCESS;
 }
