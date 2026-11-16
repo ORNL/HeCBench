@@ -239,8 +239,57 @@ fill(const int e, T* w, const T value)
   }
 }
 
+// Host reference of the Jaccard weights computed by the kernels above
 template <bool weighted, typename T>
-void jaccard_weight (const int iteration, const int n, const int e,
+bool verify_weights (const int n, const int e,
+    const int* csr_ptr, const int* csr_ind, const T* csr_val,
+    const T gamma, const T* weight_j)
+{
+  // vertex weights assigned by fill<weighted>
+  auto vertex_weight = [e](int c) -> double {
+    return weighted ? (double)((T)(c+1)/e) : 1.0;
+  };
+
+  vector<double> work(n);
+  for (int row = 0; row < n; row++) {
+    double sum = 0.0;
+    for (int k = csr_ptr[row]; k < csr_ptr[row+1]; k++)
+      sum += vertex_weight(csr_ind[k]);
+    work[row] = sum;
+  }
+
+  int errors = 0;
+  for (int row = 0; row < n; row++) {
+    for (int j = csr_ptr[row]; j < csr_ptr[row+1]; j++) {
+      int col = csr_ind[j];
+      double wi = 0.0;
+      int a = csr_ptr[row], a_end = csr_ptr[row+1];
+      int b = csr_ptr[col], b_end = csr_ptr[col+1];
+      while (a < a_end && b < b_end) {
+        if (csr_ind[a] == csr_ind[b]) {
+          wi += vertex_weight(csr_ind[a]);
+          a++; b++;
+        } else if (csr_ind[a] < csr_ind[b]) {
+          a++;
+        } else {
+          b++;
+        }
+      }
+      double ws = work[row] + work[col];
+      double ref = ((double)gamma * csr_val[j]) * (wi / (ws - wi));
+      double err = std::fabs(weight_j[j] - ref);
+      // the device sums in a different order and precision
+      if (!(err <= 1e-6 || err <= 1e-4 * std::fabs(ref))) {
+        if (errors++ < 10)
+          printf("Mismatch at %d: %f (device) != %f (host)\n", j, weight_j[j], ref);
+      }
+    }
+  }
+  return errors == 0;
+}
+
+template <bool weighted, typename T>
+bool jaccard_weight (const int iteration, const int n, const int e,
     int* csr_ptr, int* csr_ind, T* csr_val)
 {
 
@@ -346,6 +395,8 @@ void jaccard_weight (const int iteration, const int n, const int e,
   cout << "Average execution time of kernels: " << (time * 1e-9f) / iteration << " (s)\n";
 
   hipMemcpy(weight_j, d_weight_j, sizeof(T) * e, hipMemcpyDeviceToHost);
+
+  bool ok = verify_weights<weighted, T>(n, e, csr_ptr, csr_ind, csr_val, gamma, weight_j);
 #ifdef DEBUG
   // verify using known values when weighted is true
   float error;
@@ -366,13 +417,10 @@ void jaccard_weight (const int iteration, const int n, const int e,
             std::fabs(weight_j[4] - 0.920000) +
             std::fabs(weight_j[5] - 0.460000);
 
-  if (error > 1e-5) {
+  if (!(error <= 1e-5)) {
     for (int i = 0; i < e; i++) printf("wj: %d %f\n", i, weight_j[i]);
-    printf("FAILED");
-  } else {
-    printf("PASSED");
+    ok = false;
   }
-  printf("\n");
 #endif
 
   hipFree (d_work);
@@ -388,6 +436,7 @@ void jaccard_weight (const int iteration, const int n, const int e,
   free(weight_s);
   free(work);
 #endif
+  return ok;
 }
 
 // Utilities
@@ -423,10 +472,20 @@ int main(int argc, char** argv)
     { 0, 6, 0, 1}
   };
 #else
+  if (argc != 4) {
+    printf("Usage: %s <number of rows> <number of columns> <repeat>\n", argv[0]);
+    return 1;
+  }
 
   int numRow = atoi(argv[1]);
   int numCol = atoi(argv[2]);
   iteration = atoi(argv[3]);
+
+  // column indices are also used as row indices
+  if (numRow <= 0 || numCol <= 0 || numCol > numRow || iteration <= 0) {
+    printf("Error: require 0 < number of columns <= number of rows and repeat > 0\n");
+    return 1;
+  }
 
   srand(2);
 
@@ -458,6 +517,12 @@ int main(int argc, char** argv)
     csr_ptr.push_back(nnz);
   }
 
+  // vertex weights are stored in an array of nnz elements indexed by column
+  if (nnz < col) {
+    printf("Error: the number of non-zero elements is less than the number of columns\n");
+    return 1;
+  }
+
   // print when the matrix is small
   if (row <= 16 && col <= 16) {
     printMatrix(M);
@@ -466,9 +531,10 @@ int main(int argc, char** argv)
     printVector(csr_ind, (char*)"col indices = ");
   }
 
-  jaccard_weight<true, vtype>(iteration, row, nnz, csr_ptr.data(), csr_ind.data(), csr_val.data());
-  jaccard_weight<false, vtype>(iteration, row, nnz, csr_ptr.data(), csr_ind.data(), csr_val.data());
+  bool ok = jaccard_weight<true, vtype>(iteration, row, nnz, csr_ptr.data(), csr_ind.data(), csr_val.data());
+  ok = jaccard_weight<false, vtype>(iteration, row, nnz, csr_ptr.data(), csr_ind.data(), csr_val.data()) && ok;
+  printf("%s\n", ok ? "PASS" : "FAIL");
 
-  return 0;
+  return ok ? 0 : 1;
 }
 
