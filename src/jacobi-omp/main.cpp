@@ -19,6 +19,7 @@
 #include <ctime>
 #include <chrono>
 #include <omp.h>
+#include "../jacobi-cuda/reference.h"
 
 // A multiple of thread block size
 #define N 2048
@@ -114,12 +115,16 @@ int main () {
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   std::cout << "Average execution time per iteration: " << (time * 1e-9f) / num_iters << " (s)\n";
+
+  // the boundary of f_old is never modified, so it still holds the initial values
+  #pragma omp target update from(f[0:N*N])
 }
 
-  // If we took fewer than max_iters steps and the error is below the tolerance,
-  // we succeeded. Otherwise, we failed.
+  // If we took fewer than max_iters steps, the error is below the tolerance,
+  // and the solution passes the host check, we succeeded. Otherwise, we failed.
 
-  if (error <= tolerance && num_iters < max_iters) {
+  if (error <= tolerance && num_iters < max_iters &&
+      verify_solution(N, f, f_old, tolerance)) {
     std::cout << "PASS" << std::endl;
   }
   else {
