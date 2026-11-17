@@ -176,35 +176,64 @@ struct Mxfp6TestBench {
         return alpha * sum;
     }
 
-    // Checks sampled outputs (including the four corners) against refDot. D is
-    // column-major (M,N) with ldd = M. The tolerance covers BF16 output rounding
-    // (relTol * |ref|) and FP32 accumulation (accTol * sum|term|).
-    bool verify(int samples = 2048, double relTol = 1e-2, double accTol = 1e-3) {
+    // Checks the border, a stride-64 interior grid, and 2048 random outputs
+    // against refDot. D is column-major (M,N) with ldd = M.
+    //
+    // relTol is two BF16 ulps (2^-6). One ulp is the BF16 rounding of the FP32
+    // accumulator; the second covers that result sitting off the exact dot
+    // product. accTol is a few sqrt(K) FP32 ulps of sum|term|. A fixed 0.1% of
+    // sum|term| hid a several-percent scale error when |ref| << sum|term|.
+    bool verify() {
         std::vector<__nv_bfloat16> Dh(dElems);
         checkCudaStatus(cudaMemcpy(Dh.data(), Ddev, dElems * sizeof(__nv_bfloat16), cudaMemcpyDeviceToHost));
 
-        std::mt19937 gen(4321);
-        std::uniform_int_distribution<int> rowDist(0, m - 1), colDist(0, n - 1);
+        const double relTol = 0x1p-6;
+        const double accTol = 4.0 * std::sqrt(static_cast<double>(k)) * 0x1p-23;
+        constexpr int stride = 64;
+        constexpr int randomSamples = 2048;
+
         int bad = 0;
+        int checked = 0;
         double worst = 0.0;
-        for (int s = 0; s < samples; ++s) {
-            int i, j;
-            if (s < 4) { i = (s & 1) ? m - 1 : 0; j = (s & 2) ? n - 1 : 0; }
-            else       { i = rowDist(gen); j = colDist(gen); }
+        double worstRel = 0.0;
+        double worstAcc = 0.0;
+        auto check = [&](int i, int j) {
             double absSum;
             const double ref = refDot(i, j, absSum);
             const double got = (double)__bfloat162float(Dh[(size_t)j * m + i]);
+            const double err = std::fabs(got - ref);
             const double tol = relTol * std::fabs(ref) + accTol * absSum + 1e-6;
-            const double ratio = std::fabs(got - ref) / tol;
+            const double ratio = err / tol;
             worst = std::max(worst, ratio);
+            worstRel = std::max(worstRel, err / (std::fabs(ref) + 1e-30));
+            worstAcc = std::max(worstAcc, err / (absSum + 1e-30));
+            checked++;
             if (ratio > 1.0) {
                 if (bad < 5) printf("Mismatch at (%d, %d): got %g, expected %g\n", i, j, got, ref);
                 bad++;
             }
+        };
+
+        for (int i = 0; i < m; ++i) {
+            check(i, 0);
+            if (n > 1) check(i, n - 1);
         }
+        for (int j = 1; j + 1 < n; ++j) {
+            check(0, j);
+            if (m > 1) check(m - 1, j);
+        }
+        for (int i = stride; i < m - 1; i += stride)
+            for (int j = stride; j < n - 1; j += stride)
+                check(i, j);
+
+        std::mt19937 gen(4321);
+        std::uniform_int_distribution<int> rowDist(0, m - 1), colDist(0, n - 1);
+        for (int s = 0; s < randomSamples; ++s) check(rowDist(gen), colDist(gen));
+
         const bool ok = (bad == 0);
-        printf("Verification: %d of %d sampled outputs out of tolerance, worst error/tolerance %.3f -> %s\n",
-               bad, samples, worst, ok ? "PASS" : "FAIL");
+        printf("Verification: %d of %d checks out of tolerance (border + stride-%d grid + %d random), "
+               "worst rel %.3g, worst |err|/sum|term| %.3g, worst error/tolerance %.3f -> %s\n",
+               bad, checked, stride, randomSamples, worstRel, worstAcc, worst, ok ? "PASS" : "FAIL");
         return ok;
     }
 

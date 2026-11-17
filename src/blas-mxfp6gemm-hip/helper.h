@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstring>
 #include <algorithm>
+#include <random>
 #include <stdexcept>
 #include <vector>
 
@@ -34,7 +35,7 @@ inline void checkHipblasStatus(hipblasStatus_t status) {
 //   D(M,N) = (A(M,K) * a_scale) @ (B(N,K) * b_scale)^T
 // A and B are FP6 (E2M3) packed four elements per three bytes along K.
 // Scales are E8M0 (UE8M0), one scale per 32-element block along K (VEC_SIZE = 32),
-// as required by the OCP microscaling (MX) format on CDNA4.
+// stored row-major. hipBLASLt reads VEC32_UE8M0 scales in that order.
 // Output D is BF16.
 struct Mxfp6TestBench {
     // VEC_SIZE = 32 for mxfp6 (one UE8M0 scale per 32 FP6 elements along K)
@@ -51,7 +52,7 @@ struct Mxfp6TestBench {
         const size_t kBytes = (size_t)k * 3 / 4;
         aBytes = (size_t)m * kBytes;
         bBytes = (size_t)n * kBytes;
-        // One UE8M0 scale (1 byte) per VEC_SIZE elements along K.
+        // One UE8M0 scale (1 byte) per VEC_SIZE elements along K, row-major.
         aScaleBytes = (size_t)m * (k / VEC_SIZE);
         bScaleBytes = (size_t)n * (k / VEC_SIZE);
         dElems = (size_t)m * n;
@@ -65,7 +66,7 @@ struct Mxfp6TestBench {
         checkHipStatus(hipMalloc(&workspace, workspaceSize));
         checkHipStatus(hipStreamCreate(&stream));
 
-        fillData();
+        fillRandom();
     }
 
     ~Mxfp6TestBench() {
@@ -79,15 +80,11 @@ struct Mxfp6TestBench {
         checkHipStatus(hipStreamDestroy(stream));
     }
 
-    // FP6 E2M3 encoding of 1.0 is 0x08 (exp=01, mant=000, bias=1).
-    static constexpr uint8_t FP6_FILL = 0x08;
-    // E8M0 (UE8M0) encoding of 1.0 is 127 (exponent bias 127, so 2^0 = 1).
-    static constexpr uint8_t SCALE_FILL = 127;
-
-    static void packUniformFp6(std::vector<uint8_t>& dst, size_t numElements, uint8_t code6) {
-        dst.assign(numElements * 3 / 4, 0);
-        const uint8_t bits = code6 & 0x3F;
-        for (size_t i = 0; i < numElements; ++i) {
+    // Packs 6-bit codes four elements per three bytes, least-significant bits first.
+    static void packFp6(std::vector<uint8_t>& dst, const std::vector<uint8_t>& codes) {
+        dst.assign(codes.size() * 3 / 4, 0);
+        for (size_t i = 0; i < codes.size(); ++i) {
+            const uint8_t bits = codes[i] & 0x3F;
             const size_t bit_pos = i * 6;
             const size_t byte_idx = bit_pos / 8;
             const int bit_offset = static_cast<int>(bit_pos % 8);
@@ -99,24 +96,31 @@ struct Mxfp6TestBench {
         }
     }
 
-    void fillData() {
-        std::vector<uint8_t> rowPacked;
-        packUniformFp6(rowPacked, (size_t)k, FP6_FILL);
+    // Random FP6 codes (all 64 E2M3 codes are finite) and UE8M0 scales in [2^-3, 2^3].
+    // Host copies of the unpacked codes and scales are kept for the reference check.
+    // Scales are written row-major: index (row, block) is at row * numBlocks + block.
+    void fillRandom() {
+        std::mt19937 gen(19937);
+        std::uniform_int_distribution<int> code6(0, 63), scale(124, 130);
+        const int numBlocks = k / VEC_SIZE;
 
-        std::vector<uint8_t> Ah(aBytes), Bh(bBytes);
-        for (int row = 0; row < m; ++row) {
-            std::memcpy(Ah.data() + (size_t)row * rowPacked.size(), rowPacked.data(), rowPacked.size());
-        }
-        for (int row = 0; row < n; ++row) {
-            std::memcpy(Bh.data() + (size_t)row * rowPacked.size(), rowPacked.data(), rowPacked.size());
-        }
+        Acodes.resize((size_t)m * k);
+        Bcodes.resize((size_t)n * k);
+        for (auto &c : Acodes) c = (uint8_t)code6(gen);
+        for (auto &c : Bcodes) c = (uint8_t)code6(gen);
+        Ascales.resize((size_t)m * numBlocks);
+        Bscales.resize((size_t)n * numBlocks);
+        for (auto &s : Ascales) s = (uint8_t)scale(gen);
+        for (auto &s : Bscales) s = (uint8_t)scale(gen);
 
-        std::vector<uint8_t> Asc(aScaleBytes, SCALE_FILL), Bsc(bScaleBytes, SCALE_FILL);
+        std::vector<uint8_t> Ah, Bh;
+        packFp6(Ah, Acodes);
+        packFp6(Bh, Bcodes);
 
         checkHipStatus(hipMemcpy(Adev, Ah.data(), aBytes, hipMemcpyHostToDevice));
         checkHipStatus(hipMemcpy(Bdev, Bh.data(), bBytes, hipMemcpyHostToDevice));
-        checkHipStatus(hipMemcpy(AscaleDev, Asc.data(), aScaleBytes, hipMemcpyHostToDevice));
-        checkHipStatus(hipMemcpy(BscaleDev, Bsc.data(), bScaleBytes, hipMemcpyHostToDevice));
+        checkHipStatus(hipMemcpy(AscaleDev, Ascales.data(), aScaleBytes, hipMemcpyHostToDevice));
+        checkHipStatus(hipMemcpy(BscaleDev, Bscales.data(), bScaleBytes, hipMemcpyHostToDevice));
     }
 
     // Decode a 6-bit E2M3 (FP6) code to float (exponent bias 1).
@@ -136,28 +140,82 @@ struct Mxfp6TestBench {
         return ldexpf(1.0f, (int)code - 127);
     }
 
-    // CPU reference check. The inputs are uniform, so every output element of
-    //   D = alpha * (A*a_scale) @ (B*b_scale)^T + beta * C
-    // equals alpha * (a_elem*a_scale) * (b_elem*b_scale) * K (with beta = 0).
-    bool verify(double relTol = 1e-2) {
+    // Double-precision reference for D(i,j) = alpha * sum_k (A(i,k)*a_scale) * (B(j,k)*b_scale)
+    // (beta = 0). absSum receives sum_k |term|, which bounds the FP32 accumulation error.
+    double refDot(int i, int j, double &absSum) const {
+        const int numBlocks = k / VEC_SIZE;
+        double sum = 0.0;
+        absSum = 0.0;
+        for (int kk = 0; kk < k; ++kk) {
+            const double a = (double)decodeE2M3(Acodes[(size_t)i * k + kk]) *
+                             decodeUE8M0(Ascales[(size_t)i * numBlocks + kk / VEC_SIZE]);
+            const double b = (double)decodeE2M3(Bcodes[(size_t)j * k + kk]) *
+                             decodeUE8M0(Bscales[(size_t)j * numBlocks + kk / VEC_SIZE]);
+            sum += a * b;
+            absSum += std::fabs(a * b);
+        }
+        absSum *= std::fabs(alpha);
+        return alpha * sum;
+    }
+
+    // Checks the border, a stride-64 interior grid, and 2048 random outputs
+    // against refDot. D is column-major (M,N) with ldd = M.
+    //
+    // relTol is two BF16 ulps (2^-6). One ulp is the BF16 rounding of the FP32
+    // accumulator; the second covers that result sitting off the exact dot
+    // product. accTol is a few sqrt(K) FP32 ulps of sum|term|. A fixed 0.1% of
+    // sum|term| hid a several-percent scale error when |ref| << sum|term|.
+    bool verify() {
         std::vector<__hip_bfloat16> Dh(dElems);
         checkHipStatus(hipMemcpy(Dh.data(), Ddev, dElems * sizeof(__hip_bfloat16), hipMemcpyDeviceToHost));
 
-        float aElem  = decodeE2M3(FP6_FILL);
-        float bElem  = decodeE2M3(FP6_FILL);
-        float aScale = decodeUE8M0(SCALE_FILL);
-        float bScale = decodeUE8M0(SCALE_FILL);
-        double expected = (double)alpha * (double)(aElem * aScale) *
-                          (double)(bElem * bScale) * (double)k;
+        const double relTol = 0x1p-6;
+        const double accTol = 4.0 * std::sqrt(static_cast<double>(k)) * 0x1p-23;
+        constexpr int stride = 64;
+        constexpr int randomSamples = 2048;
 
-        double maxErr = 0.0;
-        for (size_t i = 0; i < dElems; i++) {
-            double got = (double)__bfloat162float(Dh[i]);
-            maxErr = std::max(maxErr, std::fabs(got - expected));
+        int bad = 0;
+        int checked = 0;
+        double worst = 0.0;
+        double worstRel = 0.0;
+        double worstAcc = 0.0;
+        auto check = [&](int i, int j) {
+            double absSum;
+            const double ref = refDot(i, j, absSum);
+            const double got = (double)__bfloat162float(Dh[(size_t)j * m + i]);
+            const double err = std::fabs(got - ref);
+            const double tol = relTol * std::fabs(ref) + accTol * absSum + 1e-6;
+            const double ratio = err / tol;
+            worst = std::max(worst, ratio);
+            worstRel = std::max(worstRel, err / (std::fabs(ref) + 1e-30));
+            worstAcc = std::max(worstAcc, err / (absSum + 1e-30));
+            checked++;
+            if (ratio > 1.0) {
+                if (bad < 5) printf("Mismatch at (%d, %d): got %g, expected %g\n", i, j, got, ref);
+                bad++;
+            }
+        };
+
+        for (int i = 0; i < m; ++i) {
+            check(i, 0);
+            if (n > 1) check(i, n - 1);
         }
-        bool ok = maxErr <= relTol * (std::fabs(expected) + 1.0);
-        printf("Verification: expected %.1f, max abs error %.4g -> %s\n",
-               expected, maxErr, ok ? "PASS" : "FAIL");
+        for (int j = 1; j + 1 < n; ++j) {
+            check(0, j);
+            if (m > 1) check(m - 1, j);
+        }
+        for (int i = stride; i < m - 1; i += stride)
+            for (int j = stride; j < n - 1; j += stride)
+                check(i, j);
+
+        std::mt19937 gen(4321);
+        std::uniform_int_distribution<int> rowDist(0, m - 1), colDist(0, n - 1);
+        for (int s = 0; s < randomSamples; ++s) check(rowDist(gen), colDist(gen));
+
+        const bool ok = (bad == 0);
+        printf("Verification: %d of %d checks out of tolerance (border + stride-%d grid + %d random), "
+               "worst rel %.3g, worst |err|/sum|term| %.3g, worst error/tolerance %.3f -> %s\n",
+               bad, checked, stride, randomSamples, worstRel, worstAcc, worst, ok ? "PASS" : "FAIL");
         return ok;
     }
 
@@ -165,6 +223,9 @@ struct Mxfp6TestBench {
     float alpha, beta;
     size_t workspaceSize;
     size_t aBytes, bBytes, aScaleBytes, bScaleBytes, dElems;
+
+    std::vector<uint8_t> Acodes, Bcodes;    // unpacked FP6 codes, (M,K) and (N,K) row-major
+    std::vector<uint8_t> Ascales, Bscales;  // UE8M0 codes, (M,K/32) and (N,K/32) row-major
 
     void *Adev = nullptr, *Bdev = nullptr;           // packed FP6 (E2M3)
     void *AscaleDev = nullptr, *BscaleDev = nullptr;  // UE8M0 block scales
