@@ -1,4 +1,8 @@
 #include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <vector>
 
 int reference (
   const float *__restrict__ cls_input,
@@ -115,11 +119,6 @@ void verify (
   const float score_thresh,
   const float dir_offset)
 {
-
-  typedef struct {
-    float val[9];
-  } combined_float;
-
   const int feature_anchor_size = feature_size * num_anchors;
   const int score_size_byte = feature_anchor_size * sizeof(float);
 
@@ -150,26 +149,64 @@ void verify (
       score_thresh,
       dir_offset);
 
-  bool ok = bndbox_num_r == bndbox_num;
-  if (ok) {
-    // note the max score is not necessarily unique
-    auto max_ptr = std::max_element(score_output, score_output + bndbox_num);
-    int loc = max_ptr - score_output;
-    auto cbndbox = (combined_float*)bndbox_output + loc;
-    
-    for (int i = 0; i < bndbox_num_r; i++) {
-      if (fabsf(*max_ptr - score_output_r[i]) < 1e-6f) {
-        auto cbndbox_r = (combined_float*)bndbox_output_r + i;
-        if (cbndbox->val[8] == cbndbox_r->val[8]) { // find a max score that matches 
-          printf("Comparing values at location %d and reference location %d\n", loc, i);
-          for (int i = 0; i < 9; i++) {
-            if (fabsf(cbndbox->val[i] - cbndbox_r->val[i]) > 1e-3f) {
-              ok = false;
-              break;
-            }
-          }
+  bool ok = true;
+  if (bndbox_num != bndbox_num_r) {
+    printf("Box count mismatch: device %d reference %d\n", bndbox_num, bndbox_num_r);
+    ok = false;
+  } else if (bndbox_num > 0) {
+    // atomicAdd stores boxes in an arbitrary order. Match on the box offset,
+    // which is a unique anchor index, and compare every box.
+    std::vector<int> dev_order(bndbox_num), ref_order(bndbox_num);
+    for (int i = 0; i < bndbox_num; i++) {
+      dev_order[i] = i;
+      ref_order[i] = i;
+    }
+    auto offset_less = [](const float* boxes, int a, int b) {
+      return boxes[a * 9 + 8] < boxes[b * 9 + 8];
+    };
+    std::sort(dev_order.begin(), dev_order.end(),
+              [&](int a, int b) { return offset_less(bndbox_output, a, b); });
+    std::sort(ref_order.begin(), ref_order.end(),
+              [&](int a, int b) { return offset_less(bndbox_output_r, a, b); });
+
+    for (int n = 0; n < bndbox_num; n++) {
+      const int d = dev_order[n];
+      const int r = ref_order[n];
+      const float dev_offset = bndbox_output[d * 9 + 8];
+      const float ref_offset = bndbox_output_r[r * 9 + 8];
+      if (dev_offset != ref_offset) {
+        printf("Box offset mismatch at sorted index %d: device %f reference %f\n",
+               n, dev_offset, ref_offset);
+        ok = false;
+        break;
+      }
+      if (n + 1 < bndbox_num &&
+          bndbox_output[dev_order[n + 1] * 9 + 8] == dev_offset) {
+        printf("Duplicate box offset %f\n", dev_offset);
+        ok = false;
+        break;
+      }
+      for (int k = 0; k < 7; k++) {
+        if (fabsf(bndbox_output[d * 9 + k] - bndbox_output_r[r * 9 + k]) > 1e-3f) {
+          printf("Box %f component %d mismatch: %f %f\n",
+                 dev_offset, k,
+                 bndbox_output[d * 9 + k], bndbox_output_r[r * 9 + k]);
+          ok = false;
           break;
         }
+      }
+      if (!ok) break;
+      if (bndbox_output[d * 9 + 7] != bndbox_output_r[r * 9 + 7]) {
+        printf("Box %f class mismatch: %f %f\n",
+               dev_offset, bndbox_output[d * 9 + 7], bndbox_output_r[r * 9 + 7]);
+        ok = false;
+        break;
+      }
+      if (fabsf(score_output[d] - score_output_r[r]) > 1e-4f) {
+        printf("Box %f score mismatch: %f %f\n",
+               dev_offset, score_output[d], score_output_r[r]);
+        ok = false;
+        break;
       }
     }
   }
