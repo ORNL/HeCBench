@@ -111,13 +111,8 @@ void eval(const int64_t nframe,
 
   }
 
-  bool ok = true;
-  if (fabs(h_output[0] - r_output) > 1e-1 ||
-      fabs(h_total_weight[0] - r_total_weight) > 1e-1) {
-    printf("%f %f %f %f\n", (float)h_output[0], (float)r_output, 
-                            (float)h_total_weight[0], (float)r_total_weight);
-    ok = false;
-  }
+  bool ok = nll_results_match<scalar_t>(h_output[0], h_total_weight[0],
+                                        r_output, r_total_weight);
   printf("%s\n", ok ? "PASS" : "FAIL");
 }
 
@@ -163,7 +158,7 @@ void driver(char** argv) {
   scalar_t r_output;
   scalar_t r_total_weight;
 
-  reference<scalar_t, scalar_t, index_t>(
+  nll_cpu_reference<scalar_t, index_t>(
     &r_output, &r_total_weight,
     h_input, h_target, h_weights,
     size_average, nframe, n_classes, ignore_index);
