@@ -126,7 +126,7 @@ struct Mxfp6TestBench {
         int exp  = (code >> 3) & 0x3;
         int man  = code & 0x7;
         float mag;
-        if (exp == 0) mag = (man / 8.0f) * 0.5f;
+        if (exp == 0) mag = man / 8.0f;
         else          mag = (1.0f + man / 8.0f) * float(1 << (exp - 1));
         return sign ? -mag : mag;
     }
