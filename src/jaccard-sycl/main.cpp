@@ -21,6 +21,7 @@
 #include <vector>
 #include <chrono>
 #include <sycl/sycl.hpp>
+#include "../jaccard-cuda/reference.h"
 
 using namespace std;
 
@@ -88,7 +89,10 @@ void jaccard_row_sum(
   T *d_weight_j,
   T *d_work)
 {
-  const int y = 4;
+  // one row per sub-group: the sub-group collectives in parallel_prefix_sum
+  // have no width argument, unlike the CUDA shuffles
+  const int y = 2;
+  static_assert(64 / y == 32, "a row must span the required sub-group size");
   sycl::range<3> sum_gws (1, (n+y-1)/y*y, 64/y);
   sycl::range<3> sum_lws (1, y, 64/y);
 
@@ -300,7 +304,7 @@ void fill_weights(sycl::queue &q, const int e, T *d_w, const T value)
 }
 
 template <bool weighted, typename T>
-void jaccard_weight (sycl::queue &q, const int iteration, const int n, const int e,
+bool jaccard_weight (sycl::queue &q, const int iteration, const int n, const int e,
     int* csr_ptr, int* csr_ind, T* csr_val)
 {
 
@@ -370,6 +374,8 @@ void jaccard_weight (sycl::queue &q, const int iteration, const int n, const int
 
   q.memcpy(weight_j, d_weight_j, sizeof(T) * e).wait();
 
+  bool ok = verify_weights<weighted, T>(n, e, csr_ptr, csr_ind, csr_val, gamma, weight_j);
+
 #ifdef DEBUG
   // verify using known values when weighted is true
   float error;
@@ -390,13 +396,10 @@ void jaccard_weight (sycl::queue &q, const int iteration, const int n, const int
       std::fabs(weight_j[4] - 0.920000) +
       std::fabs(weight_j[5] - 0.460000);
 
-  if (error > 1e-5) {
+  if (!(error <= 1e-5)) {
     for (int i = 0; i < e; i++) printf("wj: %d %f\n", i, weight_j[i]);
-    printf("FAIL");
-  } else {
-    printf("PASS");
+    ok = false;
   }
-  printf("\n");
 #endif
 
   sycl::free(d_work, q);
@@ -413,6 +416,7 @@ void jaccard_weight (sycl::queue &q, const int iteration, const int n, const int
   free(weight_s);
   free(work);
 #endif
+  return ok;
 }
 
 // Utilities
@@ -448,10 +452,20 @@ int main(int argc, char** argv)
     { 0, 6, 0, 1}
   };
 #else
+  if (argc != 4) {
+    printf("Usage: %s <number of rows> <number of columns> <repeat>\n", argv[0]);
+    return 1;
+  }
 
   int numRow = atoi(argv[1]);
   int numCol = atoi(argv[2]);
   iteration = atoi(argv[3]);
+
+  // column indices are also used as row indices
+  if (numRow <= 0 || numCol <= 0 || numCol > numRow || iteration <= 0) {
+    printf("Error: require 0 < number of columns <= number of rows and repeat > 0\n");
+    return 1;
+  }
 
   srand(2);
 
@@ -483,6 +497,12 @@ int main(int argc, char** argv)
     csr_ptr.push_back(nnz);
   }
 
+  // vertex weights are stored in an array of nnz elements indexed by column
+  if (nnz < col) {
+    printf("Error: the number of non-zero elements is less than the number of columns\n");
+    return 1;
+  }
+
   // print when the matrix is small
   if (row <= 16 && col <= 16) {
     printMatrix(M);
@@ -497,8 +517,9 @@ int main(int argc, char** argv)
   sycl::queue q(sycl::cpu_selector_v, sycl::property::queue::in_order());
 #endif
 
-  jaccard_weight<true, vtype>(q, iteration, row, nnz, csr_ptr.data(), csr_ind.data(), csr_val.data());
-  jaccard_weight<false, vtype>(q, iteration, row, nnz, csr_ptr.data(), csr_ind.data(), csr_val.data());
+  bool ok = jaccard_weight<true, vtype>(q, iteration, row, nnz, csr_ptr.data(), csr_ind.data(), csr_val.data());
+  ok = jaccard_weight<false, vtype>(q, iteration, row, nnz, csr_ptr.data(), csr_ind.data(), csr_val.data()) && ok;
+  printf("%s\n", ok ? "PASS" : "FAIL");
 
-  return 0;
+  return ok ? 0 : 1;
 }

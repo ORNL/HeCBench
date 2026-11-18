@@ -21,6 +21,7 @@
 #include <vector>
 #include <chrono>
 #include <cuda.h>
+#include "reference.h"
 
 using namespace std;
 
@@ -243,7 +244,7 @@ fill(const int e, T* w, const T value)
 }
 
 template <bool weighted, typename T>
-void jaccard_weight (const int iteration, const int n, const int e,
+bool jaccard_weight (const int iteration, const int n, const int e,
     int* csr_ptr, int* csr_ind, T* csr_val)
 {
   const T gamma = (T)0.46;  // arbitrary
@@ -347,6 +348,9 @@ void jaccard_weight (const int iteration, const int n, const int e,
   cout << "Average execution time of kernels: " << (time * 1e-9f) / iteration << " (s)\n";
 
   cudaMemcpy(weight_j, d_weight_j, sizeof(T) * e, cudaMemcpyDeviceToHost);
+
+  bool ok = verify_weights<weighted, T>(n, e, csr_ptr, csr_ind, csr_val, gamma, weight_j);
+
 #ifdef DEBUG
   // verify using known values when weighted is true
   float error;
@@ -367,13 +371,10 @@ void jaccard_weight (const int iteration, const int n, const int e,
             std::fabs(weight_j[4] - 0.920000) +
             std::fabs(weight_j[5] - 0.460000);
 
-  if (error > 1e-5) {
+  if (!(error <= 1e-5)) {
     for (int i = 0; i < e; i++) printf("wj: %d %f\n", i, weight_j[i]);
-    printf("FAIL");
-  } else {
-    printf("PASS");
+    ok = false;
   }
-  printf("\n");
 #endif
 
   cudaFree (d_work);
@@ -389,6 +390,7 @@ void jaccard_weight (const int iteration, const int n, const int e,
   free(weight_s);
   free(work);
 #endif
+  return ok;
 }
 
 // Utilities
@@ -424,10 +426,20 @@ int main(int argc, char** argv)
     { 0, 6, 0, 1}
   };
 #else
+  if (argc != 4) {
+    printf("Usage: %s <number of rows> <number of columns> <repeat>\n", argv[0]);
+    return 1;
+  }
 
   int numRow = atoi(argv[1]);
   int numCol = atoi(argv[2]);
   iteration = atoi(argv[3]);
+
+  // column indices are also used as row indices
+  if (numRow <= 0 || numCol <= 0 || numCol > numRow || iteration <= 0) {
+    printf("Error: require 0 < number of columns <= number of rows and repeat > 0\n");
+    return 1;
+  }
 
   srand(2);
 
@@ -459,6 +471,12 @@ int main(int argc, char** argv)
     csr_ptr.push_back(nnz);
   }
 
+  // vertex weights are stored in an array of nnz elements indexed by column
+  if (nnz < col) {
+    printf("Error: the number of non-zero elements is less than the number of columns\n");
+    return 1;
+  }
+
   // print when the matrix is small
   if (row <= 16 && col <= 16) {
     printMatrix(M);
@@ -467,9 +485,10 @@ int main(int argc, char** argv)
     printVector(csr_ind, (char*)"col indices = ");
   }
 
-  jaccard_weight<true, vtype>(iteration, row, nnz, csr_ptr.data(), csr_ind.data(), csr_val.data());
-  jaccard_weight<false, vtype>(iteration, row, nnz, csr_ptr.data(), csr_ind.data(), csr_val.data());
+  bool ok = jaccard_weight<true, vtype>(iteration, row, nnz, csr_ptr.data(), csr_ind.data(), csr_val.data());
+  ok = jaccard_weight<false, vtype>(iteration, row, nnz, csr_ptr.data(), csr_ind.data(), csr_val.data()) && ok;
+  printf("%s\n", ok ? "PASS" : "FAIL");
 
-  return 0;
+  return ok ? 0 : 1;
 }
 
