@@ -168,6 +168,7 @@ int main(int argc, char *argv[]) {
     const int N = 8192;
     const int Ks[5] = {512, 1024, 2048, 4096, 8192};
 
+    int failures = 0;
     for (int i = 0; i < 5; i++) {
         int m = M, n = N, k = Ks[i];
         printf("Matrix dimension (M, N, K) = (%d, %d, %d)\n", m, n, k);
@@ -187,9 +188,9 @@ int main(int argc, char *argv[]) {
                       props.workspace,
                       props.workspaceSize);
 
-        if (ran) props.verify();
+        if (!ran || !props.verify()) failures++;
     }
 
-    return 0;
+    return failures == 0 ? 0 : 1;
 #endif // MXFP6_GEMM_SUPPORTED
 }
