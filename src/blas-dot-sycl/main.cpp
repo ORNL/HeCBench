@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <chrono>
 #include <cmath>
+#include <type_traits>
 #include <sycl/sycl.hpp>
 
 #ifdef USE_ONEMATH
@@ -30,13 +31,31 @@ void dot (const size_t iNumElements, const int iNumIterations)
   T* srcB = (T*) malloc (src_size_bytes);
   T  dst;
 
+  // Half of the FP16 maximum (65504), so that rounding the inputs up
+  // cannot push the dot product beyond the FP16 range
+  const double target = 32752.0;
+
   size_t i;
   double sum = 0.0;
   for (i = 0; i < iNumElements ; ++i)
   {
-    srcA[i] = (T)(sqrt(65504.0 / iNumElements));
-    srcB[i] = (T)(sqrt(65504.0 / iNumElements));
+    srcA[i] = (T)(sqrt(target / iNumElements));
+    srcB[i] = (T)(sqrt(target / iNumElements));
     sum += (float)srcA[i] * (float)srcB[i];
+  }
+
+  // The result is rounded to T, so compare against a rounded reference
+  // with a tolerance of one machine epsilon of T relative to the result
+  double ref, tol;
+  if constexpr (std::is_same<T, sycl::half>::value) {
+    ref = (float)(T)(float)sum;
+    tol = fabs(ref) * 0x1p-10;
+  } else if constexpr (std::is_same<T, sycl::ext::oneapi::bfloat16>::value) {
+    ref = (float)(T)(float)sum;
+    tol = fabs(ref) * 0x1p-7;
+  } else {
+    ref = sum;
+    tol = 1e-1;
   }
 
 #ifdef USE_GPU
@@ -69,9 +88,8 @@ void dot (const size_t iNumElements, const int iNumIterations)
   printf("Average oneMKL::dot execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
 #endif
   q.memcpy(&dst, d_dst, sizeof(T)).wait();
-  printf("Host: %lf  Device: %lf\n", sum, double(dst));
-  const double tol = fmax(1e-6, 0.01 * fabs(sum));
-  printf("%s\n\n", (fabs(double(dst) - sum) < tol) ? "PASS" : "FAIL");
+  printf("Host: %lf  Device: %lf\n", ref, double(dst));
+  printf("%s\n\n", (fabs(double(dst) - ref) <= tol) ? "PASS" : "FAIL");
 
   sycl::free(d_dst, q);
   sycl::free(d_srcA, q);
