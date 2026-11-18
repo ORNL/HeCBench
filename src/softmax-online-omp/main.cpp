@@ -56,8 +56,13 @@ void softmax_forward_online_kernel(int grid_size, int block_size, float* out, co
 
         float maxval = -INFINITY, sumval = 0.0f;
 
+        // thread_limit is an upper bound; the team may have fewer threads
         int tid = omp_get_thread_num();
-        for (int i = tid; i < C; i += block_size) {
+        int nthreads = omp_get_num_threads();
+        int pow2 = 1;
+        while (pow2 * 2 <= nthreads) pow2 *= 2;
+
+        for (int i = tid; i < C; i += nthreads) {
           float v = x[i];
           float bigger = fmaxf(maxval, v);
           float shift = softmax_exp_shift(bigger);
@@ -70,7 +75,10 @@ void softmax_forward_online_kernel(int grid_size, int block_size, float* out, co
         smem[tid] = maxval;
         #pragma omp barrier
 
-        for (int stride = block_size/ 2; stride > 0; stride /= 2) {
+        if (tid >= pow2) smem[tid - pow2] = fmaxf(smem[tid - pow2], smem[tid]);
+        #pragma omp barrier
+
+        for (int stride = pow2 / 2; stride > 0; stride /= 2) {
           if (tid < stride) smem[tid] = fmaxf(smem[tid], smem[tid + stride]);
           #pragma omp barrier
         }
@@ -81,7 +89,10 @@ void softmax_forward_online_kernel(int grid_size, int block_size, float* out, co
         smem[tid] = sumval * expf(maxval - global_maxval);
         #pragma omp barrier
 
-        for (int stride = block_size/ 2; stride > 0; stride /= 2) {
+        if (tid >= pow2) smem[tid - pow2] += smem[tid];
+        #pragma omp barrier
+
+        for (int stride = pow2 / 2; stride > 0; stride /= 2) {
            if (tid < stride) smem[tid] += smem[tid + stride];
            #pragma omp barrier
         }
@@ -89,7 +100,7 @@ void softmax_forward_online_kernel(int grid_size, int block_size, float* out, co
         float global_sum = smem[0];
         #pragma omp barrier
 
-        for (int i = tid; i < C; i += block_size) {
+        for (int i = tid; i < C; i += nthreads) {
           y[i] = expf(x[i] - global_maxval) / global_sum;
         }
       }
