@@ -73,6 +73,12 @@ void softmax_forward_online_kernel(float* out, const float* inp, int N, int C,
 }
 */
 
+// -inf - -inf is NaN, and 0 * NaN stays NaN, so a later finite value cannot
+// recover the sum. Use 0 as the exp shift while the running max is still -inf.
+inline float softmax_exp_shift(float maxval) {
+  return (maxval == -INFINITY) ? 0.0f : maxval;
+}
+
 void softmax_forward_online_kernel2(float* out, const float* inp, int N, int C,
                                     const sycl::nd_item<1> &item) {
   int tid = item.get_local_id(0);
@@ -99,8 +105,9 @@ void softmax_forward_online_kernel2(float* out, const float* inp, int N, int C,
     // when updating the maxval, dynamically updates the previous sumval by
     // multiplying e^{previous_maxval - current_maxval}
     bigger = sycl::fmax(maxval, (float)(x[i]));
-    sumval = sumval * sycl::exp(maxval - bigger) +
-             sycl::exp(x[i] - bigger);
+    float shift = softmax_exp_shift(bigger);
+    sumval = sumval * sycl::exp(maxval - shift) +
+             sycl::exp(x[i] - shift);
     maxval = bigger;
   }
 
@@ -116,7 +123,7 @@ void softmax_forward_online_kernel2(float* out, const float* inp, int N, int C,
       sumval *= sycl::exp(maxval - offsetMaxval);
       maxval = offsetMaxval;
     } else {
-      offsetSumval *= sycl::exp(offsetMaxval - maxval);
+      offsetSumval *= sycl::exp(offsetMaxval - softmax_exp_shift(maxval));
     }
     sumval += offsetSumval;
   }
@@ -146,11 +153,13 @@ void softmax_forward_online_kernel3(float* __restrict__ out, const float* __rest
   int block_size = item.get_local_range(0);
   for (int i = tid; i < C; i += block_size) {
       float v = x[i];
+      float bigger = sycl::fmax(maxval, v);
+      float shift = softmax_exp_shift(bigger);
       if (v > maxval) {
-          sumval *= sycl::exp(maxval - v);
+          sumval *= sycl::exp(maxval - shift);
           maxval = v;
       }
-      sumval += sycl::exp(v - maxval);
+      sumval += sycl::exp(v - shift);
   }
 
   smem[tid] = maxval;
