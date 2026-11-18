@@ -41,6 +41,7 @@ struct pair_r compute(
 
   struct pair_r rval = {0.f, 0.f};
 
+  #pragma unroll 4
   for (j = 0; j < D; j++) {
     genekj[j]=gene[k*(D+1)+j];
     if(sample[j]=='1')
@@ -52,6 +53,7 @@ struct pair_r compute(
   sx /= wid;
   sx_n /= (D-wid);
 
+  #pragma unroll 4
   for (j = 0; j < D; j++) {
     if(sample[j]=='1')
       sxx += (sx-genekj[j]) * (sx-genekj[j]);
@@ -62,6 +64,7 @@ struct pair_r compute(
   sxx = sycl::sqrt(sxx);
   sxx_n = sycl::sqrt(sxx_n);
 
+  #pragma unroll 4
   for (j = 0; j < D; j++) {
     geneij[j]=gene[i*(D+1)+j];
     if(sample[j]=='1')
@@ -73,6 +76,7 @@ struct pair_r compute(
   sy /= wid; 
   sy_n /= (D-wid); 
 
+  #pragma unroll 4
   for (j = 0; j < D; j++)
   {
     if(sample[j]=='1') {
