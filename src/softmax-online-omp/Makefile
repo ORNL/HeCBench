@@ -61,3 +61,4 @@ clean:
 run: $(program)
 	$(LAUNCHER) ./$(program) 1
 	$(LAUNCHER) ./$(program) 2
+	$(LAUNCHER) ./$(program) 4
