@@ -65,6 +65,12 @@ __global__ void softmax_forward_online_kernel(float* out, const float* inp, int 
 }
 */
 
+// -inf - -inf is NaN, and 0 * NaN stays NaN, so a later finite value cannot
+// recover the sum. Use 0 as the exp shift while the running max is still -inf.
+__device__ __forceinline__ float softmax_exp_shift(float maxval) {
+  return (maxval == -INFINITY) ? 0.0f : maxval;
+}
+
 template <unsigned int WarpSize>
 __global__ void softmax_forward_online_kernel2(float* out, const float* inp, int N, int C) {
   int tid = threadIdx.x;
@@ -87,7 +93,8 @@ __global__ void softmax_forward_online_kernel2(float* out, const float* inp, int
     // when updating the maxval, dynamically updates the previous sumval by
     // multiplying e^{previous_maxval - current_maxval}
     bigger = fmaxf(maxval, x[i]);
-    sumval = sumval * expf(maxval - bigger) + expf(x[i] - bigger);
+    float shift = softmax_exp_shift(bigger);
+    sumval = sumval * expf(maxval - shift) + expf(x[i] - shift);
     maxval = bigger;
   }
 
@@ -101,7 +108,7 @@ __global__ void softmax_forward_online_kernel2(float* out, const float* inp, int
       sumval *= expf(maxval - offsetMaxval);
       maxval = offsetMaxval;
     } else {
-      offsetSumval *= expf(offsetMaxval - maxval);
+      offsetSumval *= expf(offsetMaxval - softmax_exp_shift(maxval));
     }
     sumval += offsetSumval;
   }
@@ -130,11 +137,13 @@ __global__ void softmax_forward_online_kernel3(float* __restrict__ out, const fl
   int tid = threadIdx.x;
   for (int i = tid; i < C; i += blockDim.x) {
       float v = x[i];
+      float bigger = fmaxf(maxval, v);
+      float shift = softmax_exp_shift(bigger);
       if (v > maxval) {
-          sumval *= expf(maxval - v);
+          sumval *= expf(maxval - shift);
           maxval = v;
       }
-      sumval += expf(v - maxval);
+      sumval += expf(v - shift);
   }
 
   smem[tid] = maxval;

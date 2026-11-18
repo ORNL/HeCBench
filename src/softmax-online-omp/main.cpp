@@ -34,6 +34,14 @@ void softmax_forward_baseline_kernel(int grid_size, int block_size, float* out, 
   }
 }
 
+// -inf - -inf is NaN, and 0 * NaN stays NaN, so a later finite value cannot
+// recover the sum. Use 0 as the exp shift while the running max is still -inf.
+#pragma omp declare target
+inline float softmax_exp_shift(float maxval) {
+  return (maxval == -INFINITY) ? 0.0f : maxval;
+}
+#pragma omp end declare target
+
 void softmax_forward_online_kernel(int grid_size, int block_size, float* out, const float* inp, int N, int C) {
 
   #pragma omp target teams num_teams(grid_size) thread_limit(block_size) 
@@ -51,11 +59,13 @@ void softmax_forward_online_kernel(int grid_size, int block_size, float* out, co
         int tid = omp_get_thread_num();
         for (int i = tid; i < C; i += block_size) {
           float v = x[i];
+          float bigger = fmaxf(maxval, v);
+          float shift = softmax_exp_shift(bigger);
           if (v > maxval) {
-            sumval *= expf(maxval - v);
+            sumval *= expf(maxval - shift);
             maxval = v;
           }
-          sumval += expf(v - maxval);
+          sumval += expf(v - shift);
         }
         smem[tid] = maxval;
         #pragma omp barrier
