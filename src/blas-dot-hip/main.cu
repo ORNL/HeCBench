@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <chrono>
 #include <cmath>
+#include <type_traits>
 #include <hip/hip_runtime.h>
 #include <hip/hip_fp16.h>
 #include <hip/hip_bf16.h>
@@ -25,13 +26,31 @@ void dot (const size_t iNumElements, const int iNumIterations)
   T* srcB = (T*) malloc (src_size_bytes);
   T  dst;
 
+  // Half of the FP16 maximum (65504), so that rounding the inputs up
+  // cannot push the dot product beyond the FP16 range
+  const double target = 32752.0;
+
   size_t i;
   double sum = 0.0;
   for (i = 0; i < iNumElements ; ++i)
   {
-    srcA[i] = (T)(sqrt(65504.0 / iNumElements));
-    srcB[i] = (T)(sqrt(65504.0 / iNumElements));
+    srcA[i] = (T)(sqrt(target / iNumElements));
+    srcB[i] = (T)(sqrt(target / iNumElements));
     sum += (float)srcA[i] * (float)srcB[i];
+  }
+
+  // The result is rounded to T, so compare against a rounded reference
+  // with a tolerance of one machine epsilon of T relative to the result
+  double ref, tol;
+  if constexpr (std::is_same<T, __half>::value) {
+    ref = (float)(T)(float)sum;
+    tol = fabs(ref) * 0x1p-10;
+  } else if constexpr (std::is_same<T, __hip_bfloat16>::value) {
+    ref = (float)(T)(float)sum;
+    tol = fabs(ref) * 0x1p-7;
+  } else {
+    ref = sum;
+    tol = 1e-1;
   }
 
   T *d_srcA;
@@ -77,8 +96,8 @@ void dot (const size_t iNumElements, const int iNumIterations)
   printf("Average hipblasDotEx execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
 
   hipMemcpy(&dst, d_dst, sizeof(T), hipMemcpyDeviceToHost);
-  printf("Host: %lf  Device: %lf\n", sum, double(dst));
-  printf("%s\n\n", (fabs(double(dst) - sum) < 1e-1) ? "PASS" : "FAIL");
+  printf("Host: %lf  Device: %lf\n", ref, double(dst));
+  printf("%s\n\n", (fabs(double(dst) - ref) <= tol) ? "PASS" : "FAIL");
 
   hipFree(d_dst);
   hipFree(d_srcA);
