@@ -55,5 +55,8 @@ $(program): $(obj) Makefile
 clean:
 	rm -rf $(program) $(obj)
 
+# Default backend is hipblaslt.  ./main <repeat> aiter  uses the aiter f6gemm
+# kernel on the same inputs and verify().  Set AITER_ASM_DIR to the directory
+# that contains gfx950/.
 run: $(program)
 	$(LAUNCHER) ./$(program) 100

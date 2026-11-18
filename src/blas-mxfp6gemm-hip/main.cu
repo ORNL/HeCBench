@@ -1,5 +1,9 @@
 #include <chrono>
+#include <cstddef>
+#include <cstdlib>
 #include <cstring>
+#include <fstream>
+#include <string>
 #include "helper.h"
 
 // MXFP6 block-scaled matmul in hipBLASLt requires ROCm >= 7.0
@@ -179,14 +183,277 @@ static bool deviceSupportsBlockScaled(hipblasLtHandle_t ltHandle, hipDataType ab
     return ok;
 }
 
+// aiter f6gemm (gfx950). D = alpha * A @ B^T, with A and B in the
+// mxfp6_c0c1_256_padk2 layout. The kernel writes row-major BF16; this path
+// transposes that into the column-major D buffer the shared verify() reads.
+// Packing is outside the timed region, matching hipBLASLt (its inputs are
+// already on device when hipblasLtMatmul is timed).
+struct __attribute__((packed, aligned(16))) AiterKernelArgs {
+    void *ptr_D; unsigned _p0[2];
+    void *ptr_C; unsigned _p1[2];
+    void *ptr_A; unsigned _p2[2];
+    void *ptr_B; unsigned _p3[2];
+    float alpha; unsigned _p4[3];
+    float beta; unsigned _p5[3];
+    unsigned stride_D0; unsigned _p6[3];
+    unsigned stride_D1; unsigned _p7[3];
+    unsigned stride_C0; unsigned _p8[3];
+    unsigned stride_C1; unsigned _p9[3];
+    unsigned stride_A0; unsigned _p10[3];
+    unsigned stride_A1; unsigned _p11[3];
+    unsigned stride_B0; unsigned _p12[3];
+    unsigned stride_B1; unsigned _p13[3];
+    unsigned M; unsigned _p14[3];
+    unsigned N; unsigned _p15[3];
+    unsigned K; unsigned _p16[3];
+    void *ptr_ScaleA; unsigned _p17[2];
+    void *ptr_ScaleB; unsigned _p18[2];
+    unsigned stride_ScaleA0; unsigned _p19[3];
+    unsigned stride_ScaleA1; unsigned _p20[3];
+    unsigned stride_ScaleB0; unsigned _p21[3];
+    unsigned stride_ScaleB1; unsigned _p22[3];
+    int log2_k_split; unsigned _p23[3];
+};
+static_assert(sizeof(AiterKernelArgs) == 0x180, "aiter f6gemm kernarg must be 0x180 bytes");
+static_assert(offsetof(AiterKernelArgs, ptr_A) == 0x20, "ptr_A");
+static_assert(offsetof(AiterKernelArgs, alpha) == 0x40, "alpha");
+static_assert(offsetof(AiterKernelArgs, stride_D0) == 0x60, "stride_D0");
+static_assert(offsetof(AiterKernelArgs, M) == 0xe0, "M");
+static_assert(offsetof(AiterKernelArgs, ptr_ScaleA) == 0x110, "ptr_ScaleA");
+static_assert(offsetof(AiterKernelArgs, stride_ScaleA0) == 0x130, "stride_ScaleA0");
+static_assert(offsetof(AiterKernelArgs, stride_ScaleB0) == 0x150, "stride_ScaleB0");
+
+static constexpr int kAiterTile = 256;
+static constexpr int kAiterKTile = 128;
+static constexpr int kAiterPadK = 2;
+static constexpr int kAiterPackedTileBytes = 24576;
+static constexpr int kAiterScaleTileBytes = 1024;
+static constexpr const char *kAiterKernelName = "_ZN5aiter29f6gemm_bf16_per1x32Fp6_dmabigE";
+static constexpr const char *kAiterCoFile = "f6gemm/f6gemm_bf16_per1x32Fp6_dmabig.co";
+
+__global__ void mxfp6RowMajorToColumnMajor(const __hip_bfloat16 *__restrict__ src,
+                                           __hip_bfloat16 *__restrict__ dst,
+                                           int m, int n) {
+    const int j = blockIdx.x * blockDim.x + threadIdx.x;
+    const int i = blockIdx.y * blockDim.y + threadIdx.y;
+    if (i < m && j < n)
+        dst[(size_t)j * m + i] = src[(size_t)i * n + j];
+}
+
+static void pack32(const uint8_t codes[32], uint8_t out[24]) {
+    for (int g = 0; g < 8; ++g) {
+        const unsigned c0 = codes[g * 4 + 0] & 0x3f;
+        const unsigned c1 = codes[g * 4 + 1] & 0x3f;
+        const unsigned c2 = codes[g * 4 + 2] & 0x3f;
+        const unsigned c3 = codes[g * 4 + 3] & 0x3f;
+        out[g * 3 + 0] = (uint8_t)((c0 | (c1 << 6)) & 0xff);
+        out[g * 3 + 1] = (uint8_t)(((c1 >> 2) | (c2 << 4)) & 0xff);
+        out[g * 3 + 2] = (uint8_t)(((c2 >> 4) | (c3 << 2)) & 0xff);
+    }
+}
+
+// Host port of aiter pack_big / pack_scale. codes is [rows, K] row-major
+// 6-bit values; scales is [rows, K/32] row-major UE8M0 codes.
+static void packAiterOperand(const std::vector<uint8_t> &codes, int rows, int k,
+                             std::vector<uint8_t> &packed) {
+    const int nt = rows / kAiterTile;
+    const int nk = k / kAiterKTile;
+    const int nkPad = nk + kAiterPadK;
+    packed.assign((size_t)nt * nkPad * kAiterPackedTileBytes, 0);
+    for (int t = 0; t < nt; ++t) {
+        for (int s = 0; s < nk; ++s) {
+            uint8_t *tile = packed.data() + ((size_t)t * nkPad + s) * kAiterPackedTileBytes;
+            for (int i = 0; i < kAiterScaleTileBytes; ++i) {
+                const int rb = i / 64;
+                const int L = i % 64;
+                const int row = t * kAiterTile + rb * 16 + (L % 16);
+                const int col = s * kAiterKTile + (L / 16) * Mxfp6TestBench::VEC_SIZE;
+                uint8_t block[32];
+                for (int e = 0; e < 32; ++e)
+                    block[e] = codes[(size_t)row * k + col + e];
+                uint8_t bytes[24];
+                pack32(block, bytes);
+                std::memcpy(tile + (size_t)i * 16, bytes, 16);
+                std::memcpy(tile + 16384 + (size_t)i * 8, bytes + 16, 8);
+            }
+        }
+    }
+}
+
+static void packAiterScales(const std::vector<uint8_t> &scales, int rows, int k,
+                            std::vector<uint8_t> &packed) {
+    const int numBlocks = k / Mxfp6TestBench::VEC_SIZE;
+    const int nt = rows / kAiterTile;
+    const int nk = numBlocks / 4;
+    const int nkPad = nk + kAiterPadK;
+    packed.assign((size_t)nt * nkPad * kAiterScaleTileBytes, 127);
+    for (int t = 0; t < nt; ++t) {
+        for (int s = 0; s < nk; ++s) {
+            uint8_t *tile = packed.data() + ((size_t)t * nkPad + s) * kAiterScaleTileBytes;
+            for (int i = 0; i < kAiterScaleTileBytes; ++i) {
+                const int su = i / 512;
+                const int within = i % 512;
+                const int kg = within / 128;
+                const int r16 = (i % 128) / 8;
+                const int sub = i % 8;
+                const int row = t * kAiterTile + su * 128 + sub * 16 + r16;
+                const int block = s * 4 + kg;
+                tile[i] = scales[(size_t)row * numBlocks + block];
+            }
+        }
+    }
+}
+
+static std::string aiterCodeObjectPath(const std::string &arch) {
+    const std::string rel = arch + "/" + kAiterCoFile;
+    if (const char *asmDir = std::getenv("AITER_ASM_DIR")) {
+        if (asmDir[0] != '\0') return std::string(asmDir) + "/" + rel;
+    }
+    if (const char *root = std::getenv("AITER_ROOT")) {
+        if (root[0] != '\0') return std::string(root) + "/hsa/" + rel;
+    }
+    return {};
+}
+
+static bool loadAiterKernel(const std::string &arch, hipFunction_t *fn) {
+    static hipModule_t module = nullptr;
+    static hipFunction_t function = nullptr;
+    static std::string loadedArch;
+    if (function && loadedArch == arch) {
+        *fn = function;
+        return true;
+    }
+    const std::string path = aiterCodeObjectPath(arch);
+    if (path.empty()) {
+        printf("aiter backend needs AITER_ASM_DIR (directory containing %s/) "
+               "or AITER_ROOT\n", arch.c_str());
+        return false;
+    }
+    std::ifstream file(path);
+    if (!file) {
+        printf("aiter code object not found: %s\n", path.c_str());
+        return false;
+    }
+    checkHipStatus(hipModuleLoad(&module, path.c_str()));
+    checkHipStatus(hipModuleGetFunction(&function, module, kAiterKernelName));
+    loadedArch = arch;
+    *fn = function;
+    printf("aiter code object: %s\n", path.c_str());
+    return true;
+}
+
+bool AiterMxfp6Matmul(const int repeat, Mxfp6TestBench &props) {
+    const int m = props.m, n = props.n, k = props.k;
+    if (m % kAiterTile || n % kAiterTile || k % kAiterKTile) {
+        printf("aiter mxfp6 gemm needs M and N multiples of %d and K a multiple of %d\n",
+               kAiterTile, kAiterKTile);
+        return false;
+    }
+    if (props.beta != 0.0f) {
+        printf("aiter mxfp6 gemm supports only beta = 0\n");
+        return false;
+    }
+    // dmabig swizzle bounds apply only for K <= 6144. These benchmark shapes fit;
+    // refuse anything that would need the swizzle-free fallback kernel.
+    if (k <= 6144 && (m > 131072 || n > 16384)) {
+        printf("aiter dmabig kernel swizzle bounds exceeded for (M, N, K) = (%d, %d, %d)\n",
+               m, n, k);
+        return false;
+    }
+
+    int device = 0;
+    checkHipStatus(hipGetDevice(&device));
+    hipDeviceProp_t prop;
+    checkHipStatus(hipGetDeviceProperties(&prop, device));
+    std::string arch = prop.gcnArchName;
+    const size_t colon = arch.find(':');
+    if (colon != std::string::npos) arch.resize(colon);
+
+    hipFunction_t fn = nullptr;
+    if (!loadAiterKernel(arch, &fn)) return false;
+
+    std::vector<uint8_t> aPacked, bPacked, aScale, bScale;
+    packAiterOperand(props.Acodes, m, k, aPacked);
+    packAiterOperand(props.Bcodes, n, k, bPacked);
+    packAiterScales(props.Ascales, m, k, aScale);
+    packAiterScales(props.Bscales, n, k, bScale);
+
+    void *aDev = nullptr, *bDev = nullptr, *asDev = nullptr, *bsDev = nullptr;
+    __hip_bfloat16 *rowDev = nullptr;
+    checkHipStatus(hipMalloc(&aDev, aPacked.size()));
+    checkHipStatus(hipMalloc(&bDev, bPacked.size()));
+    checkHipStatus(hipMalloc(&asDev, aScale.size()));
+    checkHipStatus(hipMalloc(&bsDev, bScale.size()));
+    checkHipStatus(hipMalloc(&rowDev, props.dElems * sizeof(__hip_bfloat16)));
+    checkHipStatus(hipMemcpy(aDev, aPacked.data(), aPacked.size(), hipMemcpyHostToDevice));
+    checkHipStatus(hipMemcpy(bDev, bPacked.data(), bPacked.size(), hipMemcpyHostToDevice));
+    checkHipStatus(hipMemcpy(asDev, aScale.data(), aScale.size(), hipMemcpyHostToDevice));
+    checkHipStatus(hipMemcpy(bsDev, bScale.data(), bScale.size(), hipMemcpyHostToDevice));
+
+    AiterKernelArgs args{};
+    args.ptr_D = rowDev;
+    args.ptr_A = aDev;
+    args.ptr_B = bDev;
+    args.alpha = props.alpha;
+    args.stride_D0 = (unsigned)n;
+    args.M = (unsigned)m;
+    args.N = (unsigned)n;
+    args.K = (unsigned)k;
+    args.ptr_ScaleA = asDev;
+    args.ptr_ScaleB = bsDev;
+    args.stride_ScaleA0 = (unsigned)(k / Mxfp6TestBench::VEC_SIZE);
+    args.stride_ScaleB0 = (unsigned)(k / Mxfp6TestBench::VEC_SIZE);
+
+    size_t argSize = sizeof(args);
+    void *config[] = {HIP_LAUNCH_PARAM_BUFFER_POINTER, &args,
+                      HIP_LAUNCH_PARAM_BUFFER_SIZE, &argSize,
+                      HIP_LAUNCH_PARAM_END};
+    const unsigned gdx = (unsigned)(n / kAiterTile);
+    const unsigned gdy = (unsigned)(m / kAiterTile);
+    auto launch = [&]() {
+        checkHipStatus(hipModuleLaunchKernel(fn, gdx, gdy, 1, 256, 1, 1, 0, 0, nullptr, config));
+    };
+
+    launch();
+    checkHipStatus(hipDeviceSynchronize());
+
+    auto start = std::chrono::steady_clock::now();
+    for (int i = 0; i < repeat; i++) launch();
+    checkHipStatus(hipDeviceSynchronize());
+    auto end = std::chrono::steady_clock::now();
+    auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    auto ns = (time / repeat);
+    printf("Average aiter mxfp6 gemm execution time %10.3f (us) | ", ns * 1e-3f);
+    printf("Average aiter mxfp6 gemm performance %.1f (TFLOPS)\n", 2.f * m * k * n / ns * 1e-3f);
+
+    dim3 block(16, 16);
+    dim3 grid((n + block.x - 1) / block.x, (m + block.y - 1) / block.y);
+    mxfp6RowMajorToColumnMajor<<<grid, block>>>(rowDev, props.Ddev, m, n);
+    checkHipStatus(hipGetLastError());
+    checkHipStatus(hipDeviceSynchronize());
+
+    checkHipStatus(hipFree(aDev));
+    checkHipStatus(hipFree(bDev));
+    checkHipStatus(hipFree(asDev));
+    checkHipStatus(hipFree(bsDev));
+    checkHipStatus(hipFree(rowDev));
+    return true;
+}
+
 #endif // MXFP6_GEMM_SUPPORTED
 
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        printf("Usage: %s <repeat>\n", argv[0]);
+    if (argc != 2 && argc != 3) {
+        printf("Usage: %s <repeat> [hipblaslt|aiter]\n", argv[0]);
         return 1;
     }
     const int repeat = atoi(argv[1]);
+    const bool useAiter = (argc == 3);
+    if (useAiter && std::strcmp(argv[2], "aiter") != 0 && std::strcmp(argv[2], "hipblaslt") != 0) {
+        printf("Usage: %s <repeat> [hipblaslt|aiter]\n", argv[0]);
+        return 1;
+    }
+    const bool aiterBackend = useAiter && std::strcmp(argv[2], "aiter") == 0;
 
 #if !MXFP6_GEMM_SUPPORTED
     printf("Skipped: MXFP6 block-scaled matmul requires ROCm >= 7.0\n");
@@ -222,7 +489,11 @@ int main(int argc, char *argv[]) {
 
         Mxfp6TestBench props(m, n, k, 1.0f, 0.0f, 32ULL * 1024 * 1024);
 
-        bool ran = LtMxfp6Matmul(repeat,
+        bool ran;
+        if (aiterBackend) {
+            ran = AiterMxfp6Matmul(repeat, props);
+        } else {
+            ran = LtMxfp6Matmul(repeat,
                       props.ltHandle,
                       props.m,
                       props.n,
@@ -234,6 +505,7 @@ int main(int argc, char *argv[]) {
                       props.Ddev, props.m,                  // D: (M,N), ldd = M
                       props.workspace,
                       props.workspaceSize);
+        }
 
         if (!ran || !props.verify()) failures++;
     }
