@@ -55,8 +55,11 @@ $(program): $(obj) Makefile
 clean:
 	rm -rf $(program) $(obj)
 
-# Default backend is hipblaslt.  ./main <repeat> aiter  uses the aiter f6gemm
-# kernel on the same inputs and verify().  Set AITER_ASM_DIR to the directory
-# that contains gfx950/.
+# Default backend is hipblaslt.  The aiter f6gemm kernel uses the same inputs
+# and verify():
+#   export AITER_ASM_DIR=/path/to/aiter/hsa
+#   ./main <repeat> aiter
+# AITER_ASM_DIR is the hsa directory of an aiter checkout. The kernel loaded is
+# $AITER_ASM_DIR/$ARCH/f6gemm/f6gemm_bf16_per1x32Fp6_dmabig.co.
 run: $(program)
 	$(LAUNCHER) ./$(program) 100

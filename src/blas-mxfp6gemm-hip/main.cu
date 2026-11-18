@@ -229,7 +229,8 @@ static constexpr int kAiterPadK = 2;
 static constexpr int kAiterPackedTileBytes = 24576;
 static constexpr int kAiterScaleTileBytes = 1024;
 static constexpr const char *kAiterKernelName = "_ZN5aiter29f6gemm_bf16_per1x32Fp6_dmabigE";
-static constexpr const char *kAiterCoFile = "f6gemm/f6gemm_bf16_per1x32Fp6_dmabig.co";
+// Same relative path AiterAsmKernel loads: $AITER_ASM_DIR/<arch>/f6gemm/<file>.
+static constexpr const char *kAiterCoRel = "f6gemm/f6gemm_bf16_per1x32Fp6_dmabig.co";
 
 __global__ void mxfp6RowMajorToColumnMajor(const __hip_bfloat16 *__restrict__ src,
                                            __hip_bfloat16 *__restrict__ dst,
@@ -304,15 +305,22 @@ static void packAiterScales(const std::vector<uint8_t> &scales, int rows, int k,
     }
 }
 
+// AITER_ASM_DIR is the hsa directory of an aiter checkout. `import aiter`
+// sets it to <aiter>/hsa (develop install) or <aiter>/aiter_meta/hsa (wheel).
+// The kernel file is $AITER_ASM_DIR/<arch>/f6gemm/f6gemm_bf16_per1x32Fp6_dmabig.co.
+static void printAiterAsmDirHelp(const char *arch) {
+    printf("Set AITER_ASM_DIR to the hsa directory of an aiter checkout:\n"
+           "  export AITER_ASM_DIR=/path/to/aiter/hsa\n"
+           "The %s kernel is then $AITER_ASM_DIR/%s/%s\n",
+           arch, arch, kAiterCoRel);
+}
+
 static std::string aiterCodeObjectPath(const std::string &arch) {
-    const std::string rel = arch + "/" + kAiterCoFile;
-    if (const char *asmDir = std::getenv("AITER_ASM_DIR")) {
-        if (asmDir[0] != '\0') return std::string(asmDir) + "/" + rel;
-    }
-    if (const char *root = std::getenv("AITER_ROOT")) {
-        if (root[0] != '\0') return std::string(root) + "/hsa/" + rel;
-    }
-    return {};
+    const char *asmDir = std::getenv("AITER_ASM_DIR");
+    if (asmDir == nullptr || asmDir[0] == '\0') return {};
+    std::string dir(asmDir);
+    while (!dir.empty() && dir.back() == '/') dir.pop_back();
+    return dir + "/" + arch + "/" + kAiterCoRel;
 }
 
 static bool loadAiterKernel(const std::string &arch, hipFunction_t *fn) {
@@ -323,15 +331,17 @@ static bool loadAiterKernel(const std::string &arch, hipFunction_t *fn) {
         *fn = function;
         return true;
     }
-    const std::string path = aiterCodeObjectPath(arch);
-    if (path.empty()) {
-        printf("aiter backend needs AITER_ASM_DIR (directory containing %s/) "
-               "or AITER_ROOT\n", arch.c_str());
+    const char *asmDir = std::getenv("AITER_ASM_DIR");
+    if (asmDir == nullptr || asmDir[0] == '\0') {
+        printf("AITER_ASM_DIR is not set.\n");
+        printAiterAsmDirHelp(arch.c_str());
         return false;
     }
-    std::ifstream file(path);
-    if (!file) {
+    const std::string path = aiterCodeObjectPath(arch);
+    std::ifstream probe(path);
+    if (!probe) {
         printf("aiter code object not found: %s\n", path.c_str());
+        printAiterAsmDirHelp(arch.c_str());
         return false;
     }
     checkHipStatus(hipModuleLoad(&module, path.c_str()));
@@ -445,12 +455,16 @@ bool AiterMxfp6Matmul(const int repeat, Mxfp6TestBench &props) {
 int main(int argc, char *argv[]) {
     if (argc != 2 && argc != 3) {
         printf("Usage: %s <repeat> [hipblaslt|aiter]\n", argv[0]);
+        printf("  hipblaslt is the default.\n");
+        printf("  aiter: export AITER_ASM_DIR=/path/to/aiter/hsa\n");
         return 1;
     }
     const int repeat = atoi(argv[1]);
     const bool useAiter = (argc == 3);
     if (useAiter && std::strcmp(argv[2], "aiter") != 0 && std::strcmp(argv[2], "hipblaslt") != 0) {
         printf("Usage: %s <repeat> [hipblaslt|aiter]\n", argv[0]);
+        printf("  hipblaslt is the default.\n");
+        printf("  aiter: export AITER_ASM_DIR=/path/to/aiter/hsa\n");
         return 1;
     }
     const bool aiterBackend = useAiter && std::strcmp(argv[2], "aiter") == 0;
@@ -475,6 +489,14 @@ int main(int argc, char *argv[]) {
         printf("Skipped: MXFP6 block-scaled matmul is not supported on this device "
                "(%s / %s)\n", prop.gcnArchName, prop.name);
         return 0;
+    }
+
+    if (aiterBackend) {
+        std::string arch = prop.gcnArchName;
+        const size_t colon = arch.find(':');
+        if (colon != std::string::npos) arch.resize(colon);
+        hipFunction_t fn = nullptr;
+        if (!loadAiterKernel(arch, &fn)) return 1;
     }
 
     // M = N = 8192, sweep K -- following the benchmark shapes in reference.py.
