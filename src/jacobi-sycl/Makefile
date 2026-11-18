@@ -71,7 +71,7 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp
+%.o: %.cpp ../jacobi-cuda/reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
