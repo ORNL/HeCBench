@@ -131,17 +131,8 @@ void eval(const int64_t nframe,
   cudaMemcpy(&h_output, d_output, output_size_bytes, cudaMemcpyDeviceToHost);
   cudaMemcpy(&h_total_weight, d_total_weight, output_size_bytes, cudaMemcpyDeviceToHost);
 
-  bool ok = true;
-  float ho, ro, hw, rw;
-  ho = (float)h_output;
-  ro = (float)r_output; 
-  hw = (float)h_total_weight;
-  rw = (float)r_total_weight;
-  // relax the error bound for FP16
-  if (fabs(ho - ro) > 1.f || fabs(hw - rw) > 1.f) {
-    printf("%f %f %f %f\n", ho, ro, hw, rw);
-    ok = false;
-  }
+  bool ok = nll_results_match<scalar_t>(h_output, h_total_weight,
+                                        r_output, r_total_weight);
   printf("%s\n", ok ? "PASS" : "FAIL");
 
   cudaFree(d_output);
@@ -192,7 +183,7 @@ void driver(char** argv) {
   scalar_t r_output;
   scalar_t r_total_weight;
 
-  reference<scalar_t, scalar_t, index_t>(
+  nll_cpu_reference<scalar_t, index_t>(
     &r_output, &r_total_weight,
     h_input, h_target, h_weights,
     size_average, nframe, n_classes, ignore_index);
