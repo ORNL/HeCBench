@@ -34,15 +34,83 @@ void softmax_forward_baseline_kernel(int grid_size, int block_size, float* out, 
   }
 }
 
+// struct for the reduction operation, matching the CUDA SumMax
+struct SumMax {
+  float maxval;
+  float sum;
+};
+
 // -inf - -inf is NaN, and 0 * NaN stays NaN, so a later finite value cannot
 // recover the sum. Use 0 as the exp shift while the running max is still -inf.
 #pragma omp declare target
 inline float softmax_exp_shift(float maxval) {
   return (maxval == -INFINITY) ? 0.0f : maxval;
 }
+
+inline SumMax reduce_sum_max_op(SumMax a, SumMax b) {
+  bool a_bigger = (a.maxval > b.maxval);
+  SumMax bigger_m = a_bigger ? a : b;
+  SumMax smaller_m = a_bigger ? b : a;
+  SumMax res;
+  res.maxval = bigger_m.maxval;
+  float shift = softmax_exp_shift(res.maxval);
+  res.sum = bigger_m.sum + smaller_m.sum * expf(smaller_m.maxval - shift);
+  return res;
+}
 #pragma omp end declare target
 
+// CUDA softmax_forward_online_kernel: each thread scans a stride of the row,
+// then cg::reduce merges the {max, sum} pairs with reduce_sum_max_op.
+// nvc++ rejects declare reduction for a user-defined type, so the tree is written out.
 void softmax_forward_online_kernel(int grid_size, int block_size, float* out, const float* inp, int N, int C) {
+  #pragma omp target teams num_teams(grid_size) thread_limit(block_size)
+  {
+    SumMax smem[1024];
+    #pragma omp parallel
+    {
+      int row = omp_get_team_num();
+      if (row < N) {
+        const float* x = inp + row * C;
+        float* const y = out + row * C;
+
+        int tid = omp_get_thread_num();
+        int nthreads = omp_get_num_threads();
+        int pow2 = 1;
+        while (pow2 * 2 <= nthreads) pow2 *= 2;
+
+        SumMax sm_partial;
+        sm_partial.maxval = -INFINITY;
+        sm_partial.sum = 0.0f;
+        for (int i = tid; i < C; i += nthreads) {
+          SumMax v;
+          v.maxval = x[i];
+          v.sum = 1.0f;
+          sm_partial = reduce_sum_max_op(sm_partial, v);
+        }
+        smem[tid] = sm_partial;
+        #pragma omp barrier
+
+        if (tid >= pow2) smem[tid - pow2] = reduce_sum_max_op(smem[tid - pow2], smem[tid]);
+        #pragma omp barrier
+
+        for (int stride = pow2 / 2; stride > 0; stride /= 2) {
+          if (tid < stride) smem[tid] = reduce_sum_max_op(smem[tid], smem[tid + stride]);
+          #pragma omp barrier
+        }
+
+        SumMax sm_total = smem[0];
+        #pragma omp barrier
+
+        for (int i = tid; i < C; i += nthreads) {
+          y[i] = expf(x[i] - sm_total.maxval) / sm_total.sum;
+        }
+      }
+    }
+  }
+}
+
+// CUDA softmax_forward_online_kernel3: shared-memory tree reduction
+void softmax_forward_online3_kernel(int grid_size, int block_size, float* out, const float* inp, int N, int C) {
 
   #pragma omp target teams num_teams(grid_size) thread_limit(block_size) 
   {
@@ -119,6 +187,11 @@ void softmax_forward_online(float* out, const float* inp, int N, int C, int bloc
   softmax_forward_online_kernel(grid_size, block_size, out, inp, N, C);
 }
 
+void softmax_forward_online3(float* out, const float* inp, int N, int C, int block_size) {
+  const int grid_size = N;
+  softmax_forward_online3_kernel(grid_size, block_size, out, inp, N, C);
+}
+
 // kernel version dispatch
 void softmax_forward(int kernel_num, float* out, const float* inp, int N, int C,
                      const int block_size) {
@@ -128,6 +201,9 @@ void softmax_forward(int kernel_num, float* out, const float* inp, int N, int C,
       break;
     case 2:
       softmax_forward_online(out, inp, N, C, block_size);
+      break;
+    case 4:
+      softmax_forward_online3(out, inp, N, C, block_size);
       break;
     default:
       printf("Invalid kernel number\n");
