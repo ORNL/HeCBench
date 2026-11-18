@@ -1,9 +1,14 @@
 
 Canny Edge Detection - data partitioning (CEDD)
 
-Extract the dataset
+Fetch the dataset (from the repository root)
 
-    tar -zxf frames.tar.gz
+    dvc pull src/data/ced/input.dvc src/data/ced/output.dvc
+
+The frames are not hosted by HeCBench: src/data/ced/*.dvc are `dvc import`s
+of CUDA-D/CEDD/{input,output} from the Chai repository
+(https://github.com/chai-benchmarks/chai, pinned commit 61db988), shared by
+ced-cuda, ced-hip and ced-sycl.
 
 Compilation instructions:
 
@@ -20,9 +25,9 @@ For more options:
 
 Note:
 The input folder contains frames from a sample video. In order to generate frames 
-with a format suitable for this benchmark, use convert_frames in utils folder.
+with a format suitable for this benchmark, use utils/convert_frames in the Chai repository.
 The output folder contains output frames for comparison purposes. In order to 
-generate output frames, use ced_output_frames in utils folder.
+generate output frames, use utils/ced_output_frames in the Chai repository.
 
 Acknowledgements:
 Sean Kelley (https://github.com/smskelley/canny-opencl)

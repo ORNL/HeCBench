@@ -430,3 +430,16 @@ MACRO(UNZIPFILE zipfile)
         endif()
     endif()
 ENDMACRO()
+
+# REQUIREDATADIR
+#
+# Warn when a DVC-tracked data directory (e.g. one created with
+# `dvc import`) has not been fetched yet. Unlike UNZIPFILE there is
+# nothing to extract: the directory is used as-is.
+MACRO(REQUIREDATADIR datadir)
+    if(NOT IS_DIRECTORY "${datadir}")
+        message(WARNING
+            "Data directory ${datadir} is missing. "
+            "Fetch it from the repository root with `dvc pull` and re-run CMake.")
+    endif()
+ENDMACRO()

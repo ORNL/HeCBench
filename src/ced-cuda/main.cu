@@ -399,8 +399,8 @@ struct Params {
     n_warmup        = 10;
     n_reps          = 100;
     alpha           = 0.2;
-    file_name       = "input/peppa/";
-    comparison_file = "output/peppa/";
+    file_name       = "../data/ced/input/peppa/";
+    comparison_file = "../data/ced/output/peppa/";
     int opt;
     while((opt = getopt(argc, argv, "hd:i:t:w:r:a:f:c:x")) >= 0) {
       switch(opt) {
@@ -453,8 +453,8 @@ struct Params {
         "\n              NOTE: Dynamic partitioning used when <A> is not between 0.0 and 1.0"
         "\n"
         "\nBenchmark-specific options:"
-        "\n    -f <F>    folder containing input video files (default=input/peppa/)"
-        "\n    -c <C>    folder containing comparison files (default=output/peppa/)"
+        "\n    -f <F>    folder containing input video files (default=../data/ced/input/peppa/)"
+        "\n    -c <C>    folder containing comparison files (default=../data/ced/output/peppa/)"
         "\n    -x        display output video (with CHAI_OPENCV)"
         "\n");
   }

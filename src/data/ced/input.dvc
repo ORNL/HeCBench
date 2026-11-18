@@ -1,0 +1,14 @@
+md5: 50835aba5f2c0280ff11e81ff1d45055
+frozen: true
+deps:
+- path: CUDA-D/CEDD/input
+  repo:
+    url: https://github.com/chai-benchmarks/chai
+    rev: 61db988662cb993fa108429a13759dbdc83ab9be
+    rev_lock: 61db988662cb993fa108429a13759dbdc83ab9be
+outs:
+- md5: 128a11baf57f748b7d41d923e86aadb2.dir
+  size: 97357619
+  nfiles: 110
+  hash: md5
+  path: input

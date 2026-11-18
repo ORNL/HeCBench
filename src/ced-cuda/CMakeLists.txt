@@ -1,7 +1,7 @@
 # ced-cuda/CMakeLists.txt
 
-set(SRC_DIR "${CMAKE_CURRENT_LIST_DIR}")
-UNZIPFILE("${SRC_DIR}/frames.tar.gz")
+REQUIREDATADIR("${CMAKE_CURRENT_LIST_DIR}/../data/ced/input")
+REQUIREDATADIR("${CMAKE_CURRENT_LIST_DIR}/../data/ced/output")
 
 add_hecbench_benchmark(
     NAME ced
