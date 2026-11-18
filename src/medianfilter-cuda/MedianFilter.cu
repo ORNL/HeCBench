@@ -246,9 +246,11 @@ __global__ void ckMedian(
   uiPackedPix |= 0x0000FF00 & (((unsigned int)(fMedianEstimate[1] + 0.5f)) << 8);
   uiPackedPix |= 0x00FF0000 & (((unsigned int)(fMedianEstimate[2] + 0.5f)) << 16);
 
-  // Write out to GMEM with restored offset
-  if((iDevYPrime < iDevImageHeight) && (iImagePosX < iImageWidth))
+  // The apron load shifted Y up by one row. Restore it before the bounds check,
+  // otherwise a thread on row (height) stores one row past the image.
+  const int iDevY = iDevYPrime + 1;
+  if((iDevY >= 0) && (iDevY < iDevImageHeight) && (iImagePosX < iImageWidth))
   {
-    uiDest[iDevGMEMOffset + iImageX] = uiPackedPix;
+    uiDest[iDevY * iImageX + iImagePosX] = uiPackedPix;
   }
 }
