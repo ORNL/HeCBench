@@ -1,7 +1,7 @@
 #pragma omp target teams distribute parallel for thread_limit(BLOCK_SIZE)
-for (int col = 1; col < NUM/2+1; col++)
+for (int c = 1; c < NUM/2+1; c++)
 {
-  col = (col * 2) - 1;
+  int col = (c * 2) - 1;
 
   int NUM_2 = NUM >> 1;
 
