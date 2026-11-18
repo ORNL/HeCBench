@@ -228,6 +228,10 @@ static constexpr int kAiterKTile = 128;
 static constexpr int kAiterPadK = 2;
 static constexpr int kAiterPackedTileBytes = 24576;
 static constexpr int kAiterScaleTileBytes = 1024;
+// One 32-element group per scale byte. A 256x128 tile holds 1024 of them,
+// which is also the scale tile size; keep the two counts tied together.
+static constexpr int kAiterGroupsPerTile = (kAiterTile * kAiterKTile) / Mxfp6TestBench::VEC_SIZE;
+static_assert(kAiterGroupsPerTile == kAiterScaleTileBytes, "scale tile holds one byte per group");
 static constexpr const char *kAiterKernelName = "_ZN5aiter29f6gemm_bf16_per1x32Fp6_dmabigE";
 // Same relative path AiterAsmKernel loads: $AITER_ASM_DIR/<arch>/f6gemm/<file>.
 static constexpr const char *kAiterCoRel = "f6gemm/f6gemm_bf16_per1x32Fp6_dmabig.co";
@@ -264,7 +268,7 @@ static void packAiterOperand(const std::vector<uint8_t> &codes, int rows, int k,
     for (int t = 0; t < nt; ++t) {
         for (int s = 0; s < nk; ++s) {
             uint8_t *tile = packed.data() + ((size_t)t * nkPad + s) * kAiterPackedTileBytes;
-            for (int i = 0; i < kAiterScaleTileBytes; ++i) {
+            for (int i = 0; i < kAiterGroupsPerTile; ++i) {
                 const int rb = i / 64;
                 const int L = i % 64;
                 const int row = t * kAiterTile + rb * 16 + (L % 16);
@@ -388,29 +392,37 @@ bool AiterMxfp6Matmul(const int repeat, Mxfp6TestBench &props) {
     packAiterScales(props.Ascales, m, k, aScale);
     packAiterScales(props.Bscales, n, k, bScale);
 
-    void *aDev = nullptr, *bDev = nullptr, *asDev = nullptr, *bsDev = nullptr;
-    __hip_bfloat16 *rowDev = nullptr;
-    checkHipStatus(hipMalloc(&aDev, aPacked.size()));
-    checkHipStatus(hipMalloc(&bDev, bPacked.size()));
-    checkHipStatus(hipMalloc(&asDev, aScale.size()));
-    checkHipStatus(hipMalloc(&bsDev, bScale.size()));
-    checkHipStatus(hipMalloc(&rowDev, props.dElems * sizeof(__hip_bfloat16)));
-    checkHipStatus(hipMemcpy(aDev, aPacked.data(), aPacked.size(), hipMemcpyHostToDevice));
-    checkHipStatus(hipMemcpy(bDev, bPacked.data(), bPacked.size(), hipMemcpyHostToDevice));
-    checkHipStatus(hipMemcpy(asDev, aScale.data(), aScale.size(), hipMemcpyHostToDevice));
-    checkHipStatus(hipMemcpy(bsDev, bScale.data(), bScale.size(), hipMemcpyHostToDevice));
+    // Freed on every exit, including a throw from checkHipStatus.
+    struct DevFree {
+        void *p = nullptr;
+        ~DevFree() { if (p) (void)hipFree(p); }
+    } aDev, bDev, asDev, bsDev, rowDev;
+    auto alloc = [](size_t bytes) {
+        void *p = nullptr;
+        checkHipStatus(hipMalloc(&p, bytes));
+        return p;
+    };
+    aDev.p = alloc(aPacked.size());
+    bDev.p = alloc(bPacked.size());
+    asDev.p = alloc(aScale.size());
+    bsDev.p = alloc(bScale.size());
+    rowDev.p = alloc(props.dElems * sizeof(__hip_bfloat16));
+    checkHipStatus(hipMemcpy(aDev.p, aPacked.data(), aPacked.size(), hipMemcpyHostToDevice));
+    checkHipStatus(hipMemcpy(bDev.p, bPacked.data(), bPacked.size(), hipMemcpyHostToDevice));
+    checkHipStatus(hipMemcpy(asDev.p, aScale.data(), aScale.size(), hipMemcpyHostToDevice));
+    checkHipStatus(hipMemcpy(bsDev.p, bScale.data(), bScale.size(), hipMemcpyHostToDevice));
 
     AiterKernelArgs args{};
-    args.ptr_D = rowDev;
-    args.ptr_A = aDev;
-    args.ptr_B = bDev;
+    args.ptr_D = rowDev.p;
+    args.ptr_A = aDev.p;
+    args.ptr_B = bDev.p;
     args.alpha = props.alpha;
     args.stride_D0 = (unsigned)n;
     args.M = (unsigned)m;
     args.N = (unsigned)n;
     args.K = (unsigned)k;
-    args.ptr_ScaleA = asDev;
-    args.ptr_ScaleB = bsDev;
+    args.ptr_ScaleA = asDev.p;
+    args.ptr_ScaleB = bsDev.p;
     args.stride_ScaleA0 = (unsigned)(k / Mxfp6TestBench::VEC_SIZE);
     args.stride_ScaleB0 = (unsigned)(k / Mxfp6TestBench::VEC_SIZE);
 
@@ -438,15 +450,10 @@ bool AiterMxfp6Matmul(const int repeat, Mxfp6TestBench &props) {
 
     dim3 block(16, 16);
     dim3 grid((n + block.x - 1) / block.x, (m + block.y - 1) / block.y);
-    mxfp6RowMajorToColumnMajor<<<grid, block>>>(rowDev, props.Ddev, m, n);
+    mxfp6RowMajorToColumnMajor<<<grid, block>>>(
+        static_cast<__hip_bfloat16 *>(rowDev.p), props.Ddev, m, n);
     checkHipStatus(hipGetLastError());
     checkHipStatus(hipDeviceSynchronize());
-
-    checkHipStatus(hipFree(aDev));
-    checkHipStatus(hipFree(bDev));
-    checkHipStatus(hipFree(asDev));
-    checkHipStatus(hipFree(bsDev));
-    checkHipStatus(hipFree(rowDev));
     return true;
 }
 
@@ -460,6 +467,11 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     const int repeat = atoi(argv[1]);
+    if (repeat < 1) {
+        printf("Usage: %s <repeat> [hipblaslt|aiter]\n", argv[0]);
+        printf("  <repeat> must be a positive integer.\n");
+        return 1;
+    }
     const bool useAiter = (argc == 3);
     if (useAiter && std::strcmp(argv[2], "aiter") != 0 && std::strcmp(argv[2], "hipblaslt") != 0) {
         printf("Usage: %s <repeat> [hipblaslt|aiter]\n", argv[0]);
@@ -485,7 +497,9 @@ int main(int argc, char *argv[]) {
     checkHipblasStatus(hipblasLtCreate(&probeHandle));
     const bool supported = deviceSupportsBlockScaled(probeHandle, HIP_R_6F_E2M3);
     checkHipblasStatus(hipblasLtDestroy(probeHandle));
-    if (!supported) {
+    // hipBLASLt's heuristic is the gate for the default backend. An explicit
+    // aiter run does not depend on that algorithm; it loads its own code object.
+    if (!supported && !aiterBackend) {
         printf("Skipped: MXFP6 block-scaled matmul is not supported on this device "
                "(%s / %s)\n", prop.gcnArchName, prop.name);
         return 0;
