@@ -4,6 +4,7 @@
 #include <chrono>
 #include <random>
 #include <hip/hip_runtime.h>
+#include "../cross-cuda/reference.h"
 
 // Reference
 // https://pytorch.org/docs/stable/generated/torch.linalg.cross.html#torch.linalg.cross
@@ -177,14 +178,13 @@ void eval(const int nrows, const int repeat) {
 
   hipMemcpy(o3, d_o, size_bytes, hipMemcpyDeviceToHost);
 
-  bool ok = true;
-  for (int i = 0; i < num_elems; i++) {
-    if (fabs(o[i] - o2[i]) > 1e-3 || fabs(o[i] - o3[i]) > 1e-3) {
-      ok = false;
-      break;
-    }
-  }
+  T* ref = (T*) malloc(size_bytes);
+  cross_reference(nrows, ref, a, b);
+  bool ok = cross_matches_reference(o, ref, num_elems) &&
+            cross_matches_reference(o2, ref, num_elems) &&
+            cross_matches_reference(o3, ref, num_elems);
   printf("%s\n", ok ? "PASS" : "FAIL");
+  free(ref);
 
   hipFree(d_a);
   hipFree(d_b);
