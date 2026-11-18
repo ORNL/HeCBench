@@ -311,21 +311,29 @@ void attention_page (int num_seqs,
 int main(int argc, char* argv[])
 {
    if (argc != 7 && argc != 8) {
-     printf("Usage: %s <batch size> <number of query heads> <head size> ", argv[0]);
-     printf("<max_seq_len> <number of cache blocks> <repeat> ");
-     printf("[number of kv heads]\n");
+     printf("Usage: %s <batch size> <number of query heads> [number of kv heads] ", argv[0]);
+     printf("<head size> <max_seq_len> <number of cache blocks> <repeat>\n");
      printf("head size choices [32, 64, 80, 96, 112, 120, 128, 192, 256]\n");
      printf("The query-head count must be a positive multiple of the KV-head count.\n");
-     printf("The KV-head count defaults to the query-head count.\n");
+     printf("With seven arguments the KV-head count equals the query-head count.\n");
      return 1;
    }
     int num_seqs = atoi(argv[1]);        // batch size 8
     int num_query_heads = atoi(argv[2]); //32, 64
-    int head_size = atoi(argv[3]);       // choices=[32, 64, 80, 96, 112, 120, 128, 192, 256],
-    int max_seq_len = atoi(argv[4]);     // choices=[4096]
-    int num_blocks = atoi(argv[5]);      //128*1024
-    int repeat = atoi(argv[6]);
-    int num_kv_heads = (argc == 8) ? atoi(argv[7]) : num_query_heads;
+    int num_kv_heads, head_size, max_seq_len, num_blocks, repeat;
+    if (argc == 8) {
+      num_kv_heads = atoi(argv[3]);
+      head_size = atoi(argv[4]);       // choices=[32, 64, 80, 96, 112, 120, 128, 192, 256]
+      max_seq_len = atoi(argv[5]);     // choices=[4096]
+      num_blocks = atoi(argv[6]);      //128*1024
+      repeat = atoi(argv[7]);
+    } else {
+      num_kv_heads = num_query_heads;
+      head_size = atoi(argv[3]);
+      max_seq_len = atoi(argv[4]);
+      num_blocks = atoi(argv[5]);
+      repeat = atoi(argv[6]);
+    }
     if (num_kv_heads <= 0 || num_query_heads <= 0 ||
         num_query_heads % num_kv_heads != 0) {
       printf("query-head count (%d) must be a positive multiple of the KV-head count (%d)\n",
