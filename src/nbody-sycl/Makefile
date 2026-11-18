@@ -37,7 +37,7 @@ CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../nbody-cuda \
 # result the device output is checked against, and it is compiled only into
 # main.o. icpx defaults to -fp-model=fast, which allows FMA contraction and
 # reassociation in that host accumulation and makes the single-precision
-# reference drift past the 1e-3 error bound (see
+# reference disagree with the gcc/nvcc host result (see
 # https://github.com/intel/llvm/issues/21197). Force precise, non-contracted FP
 # for the reference so it matches the gcc/nvcc host result. These flags are
 # applied ONLY to main.o so the benchmarked device kernel in GSimulation.o keeps
@@ -98,11 +98,13 @@ $(program): $(obj)
 
 # main.o holds the host reference: compile it with precise, non-contracted FP.
 main.o: main.cpp GSimulation.hpp Particle.hpp type.hpp \
+           ../nbody-cuda/nbody_constants.hpp \
            ../nbody-cuda/GSimulationReference.hpp
 	$(CC) $(CFLAGS) $(FPFLAGS) -c $< -o $@
 
 # GSimulation.o holds the device kernel: keep default code generation.
 %.o: %.cpp GSimulation.hpp Particle.hpp type.hpp \
+           ../nbody-cuda/nbody_constants.hpp \
            ../nbody-cuda/GSimulationReference.hpp
 	$(CC) $(CFLAGS) -c $< -o $@
 

@@ -52,7 +52,8 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp *.hpp ../nbody-cuda/GSimulationReference.hpp
+%.o: %.cpp *.hpp nbody_step.inc ../nbody-cuda/nbody_constants.hpp \
+      ../nbody-cuda/GSimulationReference.hpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
