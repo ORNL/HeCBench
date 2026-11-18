@@ -238,7 +238,7 @@ void attention_page (int num_seqs,
         0, 0, //const int blocksparse_local_blocks, const int blocksparse_vert_stride,
         0, 0, //const int blocksparse_block_size, const int blocksparse_head_sliding_step,
         num_seqs,
-        num_kv_heads,
+        num_query_heads,
         head_size,
         max_num_blocks_per_seq,
         q_stride,
@@ -310,19 +310,28 @@ void attention_page (int num_seqs,
 
 int main(int argc, char* argv[])
 {
-   if (argc != 7) {
+   if (argc != 7 && argc != 8) {
      printf("Usage: %s <batch size> <number of query heads> <head size> ", argv[0]);
-     printf("<max_seq_len> <number of cache blocks> <repeat>\n");
+     printf("<max_seq_len> <number of cache blocks> <repeat> ");
+     printf("[number of kv heads]\n");
      printf("head size choices [32, 64, 80, 96, 112, 120, 128, 192, 256]\n");
+     printf("The query-head count must be a positive multiple of the KV-head count.\n");
+     printf("The KV-head count defaults to the query-head count.\n");
      return 1;
    }
     int num_seqs = atoi(argv[1]);        // batch size 8
     int num_query_heads = atoi(argv[2]); //32, 64
-    int num_kv_heads = num_query_heads;  // there exist bugs in the vllm kernel when num_kv_heads and num_query_heads diff 
     int head_size = atoi(argv[3]);       // choices=[32, 64, 80, 96, 112, 120, 128, 192, 256],
     int max_seq_len = atoi(argv[4]);     // choices=[4096]
     int num_blocks = atoi(argv[5]);      //128*1024
     int repeat = atoi(argv[6]);
+    int num_kv_heads = (argc == 8) ? atoi(argv[7]) : num_query_heads;
+    if (num_kv_heads <= 0 || num_query_heads <= 0 ||
+        num_query_heads % num_kv_heads != 0) {
+      printf("query-head count (%d) must be a positive multiple of the KV-head count (%d)\n",
+             num_query_heads, num_kv_heads);
+      return 1;
+    }
 
     printf("query shape = [%d (num_seqs), %d (num_query_heads), %d (head_size)]\n",
            num_seqs, num_query_heads, head_size);
