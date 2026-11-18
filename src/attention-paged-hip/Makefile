@@ -67,3 +67,5 @@ run: $(program)
 	$(LAUNCHER) ./$(program) 8 32 128 4096 1024 100
 	$(LAUNCHER) ./$(program) 8 32 128 4096 8192 100
 	$(LAUNCHER) ./$(program) 8 32 128 4096 131072 100
+	$(LAUNCHER) ./$(program) 8 32 8 128 4096 8192 100
+	$(LAUNCHER) ./$(program) 8 48 2 128 4096 8192 100
