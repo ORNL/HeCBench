@@ -4,30 +4,45 @@ Data files tracked by DVC in this directory (fetch with `dvc pull`):
   dataset.tar.gz -> Face.pgm, class.txt, info.txt
 
 What:
-  A 1280x626 grayscale photograph of people (Face.pgm) and the
-  Viola-Jones cascade description (class.txt, info.txt).
+  Face.pgm: a 1280x626 grayscale copy of the 1927 Solvay Conference
+  group photograph. class.txt and info.txt: OpenCV's frontal-face
+  Haar cascade (25 stages, 2,913 weak classifiers) converted to
+  fixed-point integers.
 
 Source:
-  Viola-Jones face detection by Francesco Comaschi, TU Eindhoven
-  (5KK73 GPU course, 2012):
+  Face.pgm: "Solvay conference 1927" by Benjamin Couprie, Institut
+  International de Physique Solvay, Brussels, 1927.
+    https://commons.wikimedia.org/wiki/File:Solvay_conference_1927.jpg
+  (original 3000x2171; converted to grayscale and resized, saved with GIMP)
+
+  class.txt, info.txt: OpenCV
+  data/haarcascades/haarcascade_frontalface_default.xml, created by
+  Rainer Lienhart, https://github.com/opencv/opencv. The stage sizes,
+  rectangles, thresholds (x4096) and leaf values (x256) match that
+  file (checked 2026-11-19).
+
+  Benchmark code: Viola-Jones face detection by Francesco Comaschi,
+  TU Eindhoven (5KK73 GPU course, 2012),
   https://sites.google.com/site/5kk73gpu2012/assignment/viola-jones-face-detection
-  No public copy of these data files was found (checked 2026-11-19).
 
 Copyright:
-  Code: Francesco Comaschi, TU Eindhoven. Photograph: unknown.
+  Face.pgm: none (public domain).
+  class.txt, info.txt: Copyright (C) 2000, Intel Corporation.
+  Code: Francesco Comaschi, TU Eindhoven.
 
 License:
-  The code is GPL-3.0 (see LICENSE in this directory). The cascade
-  files are distributed with that code. The photograph's copyright and
-  the consent of the people pictured are NOT established; the GPL
-  notice does not cover them.
+  Face.pgm: public domain. Wikimedia Commons: "the image, owned by the
+  Institut International de Physique Solvay, was published in Belgium
+  more than 70 years ago"; also public domain in the US (published
+  1927).
+  class.txt, info.txt: Intel License Agreement for Open Source Computer
+  Vision Library (BSD-style); see LICENSE.opencv-cascade in this
+  directory.
+  Code: GPL-3.0 (see LICENSE in this directory). The GPL does not cover
+  the data above.
 
 Used by:
   face-cuda, face-hip, face-omp, face-sycl
-
-Notes:
-  OPEN QUESTION: find the photograph's source, or replace it with an
-  openly licensed image.
 
 This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
 LICENSE does not apply to it.
