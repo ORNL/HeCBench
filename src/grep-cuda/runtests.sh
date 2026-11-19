@@ -25,7 +25,7 @@ pass=1
 
 len=${#teststrings[@]} 
 
-FILES=./testcases/*
+FILES=../data/grep/testcases/*.txt
 
 #loop over all test cases
 for file in $FILES

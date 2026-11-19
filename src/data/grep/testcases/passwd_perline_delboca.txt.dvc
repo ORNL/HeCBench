@@ -1,0 +1,13 @@
+md5: d5300ebc4cf98175327dec9e9f8e46db
+frozen: true
+deps:
+- path: testbench/testcases/passwd_perline_delboca.txt
+  repo:
+    url: https://github.com/bkase/CUDA-grep
+    rev: fa6630eb0c3e782620ec3eaf989873dadc9a036b
+    rev_lock: fa6630eb0c3e782620ec3eaf989873dadc9a036b
+outs:
+- md5: a5012ce1dc1da70e233fd620e5270ff6
+  size: 153084
+  hash: md5
+  path: passwd_perline_delboca.txt

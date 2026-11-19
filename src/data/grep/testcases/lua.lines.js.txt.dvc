@@ -1,0 +1,13 @@
+md5: a1235af6f6b60447e8ee0f241f165051
+frozen: true
+deps:
+- path: testbench/testcases/lua.lines.js.txt
+  repo:
+    url: https://github.com/bkase/CUDA-grep
+    rev: fa6630eb0c3e782620ec3eaf989873dadc9a036b
+    rev_lock: fa6630eb0c3e782620ec3eaf989873dadc9a036b
+outs:
+- md5: 4e4a160ed6e2517dae9f733a8aac76f7
+  size: 1571016
+  hash: md5
+  path: lua.lines.js.txt

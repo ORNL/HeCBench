@@ -1,0 +1,50 @@
+DATA NOTICE: grep
+
+Data files (dvc imports; not stored by HeCBench, fetch with `dvc pull`):
+  testcases/20000_leagues.txt, testcases/romeojuliet.txt,
+  testcases/lua.lines.js.txt, testcases/passwd_perline_delboca.txt
+
+What:
+  Line-oriented text inputs for the regular-expression tests that
+  runtests.sh runs:
+  - 20000_leagues.txt: Jules Verne, "Twenty Thousand Leagues Under the
+    Sea" (English translation).
+  - romeojuliet.txt: William Shakespeare, "Romeo and Juliet".
+  - lua.lines.js.txt: lines of JavaScript source code.
+  - passwd_perline_delboca.txt: 17,784 plaintext passwords, one per
+    line, with no usernames or email addresses.
+
+Source:
+  CUDA-grep by Brandon Kase and Manish Burman (CMU 15-418, 2012),
+  https://github.com/bkase/CUDA-grep, testbench/testcases/, imported at
+  upstream commit fa6630eb0c3e (byte-identical to the files HeCBench
+  used to host). The upstream helper script
+  testbench/testcases/get_passwds.py is not imported.
+
+  Upstream does not say where the test files come from. The password
+  file was added on 2012-05-08 ("Added some password files that pass
+  all tests"), together with get_passwds.py, which extracts
+  "email | password" pairs from a pipe-delimited account dump. The file
+  is therefore very likely the password column of a leaked account
+  database, with the email addresses removed. Which database is not
+  recorded.
+
+Copyright:
+  CUDA-grep: Copyright (c) 2012 Manish Burman & Brandon Kase.
+  The two novels are in the public domain.
+
+License:
+  MIT (see LICENSE in grep-cuda). No license is stated for the test
+  files themselves.
+
+Used by:
+  grep-cuda, grep-hip, grep-omp, grep-sycl (runtests.sh, via `make run`)
+
+Notes:
+  HeCBench does not host these files: dvc pull fetches them from the
+  upstream repository. Because passwd_perline_delboca.txt is probably
+  derived from leaked credentials, consider replacing it with generated
+  text.
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

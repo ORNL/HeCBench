@@ -1,0 +1,13 @@
+md5: a5dd6c550d11148ae3c0cebede8de278
+frozen: true
+deps:
+- path: testbench/testcases/romeojuliet.txt
+  repo:
+    url: https://github.com/bkase/CUDA-grep
+    rev: fa6630eb0c3e782620ec3eaf989873dadc9a036b
+    rev_lock: fa6630eb0c3e782620ec3eaf989873dadc9a036b
+outs:
+- md5: b5beacef41947d7f1c0a67f53cf85e1e
+  size: 144355
+  hash: md5
+  path: romeojuliet.txt

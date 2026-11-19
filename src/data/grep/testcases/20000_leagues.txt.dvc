@@ -1,0 +1,13 @@
+md5: 0e9d9417ad9677dfa4843e8316471b58
+frozen: true
+deps:
+- path: testbench/testcases/20000_leagues.txt
+  repo:
+    url: https://github.com/bkase/CUDA-grep
+    rev: fa6630eb0c3e782620ec3eaf989873dadc9a036b
+    rev_lock: fa6630eb0c3e782620ec3eaf989873dadc9a036b
+outs:
+- md5: a57e40c8360bf7772bac53a9aaef2a30
+  size: 587855
+  hash: md5
+  path: 20000_leagues.txt
