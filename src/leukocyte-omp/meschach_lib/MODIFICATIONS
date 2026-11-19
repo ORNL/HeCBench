@@ -1,0 +1,56 @@
+MESCHACH MODIFICATIONS (leukocyte-omp/meschach_lib)
+
+This directory holds a modified copy of the Meschach Library 1.2b,
+Copyright (C) 1993 David E. Stewart & Zbigniew Leyk. The Meschach
+license (see `copyright` in this directory) requires every modified copy
+to say who made the last modification and when, and that no charge is
+made for the library or works derived from it.
+
+Who and when:
+  Modified for HeCBench (https://github.com/zjin-lcf/HeCBench) by HeCBench
+  contributors, before 2023-09-21 (the exact dates were not recorded).
+  A few files were already modified in the Rodinia benchmark suite
+  (University of Virginia), from which this copy was taken. HeCBench's
+  changes were identified by comparing with the Rodinia copy in
+  https://github.com/yuhc/gpu-rodinia (cuda/leukocyte/meschach_lib/).
+
+What was changed (portability to modern C/C++ and CUDA/HIP/SYCL compilers):
+  - the max()/min() macros were renamed macro_max()/macro_min() so they
+    do not clash with the C++ standard library;
+  - error and warning message tables were made const-correct;
+  - void* wrapper functions (wrapped_m_free() and similar) were added
+    for the free routines;
+  - <unistd.h> includes were added;
+  - the makefile's compiler flags were changed.
+
+Files that differ from Meschach 1.2b, as modified in HeCBench (54):
+  bdfactor.c bkpfacto.c copy.c err.c err.h init.c iter.h iter0.c
+  iternsym.c itersym.c lufactor.c machine.c makefile matop.c matrix.h
+  matrixio.c meminfo.c meminfo.h memory.c memstat.c memtort.c mfunc.c
+  qrfactor.c schur.c solve.c sparse.c sparse.h spbkp.c spchfctr.c
+  splufctr.c sprow.c submat.c svd.c torture.c tutadv.c vecop.c zcopy.c
+  zfunc.c zgivens.c zhessen.c zhsehldr.c zlufctr.c zmachine.c zmatio.c
+  zmatlab.c zmatop.c zmatrix.h zmemory.c znorm.c zqrfctr.c zschur.c
+  zsolve.c ztorture.c zvecop.c
+
+Files that differ from Meschach 1.2b, as already modified in Rodinia (2):
+  MACHINES/TurboC/meschach.mak machine.h
+
+Files added to the 1.2b distribution (2):
+  confdefs.h config.cache
+  (configure output)
+
+Files of the 1.2b distribution not included (3):
+  DOC/fnindex.txt DOC/tutorial.txt MACHINES/TurboC/mail
+
+No charge:
+  Meschach, and works derived from it, may not be sold. HeCBench is
+  distributed free of charge. Anyone redistributing this directory must
+  keep the `copyright` file and this notice, and must not charge for it.
+  HeCBench's top-level BSD-3-Clause LICENSE does not override these terms.
+
+The original 1.2b distribution archives (mesch12b.tar.gz and the Cray,
+MicroSoft and TurboC port archives) are no longer kept here. They are
+available from the Rodinia mirror
+https://github.com/yuhc/gpu-rodinia (cuda/leukocyte/meschach_lib/), and
+Meschach itself from https://www.netlib.org/c/meschach/.
