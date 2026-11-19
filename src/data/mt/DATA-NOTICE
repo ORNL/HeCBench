@@ -1,0 +1,33 @@
+DATA NOTICE: mt
+
+Data files (not stored by HeCBench):
+  MersenneTwister.dat, MersenneTwister.raw (downloaded by fetch.sh)
+
+What:
+  MersenneTwister.dat: precomputed Mersenne Twister parameter sets.
+  MersenneTwister.raw: reference output used for verification.
+
+Source:
+  NVIDIA GPU Computing SDK, oclMersenneTwister sample:
+    https://developer.download.nvidia.com/compute/DevZone/OpenCL/Projects/oclMersenneTwister.zip
+  ("NVIDIA GPU Computing SDK/OpenCL/src/oclMersenneTwister/data/").
+  fetch.sh downloads the zip, checks its MD5
+  (74ee39ff40b3ddc2fff22f8d5d27fbb8) and extracts the two files; CMake
+  runs it at configure time and the Makefiles before `make run`. The
+  parameter sets are made with Matsumoto & Nishimura's Dynamic Creator
+  (DCMT).
+
+Copyright:
+  NVIDIA Corporation.
+
+License:
+  NVIDIA's license (license.txt in the zip) grants use of the sample
+  and allows distributing modified source code, but not redistributing
+  NVIDIA's files. HeCBench therefore does not store these files; each
+  user downloads them from NVIDIA and agrees to NVIDIA's license.
+
+Used by:
+  mt-cuda, mt-hip, mt-omp, mt-sycl
+
+This data keeps its upstream terms. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

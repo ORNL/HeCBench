@@ -1,0 +1,44 @@
+DATA NOTICE: mpc
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  trace.tar.bz -> msg_sp.trace.out
+
+What:
+  The msg_sp double-precision floating-point message trace (an MPI
+  application's messages), decompressed.
+
+Source:
+  Martin Burtscher's FPdouble datasets,
+  https://userweb.cs.txstate.edu/~burtscher/research/datasets/FPdouble/
+  msg_sp.trace.fpc decompressed with FPC (fpc.c in this directory,
+  `make process`) gives exactly msg_sp.trace.out (checked 2026-11-19).
+
+Copyright:
+  Martin Burtscher.
+
+License:
+  No license is stated. The dataset page asks that the datasets not be
+  distributed without acknowledging the source (that web page) and
+  that published results cite one of:
+    M. Burtscher and P. Ratanaworabhan. "High Throughput Compression of
+    Double-Precision Floating-Point Data." Data Compression Conference,
+    pp. 293-302, 2007.
+    M. Burtscher and P. Ratanaworabhan. "FPC: A High-Speed Compressor
+    for Double-Precision Floating-Point Data." IEEE Transactions on
+    Computers 58(1), pp. 18-31, 2009.
+
+Used by:
+  mpc-cuda, mpc-hip, mpc-sycl
+
+CODE LICENSE NOTE (fpc.c):
+  fpc.c is FPC v1.1, Copyright (c) 2006 Cornell Research Foundation,
+  Inc. (author: Martin Burtscher), unchanged apart from a removed
+  "Subject: FPC v1.1" line. Its license (in the file header) allows use,
+  copying and modification for NON-COMMERCIAL RESEARCH OR TEACHING
+  PURPOSES ONLY, requires the notice to accompany all copies, and
+  requires modified copies to state that and when they were changed.
+  CRF reserves all commercial rights. HeCBench's BSD-3-Clause LICENSE
+  does not apply to fpc.c.
+
+This data keeps its upstream terms. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

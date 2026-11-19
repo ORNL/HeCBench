@@ -1,0 +1,27 @@
+DATA NOTICE: sa
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  genome.tar.bz -> genome.txt
+
+What:
+  The complete genome of Escherichia coli K-12 MG1655 (4,639,675 bp,
+  GenBank U00096.2) as plain text.
+
+Source:
+  https://github.com/gmzang/Parallel-Suffix-Array-on-GPU,
+  dc3_gpu/genome.txt (byte-identical at upstream commit ccf60cf0626d,
+  checked 2026-11-19). The sequence is from NCBI GenBank, U00096.2.
+
+Copyright:
+  None for the sequence (public GenBank data).
+
+License:
+  No license is stated for the upstream repository. GenBank sequence
+  data is publicly available and NCBI places no restrictions on its use
+  or distribution.
+
+Used by:
+  sa-cuda, sa-hip, sa-sycl
+
+This data keeps its upstream terms. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

@@ -1,0 +1,30 @@
+DATA NOTICE: columnarSolver
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  data.tar.gz -> data
+
+What:
+  Log-frequencies of the 676 English letter bigrams, used to score
+  candidate decryptions.
+
+Source:
+  Origin not recorded; no public copy was found (checked 2026-11-19).
+  The benchmark follows Dimitrov M. & Esslinger B., "CUDA Tutorial -
+  Cryptanalysis of Classical Ciphers Using Modern GPUs and CUDA",
+  arXiv:2103.13937 (2021).
+
+Copyright:
+  Unknown.
+
+License:
+  No license is stated.
+
+Used by:
+  columnarSolver-cuda, columnarSolver-hip, columnarSolver-omp,
+  columnarSolver-sycl
+
+Notes:
+  Language statistics (facts) with no creative content.
+
+This data keeps its upstream terms. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

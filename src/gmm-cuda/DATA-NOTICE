@@ -1,0 +1,30 @@
+DATA NOTICE: gmm
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  data.tar.gz -> data
+
+What:
+  1,000 synthetic two-dimensional points for Gaussian mixture model
+  clustering.
+
+Source:
+  Origin not recorded. The benchmark code comes from CUDA-GMM-MultiGPU
+  (Andrew D. Pangborn; https://github.com/Corv/CUDA-GMM-MultiGPU), but
+  this file is not in that repository.
+
+Copyright:
+  Unknown.
+
+License:
+  No license is stated. The BSD-3-Clause LICENSE in gmm-cuda, gmm-hip
+  and gmm-sycl covers Pangborn's code; it is not established for this
+  data.
+
+Used by:
+  gmm-cuda (gmm-cuda, -hip, -omp and -sycl each hold an identical copy)
+
+Notes:
+  Synthetic random points with no creative content.
+
+This data keeps its upstream terms. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

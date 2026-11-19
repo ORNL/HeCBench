@@ -1,0 +1,29 @@
+DATA NOTICE: sad
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  data.tar.gz -> coins.bmp, coin.bmp, bitmap_image.hpp
+
+What:
+  coins.bmp: a 630x459 photograph or scan of world coins. coin.bmp: a
+  116x116 crop of it, used as the search template. bitmap_image.hpp:
+  C++ bitmap library.
+
+Source:
+  Images: origin not recorded. bitmap_image.hpp: C++ Bitmap Library by
+  Arash Partow (2002), http://partow.net/programming/bitmap/index.html
+
+Copyright:
+  Images: unknown. bitmap_image.hpp: Arash Partow.
+
+License:
+  Images: no license stated. bitmap_image.hpp: MIT (see its header).
+
+Used by:
+  sad-cuda, sad-hip, sad-omp, sad-sycl
+
+Notes:
+  OPEN QUESTION: the images' source and terms are unknown (on the
+  "Ask Zheming" list).
+
+This data keeps its upstream terms. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

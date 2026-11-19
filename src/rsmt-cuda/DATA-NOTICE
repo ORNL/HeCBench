@@ -1,0 +1,31 @@
+DATA NOTICE: rsmt
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  newblue7.kraftwerk70.3d.80.20.82.m8.gr
+
+What:
+  The ISPD 2008 global-routing benchmark newblue7 (488x490 grid, 8
+  layers), placed with Kraftwerk.
+
+Source:
+  ISPD 2008 Global Routing Contest, https://www.ispd.cc/contests/08/ispd08rc.html
+  benchmark/newblue7.kraftwerk70.3d.80.20.82.m8.gr.gz, byte-identical
+  after gunzip (checked 2026-11-19).
+
+Copyright:
+  The ISPD 2008 contest organizers; the benchmarks are derived from
+  industrial ASIC designs (IBM).
+
+License:
+  No license is stated. The contest's Terms and Conditions concern
+  contest entries, not the benchmarks.
+
+Used by:
+  rsmt-cuda, rsmt-hip, rsmt-sycl
+
+Notes:
+  A contest benchmark released for research and published openly by
+  the contest.
+
+This data keeps its upstream terms. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

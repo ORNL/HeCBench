@@ -1,0 +1,30 @@
+DATA NOTICE: tonemapping
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  input.hdr.dvc -> input.hdr (a dvc import; not stored by HeCBench)
+
+What:
+  A high-dynamic-range (Radiance .hdr) image.
+
+Source:
+  AMD APP SDK samples, mirrored at https://github.com/OpenCL/AMD_APP_samples,
+  cpp_cl/HDRToneMapping/input.hdr (imported at commit 54da6ca, byte-identical to the file
+  HeCBench used to host).
+
+Copyright:
+  Advanced Micro Devices, Inc. (presumed; the samples are AMD's).
+
+License:
+  No license is stated for the images. The sample source code carries
+  AMD's BSD-style license.
+
+Used by:
+  tonemapping-cuda, tonemapping-hip, tonemapping-omp,
+  tonemapping-sycl
+
+Notes:
+  dvc pull fetches this file from the upstream repository; HeCBench
+  does not host it.
+
+This data keeps its upstream terms. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

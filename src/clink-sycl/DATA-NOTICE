@@ -1,0 +1,30 @@
+DATA NOTICE: clink
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  data.tar.gz -> input.hpp, weight_1.hpp, weight_2.hpp
+
+What:
+  LSTM input vectors and trained weights as C++ headers.
+
+Source:
+  https://github.com/UCLA-VAST/CLINK, C_Simulation-float/{input,weight_1,
+  weight_2}.hpp (byte-identical at upstream commit 0a8065fb6241,
+  checked 2026-11-19)
+
+Copyright:
+  The CLINK authors, UCLA VAST Lab.
+
+License:
+  No license is stated. Without a license the data is not explicitly
+  licensed for redistribution; HeCBench redistributes it on the basis
+  described under Notes.
+
+Used by:
+  clink-sycl (clink-cuda, -hip, -omp and -sycl each hold an identical copy)
+
+Notes:
+  Numeric inputs and model weights published openly in the upstream
+  repository.
+
+This data keeps its upstream terms. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

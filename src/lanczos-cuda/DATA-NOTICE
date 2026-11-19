@@ -1,0 +1,31 @@
+DATA NOTICE: lanczos
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  data.tar.bz -> data/social-large-800k.txt, data/gengraph.py
+
+What:
+  A random Barabasi-Albert graph with 800,000 vertices (edge list) and
+  the script that generates it.
+
+Source:
+  Generated with data/gengraph.py (networkx barabasi_albert_graph, no
+  fixed seed) from https://github.com/linhr/15618 (data/gengraph.py at
+  upstream commit 675274b836e5; HeCBench's copy comments out the other
+  graph sizes). The graph itself is not in the upstream repository;
+  re-running the script makes a different random graph.
+
+Copyright:
+  Script: the 15618 author (GitHub: linhr). Graph: none (randomly
+  generated).
+
+License:
+  No license is stated.
+
+Used by:
+  lanczos-cuda, lanczos-hip, lanczos-omp, lanczos-sycl
+
+Notes:
+  Randomly generated data with no creative content.
+
+This data keeps its upstream terms. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

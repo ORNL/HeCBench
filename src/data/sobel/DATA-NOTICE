@@ -1,0 +1,30 @@
+DATA NOTICE: sobel
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  SobelFilter_Input.bmp.dvc -> SobelFilter_Input.bmp (a dvc import; not stored by HeCBench)
+
+What:
+  A 512x512 bitmap used as the filter input.
+
+Source:
+  AMD APP SDK samples, mirrored at https://github.com/OpenCL/AMD_APP_samples,
+  cl/SobelFilter/SobelFilter_Input.bmp (imported at commit 54da6ca, byte-identical to the file
+  HeCBench used to host).
+  SobelFilter_Input.bmp and URNG_Input.bmp are the same image.
+
+Copyright:
+  Advanced Micro Devices, Inc. (presumed; the samples are AMD's).
+
+License:
+  No license is stated for the images. The sample source code carries
+  AMD's BSD-style license.
+
+Used by:
+  sobel-cuda, sobel-hip, sobel-omp, sobel-sycl
+
+Notes:
+  dvc pull fetches this file from the upstream repository; HeCBench
+  does not host it.
+
+This data keeps its upstream terms. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

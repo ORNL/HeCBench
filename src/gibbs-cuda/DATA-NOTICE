@@ -1,0 +1,29 @@
+DATA NOTICE: gibbs
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  data.tar.gz -> data.csv
+
+What:
+  Two-column numeric samples for the Gibbs-Metropolis example.
+
+Source:
+  https://github.com/arendsee/cuda-gibbs-example,
+  sample-data/prepared-data.csv (byte-identical at upstream commit
+  f1c74810ee6d, checked 2026-11-19)
+
+Copyright:
+  The cuda-gibbs-example author (GitHub: arendsee).
+
+License:
+  No license is stated. Without a license the data is not explicitly
+  licensed for redistribution; HeCBench redistributes it on the basis
+  described under Notes.
+
+Used by:
+  gibbs-cuda, gibbs-hip, gibbs-sycl
+
+Notes:
+  A small numeric table published openly in the upstream repository.
+
+This data keeps its upstream terms. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

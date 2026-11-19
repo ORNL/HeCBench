@@ -1,0 +1,29 @@
+DATA NOTICE: geodesic
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  locations.tar.gz -> locations.txt
+
+What:
+  2,243,854 latitude/longitude pairs of real places.
+
+Source:
+  Origin not recorded. The benchmark is described in Z. Jin, "A Study
+  of Geodesic Distance Kernel on an Integrated GPU", Argonne National
+  Laboratory, https://www.osti.gov/biblio/1576565, which does not
+  name the data source.
+
+Copyright:
+  Unknown.
+
+License:
+  No license is stated.
+
+Used by:
+  geodesic-cuda, geodesic-hip, geodesic-omp, geodesic-sycl
+
+Notes:
+  OPEN QUESTION: the coordinates' source is unknown and may require
+  attribution (on the "Ask Zheming" list).
+
+This data keeps its upstream terms. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

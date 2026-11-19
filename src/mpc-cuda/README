@@ -7,3 +7,8 @@ For example, to download a dataset for the benchmark:
   wget --no-check-certificate http://www.cs.txstate.edu/~burtscher/research/datasets/FPdouble/msg_sp.trace.fpc
 
 The data needs to be uncompressed. Please see the Makefile for more details.
+
+License: fpc.c is FPC v1.1 by Martin Burtscher, Copyright (c) 2006 Cornell
+Research Foundation, licensed for non-commercial research or teaching use
+only (see its header). The dataset comes from Burtscher's FPdouble page and
+must be acknowledged and cited; see DATA-NOTICE.

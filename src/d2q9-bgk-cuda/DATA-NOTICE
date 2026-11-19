@@ -1,0 +1,34 @@
+DATA NOTICE: d2q9-bgk
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  test.tar.gz -> Inputs/ (parameter files), Obstacles/ (obstacle maps),
+  check/ (reference outputs and check.py)
+
+What:
+  Lattice Boltzmann (D2Q9 BGK) input parameters, obstacle maps and
+  reference results for 128x128 to 4096x4096 grids.
+
+Source:
+  https://github.com/WSJHawkins/ExploringSycl, "Lattice Boltzmann/"
+  Inputs/, Obstacles/ and check/: 19 of 20 files byte-identical at
+  upstream commit 72d005e63652 (checked 2026-11-19). check/check.py was
+  ported from Python 2 to Python 3 for HeCBench.
+
+Copyright:
+  The ExploringSycl author (GitHub: WSJHawkins).
+
+License:
+  No license is stated. Without a license the data is not explicitly
+  licensed for redistribution; HeCBench redistributes it on the basis
+  described under Notes.
+
+Used by:
+  d2q9-bgk-cuda (d2q9-bgk-cuda, -hip, -omp and -sycl each hold an
+  identical copy)
+
+Notes:
+  Simulation parameters and obstacle maps with no creative content;
+  published openly in the upstream repository.
+
+This data keeps its upstream terms. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.
