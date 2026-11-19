@@ -1,0 +1,27 @@
+DATA NOTICE: bfs (Rodinia)
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  graph1MW_6.txt.tar.bz -> graph1MW_6.txt
+
+What:
+  A synthetic graph with one million vertices (average degree 6) made
+  by Rodinia's graph generator.
+
+Source:
+  The Rodinia benchmark suite (University of Virginia) data package,
+  https://rodinia.cs.virginia.edu/ (not compared byte for byte with a
+  current Rodinia download).
+
+Copyright:
+  Copyright (c) 2008-2011 University of Virginia.
+
+License:
+  Rodinia's BSD-style license; see ../LICENSE.rodinia (src/data/LICENSE.rodinia).
+  Redistributions must keep the copyright notice, and users are asked to
+  cite the Rodinia papers listed there.
+
+Used by:
+  bfs-cuda, bfs-hip, bfs-omp, bfs-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

@@ -1,0 +1,28 @@
+DATA NOTICE: ss
+
+Data files (dvc imports; not stored by HeCBench, fetch with `dvc pull`):
+  StringSearch_Input.txt (StringSearch_Input.txt.dvc)
+
+What:
+  The text of the Khronos OpenCL 1.2 Specification (rev 19), extracted
+  from the PDF; the benchmark searches it for "clEnqueueNDRangeKernel".
+
+Source:
+  AMD APP SDK StringSearch sample, mirrored at
+  https://github.com/OpenCL/AMD_APP_samples,
+  cl/StringSearch/StringSearch_Input.txt, imported at commit 54da6ca.
+
+Copyright:
+  Copyright (c) 2008-2011 The Khronos Group Inc.
+
+License:
+  The specification's notice forbids reproducing or redistributing it
+  without Khronos's written permission, except unmodified copies by
+  Khronos members. HeCBench therefore does not host it: dvc pull
+  fetches it from the upstream repository.
+
+Used by:
+  ss-cuda, ss-hip, ss-omp, ss-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

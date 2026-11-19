@@ -1,0 +1,24 @@
+DATA NOTICE: minibude
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  data.tar.gz -> data/bm1, data/bm2 (protein, ligand, poses,
+  forcefield, parameters, reference energies)
+
+What:
+  BUDE molecular docking decks.
+
+Source:
+  https://github.com/UoB-HPC/miniBUDE, data/ (byte-identical at upstream
+  commit 2b23c27e8079, checked 2026-11-19).
+
+Copyright:
+  The miniBUDE authors, University of Bristol.
+
+License:
+  Apache-2.0 (see LICENSE.txt in this directory).
+
+Used by:
+  minibude-cuda, minibude-hip, minibude-omp, minibude-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

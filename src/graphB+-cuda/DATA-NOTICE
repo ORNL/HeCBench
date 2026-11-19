@@ -1,0 +1,29 @@
+DATA NOTICE: graphB+
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  graph.tar.gz -> graph.csv
+
+What:
+  A signed, weighted edge list for graph balancing.
+
+Source:
+  ECL graphB+ (Martin Burtscher, Texas State University),
+  https://userweb.cs.txstate.edu/~burtscher/research/graphB/. The
+  network the graph comes from is not recorded. Not compared byte for
+  byte.
+
+Copyright:
+  ECL code: Copyright 2021, Texas State University. Graph: unknown.
+
+License:
+  The ECL code is BSD-3-Clause (see main.cu). No license is stated for
+  the graph.
+
+Used by:
+  graphB+-cuda, graphB+-hip, graphB+-sycl
+
+Notes:
+  Numeric node IDs and edge signs only.
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

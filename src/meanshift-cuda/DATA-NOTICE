@@ -1,0 +1,24 @@
+DATA NOTICE: meanshift
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  dataset.tar.gz -> dataset/data.csv, dataset/centroids.csv
+
+What:
+  10,000 synthetic 3D points from 3 clusters, and the cluster centres.
+
+Source:
+  https://github.com/w00zie/mean_shift,
+  datasets/3d/10000_samples_3_centers/ (byte-identical at upstream
+  commit 603e50ce37a7, checked 2026-11-19).
+
+Copyright:
+  Copyright (c) 2021 Giovanni Bindi.
+
+License:
+  MIT (see LICENSE in this directory).
+
+Used by:
+  meanshift-cuda, meanshift-hip, meanshift-omp, meanshift-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

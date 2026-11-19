@@ -1,0 +1,23 @@
+DATA NOTICE: henry
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  data.tar.gz -> IRMOF-1.cssr
+
+What:
+  The crystal structure of the metal-organic framework IRMOF-1.
+
+Source:
+  https://github.com/CorySimon/HenryCoefficient, IRMOF-1.cssr
+  (byte-identical at upstream commit 508453d71bce, checked 2026-11-19).
+
+Copyright:
+  Copyright (c) 2021 Cory Simon.
+
+License:
+  MIT (see LICENSE in this directory).
+
+Used by:
+  henry-cuda, henry-hip, henry-omp, henry-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

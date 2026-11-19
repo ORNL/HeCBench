@@ -1,0 +1,30 @@
+DATA NOTICE: sssp
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  data.tar.gz -> input/USA-road-d.BAY.gr.parboil, input/NYR_input.dat,
+  output/BAY_bfs.out, output/NYR_bfs.out
+
+What:
+  Road networks of the San Francisco Bay area and New York City, with
+  reference outputs.
+
+Source:
+  Chai benchmark suite, https://github.com/chai-benchmarks/chai,
+  CUDA-D-Sim/BFS/input and CUDA-D-Sim/SSSP/output (byte-identical at
+  commit 61db988, checked 2026-11-19). The networks are from the 9th
+  DIMACS Implementation Challenge, derived from US Census TIGER/Line
+  data.
+
+Copyright:
+  Chai: Copyright (c) 2016 University of Cordoba and University of
+  Illinois.
+
+License:
+  Chai's permissive license (see the header of kernel.cu). TIGER/Line
+  data is US Government public domain.
+
+Used by:
+  sssp-cuda
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

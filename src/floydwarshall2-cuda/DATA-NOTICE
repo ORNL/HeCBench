@@ -1,0 +1,33 @@
+DATA NOTICE: floydwarshall2
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  data.tar.gz -> CollegeMsg.egr
+
+What:
+  The SNAP CollegeMsg temporal network (private messages on a UC Irvine
+  online social network), in ECL binary graph format.
+
+Source:
+  Stanford SNAP, https://snap.stanford.edu/data/CollegeMsg.html, converted
+  by ECL-APSP (Martin Burtscher, Texas State University). Not compared
+  byte for byte.
+
+Copyright:
+  Network: P. Panzarasa, T. Opsahl and K.M. Carley. ECL code: Copyright
+  (c) 2021, Texas State University.
+
+License:
+  No license is stated for the SNAP network; SNAP asks that users cite:
+  P. Panzarasa, T. Opsahl, K.M. Carley. "Patterns and dynamics of
+  users' behavior and interaction: Network analysis of an online
+  community." JASIST 60.5 (2009): 911-932.
+  The ECL code is BSD-3-Clause (see main.cu).
+
+Used by:
+  floydwarshall2-cuda, floydwarshall2-hip, floydwarshall2-sycl
+
+Notes:
+  The graph holds numeric node IDs and edges only.
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

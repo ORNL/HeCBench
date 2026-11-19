@@ -1,0 +1,26 @@
+DATA NOTICE: hotspot3D (Rodinia)
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  hotspot3D.tar.bz -> power_512x8, temp_512x8
+
+What:
+  Synthetic 512x512x8 chip power and temperature grids.
+
+Source:
+  The Rodinia benchmark suite (University of Virginia) data package,
+  https://rodinia.cs.virginia.edu/ (not compared byte for byte with a
+  current Rodinia download).
+
+Copyright:
+  Copyright (c) 2008-2011 University of Virginia.
+
+License:
+  Rodinia's BSD-style license; see ../LICENSE.rodinia (src/data/LICENSE.rodinia).
+  Redistributions must keep the copyright notice, and users are asked to
+  cite the Rodinia papers listed there.
+
+Used by:
+  hotspot3D-cuda, hotspot3D-hip, hotspot3D-omp, hotspot3D-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

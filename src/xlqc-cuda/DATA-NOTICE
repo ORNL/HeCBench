@@ -1,0 +1,28 @@
+DATA NOTICE: xlqc
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  example.tar.gz -> example/ (basis sets, basis_*.dat, geom.xyz)
+
+What:
+  Gaussian basis-set definitions (STO-3G, 6-311+G(2d,p), def-TZVP) and
+  the molecule geometry for the Hartree-Fock example.
+
+Source:
+  https://github.com/recoli/XLQC, example/: 8 of 11 files byte-identical
+  at upstream commit ab9170930064 (checked 2026-11-19).
+  basis_C.dat and basis_N.dat have differed from upstream since
+  HeCBench added the data (2021); geom.xyz was updated in
+  ORNL/HeCBench pull request #298 (2026-07-28).
+
+Copyright:
+  Copyright (c) 2015, Xin Li. The basis sets are standard published
+  data.
+
+License:
+  BSD-3-Clause (see LICENSE in this directory).
+
+Used by:
+  xlqc-cuda (xlqc-cuda, -hip, -omp and -sycl each hold an identical copy)
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

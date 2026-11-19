@@ -1,0 +1,24 @@
+DATA NOTICE: testSNAP
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  refdata.tar.gz -> refdata_2J2_W.h, refdata_2J4_W.h, refdata_2J8_W.h,
+  refdata_2J14_W.h
+
+What:
+  Reference forces and energies for tungsten SNAP potentials.
+
+Source:
+  https://github.com/FitSNAP/TestSNAP, src/ (byte-identical at upstream
+  commit a24bb30ed670, checked 2026-11-19).
+
+Copyright:
+  Copyright (C) 2019 Aidan Thompson (Sandia National Laboratories).
+
+License:
+  Zero-Clause BSD (0BSD).
+
+Used by:
+  testSNAP-omp, testSNAP-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

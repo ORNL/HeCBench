@@ -1,0 +1,28 @@
+DATA NOTICE: minimap2
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  in-1k.txt.tar.gz -> in-1k.txt, out-1k.txt
+
+What:
+  Anchor-chaining inputs for 1,000 reads and the expected outputs.
+
+Source:
+  UCLA-VAST minimap2-acceleration,
+  https://github.com/UCLA-VAST/minimap2-acceleration. These files are
+  not committed in that repository (checked 2026-11-19), and the reads
+  they were generated from are not recorded.
+
+Copyright:
+  The minimap2-acceleration authors, UCLA VAST Lab.
+
+License:
+  MIT (the upstream repository's license).
+
+Used by:
+  minimap2-cuda, minimap2-hip, minimap2-omp, minimap2-sycl
+
+Notes:
+  Numeric anchor coordinates only; no sequence data.
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

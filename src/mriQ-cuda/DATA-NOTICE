@@ -1,0 +1,25 @@
+DATA NOTICE: mriQ
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  datasets.tar.bz -> datasets/128x128x128/input/128x128x128.bin
+
+What:
+  MRI k-space sample input for computing the Q matrix.
+
+Source:
+  The Parboil benchmark suite (UIUC IMPACT group), dataset
+  128x128x128. Parboil distributes its datasets separately from its
+  code; not compared byte for byte.
+
+Copyright:
+  Copyright (c) 2007-2012 The Board of Trustees of the University of
+  Illinois.
+
+License:
+  University of Illinois/NCSA Open Source License (Parboil's LICENSE).
+
+Used by:
+  mriQ-cuda, mriQ-hip, mriQ-omp, mriQ-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

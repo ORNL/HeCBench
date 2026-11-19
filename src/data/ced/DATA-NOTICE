@@ -1,0 +1,30 @@
+DATA NOTICE: ced
+
+Data files (dvc imports; not stored by HeCBench, fetch with `dvc pull`):
+  input/, output/ (input.dvc, output.dvc)
+
+What:
+  110 grayscale video frames (354x626, as text) and the expected Canny
+  edge-detection outputs.
+
+Source:
+  Chai benchmark suite, https://github.com/chai-benchmarks/chai,
+  CUDA-D/CEDD/input and CUDA-D/CEDD/output, imported at commit 61db988.
+  The frames come from the Peppa Pig episode in Chai's
+  utils/convert_frames/input/PeppaPigandSuzieSheepWhistle.mov.
+
+Copyright:
+  Chai: University of Cordoba and University of Illinois. The cartoon:
+  Entertainment One / Hasbro.
+
+License:
+  Chai's code carries a permissive license (see main.cu in ced-cuda);
+  it does not cover the cartoon frames, which no license covers.
+  HeCBench therefore does not host them: dvc pull fetches them from
+  Chai's repository.
+
+Used by:
+  ced-cuda, ced-hip, ced-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

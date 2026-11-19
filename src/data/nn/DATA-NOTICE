@@ -1,0 +1,27 @@
+DATA NOTICE: nn (Rodinia)
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  nn.tar.bz -> cane4_0.db .. cane4_3.db
+
+What:
+  Hurricane track records (latitude/longitude), derived from NOAA
+  hurricane data (US Government, public domain).
+
+Source:
+  The Rodinia benchmark suite (University of Virginia) data package,
+  https://rodinia.cs.virginia.edu/ (not compared byte for byte with a
+  current Rodinia download).
+
+Copyright:
+  Copyright (c) 2008-2011 University of Virginia.
+
+License:
+  Rodinia's BSD-style license; see ../LICENSE.rodinia (src/data/LICENSE.rodinia).
+  Redistributions must keep the copyright notice, and users are asked to
+  cite the Rodinia papers listed there.
+
+Used by:
+  nn-cuda
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

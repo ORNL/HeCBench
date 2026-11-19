@@ -1,0 +1,26 @@
+DATA NOTICE: lr
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  assets.tar.gz -> assets/temperature.txt, house.txt,
+  data2_arrival.txt, data2_leave.txt
+
+What:
+  Small two-column tables for linear regression.
+
+Source:
+  https://github.com/ChenyangZhang-cs/iMLBench,
+  "LR/co-run&zero-copy/assets/" (byte-identical at upstream commit
+  7039d3ba4104, checked 2026-11-19). Where the house and temperature
+  values originally come from is not recorded.
+
+Copyright:
+  The iMLBench authors.
+
+License:
+  MIT (the upstream repository's license).
+
+Used by:
+  lr-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

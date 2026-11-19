@@ -1,0 +1,29 @@
+DATA NOTICE: bsw
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  test-data.tar.gz -> test-data/protein-query.fasta,
+  test-data/protein-reference.fasta, test-data/result_aa
+
+What:
+  Protein query and reference sequences for batched Smith-Waterman
+  alignment, and the expected alignment results.
+
+Source:
+  https://github.com/mgawan/ADEPT, test-data/: the two FASTA files are
+  byte-identical at upstream commit 4f17274dc98b (checked 2026-11-19).
+  result_aa is not in ADEPT; it is the expected output that HeCBench's
+  regression check compares against.
+
+Copyright:
+  ADEPT: Copyright (c) 2019, The Regents of the University of
+  California, through Lawrence Berkeley National Laboratory.
+
+License:
+  ADEPT's BSD-style LBNL license,
+  https://github.com/mgawan/ADEPT/blob/master/LICENSE.
+
+Used by:
+  bsw-cuda, bsw-hip, bsw-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

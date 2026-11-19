@@ -1,0 +1,26 @@
+DATA NOTICE: hbc
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  test_graph.tar.gz -> graphs/breast_coexpress.txt
+
+What:
+  A breast-cancer gene co-expression network (gene-name pairs).
+
+Source:
+  https://github.com/Adam27X/hybrid_BC, graphs/ (byte-identical at
+  upstream commit ccc51271c6eb, checked 2026-11-19).
+
+Copyright:
+  Copyright (c) 2013-2016 Georgia Institute of Technology.
+
+License:
+  BSD-3-Clause (see LICENSE in this directory).
+
+Used by:
+  hbc-cuda, hbc-hip, hbc-sycl
+
+Notes:
+  Gene names only; no patient data.
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

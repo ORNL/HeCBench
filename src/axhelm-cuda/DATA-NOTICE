@@ -1,0 +1,28 @@
+DATA NOTICE: axhelm
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  BlasLapack.tar.gz -> BlasLapack/ (Fortran sources, Makefile)
+
+What:
+  Fortran sources of the BLAS/LAPACK routines that nekBench needs (code,
+  not data).
+
+Source:
+  https://github.com/Nek5000/nekBench, 3rdParty/BlasLapack/: 148 of 149
+  files byte-identical at upstream commit 7151d1b41ef1 (checked
+  2026-11-19); BlasLapack/Makefile was changed for HeCBench. The
+  routines come from Netlib BLAS/LAPACK.
+
+Copyright:
+  BLAS/LAPACK: the University of Tennessee and collaborators (Netlib).
+  nekBench: UChicago Argonne, LLC.
+
+License:
+  BLAS/LAPACK: Netlib's modified BSD license. nekBench: BSD-3-Clause
+  (see LICENSE in this directory).
+
+Used by:
+  axhelm-cuda, axhelm-hip, axhelm-omp, axhelm-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.
