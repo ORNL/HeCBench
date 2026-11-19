@@ -1,0 +1,47 @@
+DATA NOTICE: hydragnn-sc26 (mace)
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  mace_pipeline_capture.macepipe
+
+What:
+  A MACE correctness fixture (graphs, positions, cells, PBC flags,
+  model state and 56 convolution checkpoints) captured from HydraGNN;
+  see README.md and capture_manifest.json.
+
+Attribution:
+  Built from:
+  - ANI-1x, rows 0 and 1: Smith, J. S., Zubatyuk, R., Nebgen, B.,
+    Lubbers, N., Barros, K., Roitberg, A. E., Isayev, O., and
+    Tretiak, S., ANI-1x, ColabFit, 2023,
+    https://doi.org/10.60732/dd0270c8 (from the Hugging Face dataset
+    colabfit/ANI-1x); original publication: Sci. Data 7, 134 (2020),
+    https://doi.org/10.1038/s41597-020-0473-z. Licensed CC BY 4.0.
+  - MPtrj, rows 0 and 1: Bowen Deng, "Materials Project Trajectory
+    (MPtrj) Dataset", Figshare,
+    https://doi.org/10.6084/m9.figshare.23713842.v2 (taken from the
+    Hugging Face mirror nimashoghi/mptrj). Licensed MIT. MPtrj is
+    built from Materials Project calculations (https://materialsproject.org,
+    CC BY 4.0); see Deng et al., "CHGNet as a pretrained universal
+    neural network potential for charge-informed atomistic modelling",
+    Nat. Mach. Intell. 5, 1031 (2023).
+  - HydraGNN (https://github.com/ORNL/HydraGNN, commit d251f816,
+    examples/multidataset_hpo_sc26/gfm_mlip.json). BSD-3-Clause.
+
+Changes:
+  Transformed: the four structures were converted to graphs (5 A
+  cutoff, 20-neighbour cap) and run through HydraGNN's MACE model in
+  FP64; the fixture stores those inputs and the captured runtime
+  values, not the source records.
+
+License:
+  ANI-1x content: Creative Commons Attribution 4.0 International
+  (CC BY 4.0), https://creativecommons.org/licenses/by/4.0/.
+  MPtrj content: MIT; see LICENSE.mptrj in this directory.
+  Materials Project data: CC BY 4.0.
+  HydraGNN: BSD-3-Clause (see the HydraGNN repository).
+
+Used by:
+  mace-cuda, mace-hip, mace-omp, mace-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

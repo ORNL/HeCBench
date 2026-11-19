@@ -1,0 +1,32 @@
+DATA NOTICE: seam-carving
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  image.tar.gz -> Broadway_tower.jpg, stb_image.h, stb_image_write.h
+
+What:
+  Broadway_tower.jpg: a photograph of Broadway Tower, Cotswolds,
+  England (the standard seam-carving example). stb_image.h and
+  stb_image_write.h: Sean Barrett's single-file image libraries.
+
+Attribution:
+  "Broadway tower edit.jpg" by Newton2 (cropped by Yummifruitbat),
+  Wikimedia Commons,
+  https://commons.wikimedia.org/wiki/File:Broadway_tower_edit.jpg,
+  licensed under CC BY 2.5.
+
+Changes:
+  Resized from 1428x968 to 411x279 (identified 2026-11-19 by resizing
+  the Commons file and comparing).
+
+License:
+  Broadway_tower.jpg: Creative Commons Attribution 2.5 Generic
+  (CC BY 2.5), https://creativecommons.org/licenses/by/2.5/.
+  stb_image.h, stb_image_write.h: public domain or MIT (see their
+  headers). The benchmark code is under the Unlicense (see LICENSE in
+  this directory).
+
+Used by:
+  seam-carving-cuda, seam-carving-hip, seam-carving-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

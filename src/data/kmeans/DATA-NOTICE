@@ -1,0 +1,35 @@
+DATA NOTICE: kmeans
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  kdd_cup.tar.bz -> kdd_cup
+
+What:
+  494,020 network-connection records, each a row number followed by 34
+  numeric features, used as k-means input.
+
+Attribution:
+  KDD Cup 1999 Data, Salvatore Stolfo, Wei Fan, Wenke Lee, Andreas
+  Prodromidis and Philip Chan, UCI Machine Learning Repository,
+  https://doi.org/10.24432/C51C7N, licensed under CC BY 4.0.
+  Processed for the Rodinia benchmark suite (University of Virginia):
+  S. Che et al., "Rodinia: A Benchmark Suite for Heterogeneous
+  Computing", IISWC 2009.
+
+Changes:
+  Modified by Rodinia: derived from the 10% training set (494,021
+  records; 494,020 are present). Of the 41 original features, 34
+  numeric ones are kept (the 3 symbolic features, the connection label
+  and 4 further columns are not present), and a row number was added.
+  HeCBench uses Rodinia's file unchanged.
+
+License:
+  Creative Commons Attribution 4.0 International (CC BY 4.0),
+  https://creativecommons.org/licenses/by/4.0/. Rodinia's packaging is
+  under Rodinia's BSD-style license (Copyright (c) 2008-2011 University
+  of Virginia).
+
+Used by:
+  kmeans-cuda, kmeans-hip, kmeans-omp, kmeans-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.
