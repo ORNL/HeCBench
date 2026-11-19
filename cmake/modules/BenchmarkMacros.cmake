@@ -443,3 +443,14 @@ MACRO(REQUIREDATADIR datadir)
             "Fetch it from the repository root with `dvc pull` and re-run CMake.")
     endif()
 ENDMACRO()
+
+# REQUIREDATAFILE
+#
+# Same as REQUIREDATADIR, for a single DVC-tracked data file.
+MACRO(REQUIREDATAFILE datafile)
+    if(NOT EXISTS "${datafile}" OR IS_DIRECTORY "${datafile}")
+        message(WARNING
+            "Data file ${datafile} is missing. "
+            "Fetch it from the repository root with `dvc pull` and re-run CMake.")
+    endif()
+ENDMACRO()

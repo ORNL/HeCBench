@@ -1,0 +1,13 @@
+md5: d49bae6b9d5674a10178743da0cd6d67
+frozen: true
+deps:
+- path: cl/StringSearch/StringSearch_Input.txt
+  repo:
+    url: https://github.com/OpenCL/AMD_APP_samples
+    rev: 54da6ca465634e78fc51fc25edf5840467ee2411
+    rev_lock: 54da6ca465634e78fc51fc25edf5840467ee2411
+outs:
+- md5: 8d3d40b63e58f0d486054eb76d3684a2
+  size: 707705
+  hash: md5
+  path: StringSearch_Input.txt
