@@ -1,7 +1,6 @@
 # mt-sycl/CMakeLists.txt
 
-set(SRC_DIR "${CMAKE_CURRENT_LIST_DIR}")
-UNZIPFILE("${SRC_DIR}/data.tar.gz")
+FETCHDATA("${CMAKE_CURRENT_LIST_DIR}/../data/mt/fetch.sh")
 
 add_hecbench_benchmark(
     NAME mt

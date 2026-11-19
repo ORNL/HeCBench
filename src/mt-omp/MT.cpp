@@ -87,10 +87,10 @@ int main(int argc, const char **argv)
   mt_struct_stripped *h_MT = (mt_struct_stripped*) malloc (
       sizeof(mt_struct_stripped) * MT_RNG_COUNT); // MT para
 
-  const char *cDatPath = "./data/MersenneTwister.dat";
+  const char *cDatPath = "../data/mt/MersenneTwister.dat";
   loadMTGPU(cDatPath, seed, h_MT, MT_RNG_COUNT);
 
-  const char *cRawPath = "./data/MersenneTwister.raw";
+  const char *cRawPath = "../data/mt/MersenneTwister.raw";
   initMTRef(cRawPath);
 
   float *h_RandGPU = (float*)malloc(sizeof(float)*nRand); // Host buffers for GPU output

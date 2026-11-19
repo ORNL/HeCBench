@@ -1,0 +1,13 @@
+md5: a2800f0920fbbe86d5d2a8a0a8ad65e0
+frozen: true
+deps:
+- path: cpp_cl/HDRToneMapping/input.hdr
+  repo:
+    url: https://github.com/OpenCL/AMD_APP_samples
+    rev: 54da6ca465634e78fc51fc25edf5840467ee2411
+    rev_lock: 54da6ca465634e78fc51fc25edf5840467ee2411
+outs:
+- md5: 9967598ef4d0d2bff44f6bbc58c4c4de
+  size: 11209864
+  hash: md5
+  path: input.hdr

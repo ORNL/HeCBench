@@ -444,6 +444,23 @@ MACRO(REQUIREDATADIR datadir)
     endif()
 ENDMACRO()
 
+# FETCHDATA
+#
+# Run a data fetch script (e.g. src/data/mt/fetch.sh) at configure time,
+# for data that is downloaded from its official source instead of being
+# tracked by DVC. The script must be idempotent.
+MACRO(FETCHDATA script)
+    execute_process(
+        COMMAND /bin/sh "${script}"
+        RESULT_VARIABLE FETCHDATA_RESULT
+        ERROR_VARIABLE FETCHDATA_ERROR
+    )
+    if(NOT FETCHDATA_RESULT EQUAL 0)
+        message(WARNING
+            "Fetching data with ${script} failed (exit ${FETCHDATA_RESULT}): ${FETCHDATA_ERROR}")
+    endif()
+ENDMACRO()
+
 # REQUIREDATAFILE
 #
 # Same as REQUIREDATADIR, for a single DVC-tracked data file.

@@ -53,5 +53,8 @@ $(program): $(obj) Makefile
 clean:
 	rm -rf $(program) $(obj)
 
-run: $(program)
+../data/mt/MersenneTwister.dat:
+	sh ../data/mt/fetch.sh
+
+run: $(program) ../data/mt/MersenneTwister.dat
 	$(LAUNCHER) ./$(program) 1000

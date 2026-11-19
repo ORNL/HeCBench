@@ -1,0 +1,13 @@
+md5: 35738813f66cc8ca9c5f8ec59487cc4e
+frozen: true
+deps:
+- path: cl/SobelFilter/SobelFilter_Input.bmp
+  repo:
+    url: https://github.com/OpenCL/AMD_APP_samples
+    rev: 54da6ca465634e78fc51fc25edf5840467ee2411
+    rev_lock: 54da6ca465634e78fc51fc25edf5840467ee2411
+outs:
+- md5: df6a1b64624f44d4af736d606f019cba
+  size: 786486
+  hash: md5
+  path: SobelFilter_Input.bmp
