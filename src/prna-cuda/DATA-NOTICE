@@ -1,0 +1,31 @@
+DATA NOTICE: prna
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  data_tables.tar.gz -> data_tables/ (244 files)
+  HIV1-NL43.tar.gz   -> HIV1-NL43.seq
+  test.tar.gz        -> test.seq
+
+What:
+  RNA/DNA nearest-neighbor thermodynamic parameter tables, the HIV-1
+  NL4-3 RNA sequence, and a small test sequence.
+
+Source:
+  data_tables/ comes from an older release of RNAstructure (Mathews
+  Lab, University of Rochester, https://rna.urmc.rochester.edu/).
+  Only the current release (6.6) is published there; 124 of our 244
+  files are identical to it (checked 2026-11-19). The HIV-1 NL4-3
+  sequence is public GenBank data.
+
+Copyright:
+  The RNAstructure authors (Mathews Lab, University of Rochester).
+
+License:
+  GPL-2.0 (see LICENSE in this directory). GPL-2.0 permits
+  redistributing this older release.
+
+Used by:
+  prna-cuda, prna-hip, prna-omp, prna-sycl, frna-cuda, frna-hip,
+  frna-omp, frna-sycl (HIV1-NL43.seq)
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

@@ -1,0 +1,29 @@
+DATA NOTICE: egs
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  data.tar.gz -> data/ (9 files: cross-section tables, PEGS4 data,
+  voxel phantom, MTGP parameters, X-ray spectrum)
+
+What:
+  Input data for CUDA EGS photon transport.
+
+Source:
+  CUDA EGS 1.0.0, https://jonaslippuner.com/research/cuda-egs/
+  (CUDA_EGS_1.0.0.zip, data/). All 9 files are byte-identical to the
+  zip; CUDA_EGS_phantom.pegs4dat and CUDA_EGS_phantom_32.egsphant were
+  renamed EGS_phantom.pegs4dat and EGS_phantom_32.egsphant (checked
+  2026-11-19).
+
+Copyright:
+  Copyright (C) 2012 CancerCare Manitoba (authors: Jonas Lippuner and
+  Idris Elbakri).
+
+License:
+  GPL-2.0-or-later (see COPYRIGHT in this directory; the upstream
+  zip ships LICENSE.txt).
+
+Used by:
+  egs-cuda, egs-hip
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

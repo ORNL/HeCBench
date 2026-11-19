@@ -1,0 +1,30 @@
+DATA NOTICE: cmp
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  data.tar.bz -> data/simple-synthetic.su
+
+What:
+  Synthetic seismic dataset in Seismic Unix (.su) format.
+
+Source:
+  Benchmark code from https://github.com/hpg-cepetro/IPDPS-CRS-CMP-code
+  (UNICAMP). The dataset is NOT in that repository; its README says to
+  contact Prof. Edson Borin (https://github.com/eborin) for datasets.
+
+Copyright:
+  Unknown; presumably the IPDPS-CRS-CMP-code authors.
+
+License:
+  The code is GPL-3.0 (see LICENSE in this directory, copied from
+  upstream COPYING). The license of this dataset has NOT been confirmed:
+  it was not published with the GPL-3.0 repository.
+
+Used by:
+  cmp-cuda, cmp-hip, cmp-omp, cmp-sycl
+
+Notes:
+  OPEN QUESTION: confirm the dataset's origin and terms with the
+  upstream authors.
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

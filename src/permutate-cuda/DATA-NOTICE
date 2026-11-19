@@ -1,0 +1,24 @@
+DATA NOTICE: permutate
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  dataset.tar.bz -> test_data/truerand_1bit.bin
+
+What:
+  1-bit-per-sample entropy test data for the NIST SP 800-90B IID tests.
+
+Source:
+  https://github.com/yeah1kim/yeah_GPU_SP800_90B_IID,
+  test_data/truerand_1bit.bin (byte-identical at upstream commit
+  1b33cdfa4be2, checked 2026-11-19)
+
+Copyright:
+  The authors of yeah_GPU_SP800_90B_IID.
+
+License:
+  GPL-3.0 (see LICENSE in this directory).
+
+Used by:
+  permutate-cuda, permutate-hip, permutate-omp, permutate-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

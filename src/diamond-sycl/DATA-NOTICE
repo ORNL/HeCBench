@@ -1,0 +1,37 @@
+DATA NOTICE: diamond
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  data.tar.bz -> ARDB.dmnd, long.fastq.gz, short.fastq.gz
+  (ARDB.dmnd and short.fastq.gz are also committed to git here)
+
+What:
+  ARDB.dmnd: a DIAMOND-format protein database built from the
+  Antibiotic Resistance Genes Database (ARDB). long.fastq.gz (654 MB)
+  and short.fastq.gz: Illumina query reads.
+
+Source:
+  Benchmark code from https://github.com/bbuchfink/diamond. The data
+  are NOT in that repository; the README here says to contact the
+  author for the large dataset. ARDB: Liu B. & Pop M., "ARDB -
+  Antibiotic Resistance Genes Database", Nucleic Acids Res. 2009.
+  The origin of the reads (Illumina run C9V1HACXX) is undocumented.
+
+Copyright:
+  DIAMOND: Benjamin Buchfink and contributors. ARDB: University of
+  Maryland. Reads: unknown.
+
+License:
+  The code is GPL-3.0 (see LICENSE in this directory, copied from
+  upstream). GPL-3.0 does not cover the data: ARDB was released for
+  research use without a formal license, and the reads' terms are
+  unknown.
+
+Used by:
+  diamond-cuda, diamond-hip, diamond-omp, diamond-sycl
+
+Notes:
+  OPEN QUESTIONS: confirm where the reads came from and their terms;
+  confirm ARDB's terms for redistribution.
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

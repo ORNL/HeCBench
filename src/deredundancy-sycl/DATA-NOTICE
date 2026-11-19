@@ -1,0 +1,25 @@
+DATA NOTICE: deredundancy
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  testData.tar.gz -> testData.fasta
+
+What:
+  16S rRNA gene sequences for de-redundancy.
+
+Source:
+  https://github.com/JuZhenCS/gene-sequences-de-redundancy,
+  testData.fasta (byte-identical at upstream commit c429329d5abf,
+  checked 2026-11-19)
+
+Copyright:
+  The gene-sequences-de-redundancy authors.
+
+License:
+  MPL-2.0 (see LICENSE in this directory).
+
+Used by:
+  deredundancy-cuda, deredundancy-hip, deredundancy-omp,
+  deredundancy-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

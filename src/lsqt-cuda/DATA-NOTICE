@@ -1,0 +1,25 @@
+DATA NOTICE: lsqt
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  examples.tar.gz -> examples/ (159 files)
+
+What:
+  Example inputs and input generators for linear-scaling quantum transport.
+
+Source:
+  https://github.com/brucefan1983/gpuqt, examples/ (157 of 159 files
+  byte-identical at upstream commit 75be86226207, checked 2026-11-19).
+  examples/input.txt has its paths rewritten for HeCBench, and
+  examples/review/readme.md is an older upstream version.
+
+Copyright:
+  Copyright 2017 Zheyong Fan, Ville Vierimaa, and Ari Harju.
+
+License:
+  GPL-3.0 (see LICENCE in this directory).
+
+Used by:
+  lsqt-cuda, lsqt-hip, lsqt-omp, lsqt-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

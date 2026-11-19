@@ -49,6 +49,12 @@ uv tool install dvc[s3]
 dvc pull
 ```
 
+Some datasets are not stored in the HeCBench remote: they are `dvc import`s that `dvc pull` fetches directly from their upstream repositories (for example `src/data/ced` and `src/data/ss`).
+
+## Data licensing
+
+The BSD-3-Clause [LICENSE](LICENSE) covers HeCBench's own code. Datasets tracked by DVC keep the license of the project they come from, which may be GPL, LGPL, MPL or another license. Where a benchmark directory has a `DATA-NOTICE` file, it records the data's source, copyright holder and license. That license's text is in the same directory.
+
 # Benchmark categories
 Each benchmark falls into a single category. While such classification is not accurate, the arrangement serves as a starting point for users of the benchmark suite. Please see the Reference for more information about each benchmark. 
 

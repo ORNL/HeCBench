@@ -1,0 +1,24 @@
+DATA NOTICE: ccs
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  data.tar.gz -> Data_Constant_100_1_bicluster.txt
+
+What:
+  Synthetic gene-expression matrix with a planted constant bicluster.
+
+Source:
+  https://github.com/abhatta3/Condition-dependent-Correlation-Subgroups-CCS
+  Results/Synthetic_data_results/Data/Data_Constant_100_1_bicluster.txt
+  (byte-identical at upstream commit 6c5188cceca5, checked 2026-11-19)
+
+Copyright:
+  The authors of Condition-dependent-Correlation-Subgroups-CCS.
+
+License:
+  GPL-3.0 (see LICENSE in this directory).
+
+Used by:
+  ccs-cuda, ccs-hip, ccs-omp, ccs-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

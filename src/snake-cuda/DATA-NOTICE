@@ -1,0 +1,25 @@
+DATA NOTICE: snake
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  Datasets.tar.gz -> Datasets/ERR240727_1_E2_30000Pairs.txt
+
+What:
+  30,000 read/reference pairs for genome pre-alignment filtering.
+
+Source:
+  https://github.com/CMU-SAFARI/SneakySnake,
+  Datasets/ERR240727_1_E2_30000Pairs.txt (byte-identical at upstream
+  commit ab4ececd50a8, checked 2026-11-19). The reads come from ENA run
+  ERR240727, which is open data under the INSDC policy.
+
+Copyright:
+  The SneakySnake authors (SAFARI Research Group).
+
+License:
+  GPL-3.0 (see LICENSE in this directory, copied from upstream).
+
+Used by:
+  snake-cuda, snake-hip, snake-omp, snake-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

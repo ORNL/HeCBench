@@ -1,0 +1,24 @@
+DATA NOTICE: hogbom
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  data.tar.bz -> data/dirty_4096.img, data/psf_4096.img
+
+What:
+  4096x4096 dirty image and point-spread function for Hogbom CLEAN.
+
+Source:
+  https://github.com/ATNF/askap-benchmarks, data/dirty_4096.img and
+  data/psf_4096.img (byte-identical at upstream commit c6a3139cf57d,
+  checked 2026-11-19)
+
+Copyright:
+  Copyright (c) 2011 CSIRO, Australia Telescope National Facility.
+
+License:
+  GPL-2.0-or-later (see COPYRIGHT and LICENSE in this directory).
+
+Used by:
+  hogbom-cuda, hogbom-hip, hogbom-omp, hogbom-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.

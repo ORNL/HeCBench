@@ -1,0 +1,23 @@
+DATA NOTICE: svd3x3
+
+Data files tracked by DVC in this directory (fetch with `dvc pull`):
+  dataset.tar.bz -> Dataset_1M.txt
+
+What:
+  One million random 3x3 matrices.
+
+Source:
+  https://github.com/kuiwuchn/3x3_SVD_CUDA, svd3x3/svd3x3/Dataset_1M.txt
+  (byte-identical at upstream commit 74ac0dc12fe8, checked 2026-11-19)
+
+Copyright:
+  The 3x3_SVD_CUDA authors (implemented by Kui Wu).
+
+License:
+  LGPL-3.0 (see LICENSE in this directory).
+
+Used by:
+  svd3x3-cuda, svd3x3-hip, svd3x3-omp, svd3x3-sycl
+
+This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
+LICENSE does not apply to it.
