@@ -82,4 +82,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	$(LAUNCHER) ./$(program) SobelFilter_Input.bmp 100000
+	$(LAUNCHER) ./$(program) ../data/sobel/SobelFilter_Input.bmp 100000

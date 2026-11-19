@@ -1,5 +1,7 @@
 # sobel-hip/CMakeLists.txt
 
+REQUIREDATAFILE("${CMAKE_CURRENT_LIST_DIR}/../data/sobel/SobelFilter_Input.bmp")
+
 set(SDK_DIR "${CMAKE_CURRENT_LIST_DIR}/../include")
 
 add_hecbench_benchmark(

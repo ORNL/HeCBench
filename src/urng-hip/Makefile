@@ -53,4 +53,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	$(LAUNCHER) ./$(program) ../urng-sycl/URNG_Input.bmp 1000
+	$(LAUNCHER) ./$(program) ../data/urng/URNG_Input.bmp 1000

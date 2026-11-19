@@ -2,7 +2,7 @@
 
 set(SDK_DIR "${CMAKE_CURRENT_LIST_DIR}/../include")
 
-UNZIPFILE("${CMAKE_CURRENT_LIST_DIR}/image.tar.gz")
+REQUIREDATAFILE("${CMAKE_CURRENT_LIST_DIR}/../data/urng/URNG_Input.bmp")
 
 add_hecbench_benchmark(
     NAME urng
