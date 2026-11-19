@@ -10,28 +10,47 @@ What:
   and short.fastq.gz: Illumina query reads.
 
 Source:
-  Benchmark code from https://github.com/bbuchfink/diamond. The data
-  are NOT in that repository; the README here says to contact the
-  author for the large dataset. ARDB: Liu B. & Pop M., "ARDB -
-  Antibiotic Resistance Genes Database", Nucleic Acids Res. 2009.
-  The origin of the reads (Illumina run C9V1HACXX) is undocumented.
+  Benchmark code from https://github.com/bbuchfink/diamond (0.9.10).
+  The data are NOT in that repository.
+
+  ARDB.dmnd: built from the protein database of ARDB, the Antibiotic
+  Resistance Genes Database (University of Maryland), version 1.1,
+  https://ardb.cbcb.umd.edu/ (no longer maintained; its successor is
+  CARD). Official download:
+    ftp://ftp.cbcb.umd.edu/pub/data/ARDB/ardbAnno1.0.tar.gz
+  (ardbAnno1.0/blastdb/resisGenes.pfasta: 7,828 sequences, 3,054,315
+  residues). The ARDB.dmnd header records DIAMOND 0.9.10 (build 111),
+  7,825 sequences and the same 3,054,315 residues, matching:
+    diamond makedb --in resisGenes.pfasta -d ARDB
+  run with DIAMOND 0.9.10. A byte-for-byte rebuild has not been
+  checked. The DIAMOND port in this directory cannot run makedb.
+
+  Please cite ARDB as: Liu B, Pop M. ARDB - Antibiotic Resistance
+  Genes Database. Nucleic Acids Res. 2009;37(Database issue):D443-7.
+
+  Reads: the README here says to contact the HeCBench author for the
+  large dataset. short.fastq.gz is the first 500 reads of
+  long.fastq.gz. Their origin (Illumina flowcell C9V1HACXX, lane 7,
+  barcode ATGTCA) is undocumented.
 
 Copyright:
-  DIAMOND: Benjamin Buchfink and contributors. ARDB: University of
-  Maryland. Reads: unknown.
+  DIAMOND: Benjamin Buchfink and contributors. ARDB: created by Bo Liu
+  and Mihai Pop, Center for Bioinformatics and Computational Biology,
+  University of Maryland (no copyright holder is stated). Reads: unknown.
 
 License:
   The code is GPL-3.0 (see LICENSE in this directory, copied from
-  upstream). GPL-3.0 does not cover the data: ARDB was released for
-  research use without a formal license, and the reads' terms are
-  unknown.
+  upstream). GPL-3.0 does not cover the data.
+  ARDB: no license is stated. The ARDB site says "All data underlying
+  ARDB are available for download" and asks for the citation above;
+  neither the site nor the ardbAnno1.0 package gives license terms.
+  Reads: terms unknown.
 
 Used by:
   diamond-cuda, diamond-hip, diamond-omp, diamond-sycl
 
 Notes:
-  OPEN QUESTIONS: confirm where the reads came from and their terms;
-  confirm ARDB's terms for redistribution.
+  OPEN QUESTION: confirm where the reads came from and their terms.
 
 This data keeps its upstream license. HeCBench's top-level BSD-3-Clause
 LICENSE does not apply to it.
