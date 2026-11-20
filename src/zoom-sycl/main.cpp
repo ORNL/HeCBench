@@ -245,23 +245,25 @@ void zoom_out_edge_pad(
   }
 }
 
-int get_sm_size(int *output_sizes, int H, int W, sycl::range<3> &block) {
+int get_sm_size(sycl::queue &q, int *output_sizes, int H, int W,
+                sycl::range<3> &block) {
 
-  int max_smem = 48 * 1024;
-  int blocks[4][3] = {{16, 16, 1}, {16, 8, 1}, {8, 8, 1}, {8, 4, 1}};
+  size_t max_smem = q.get_device().get_info<sycl::info::device::local_mem_size>();
+  if (max_smem == 0) max_smem = 48 * 1024;
+  const int blocks[4][3] = {{16, 16, 1}, {16, 8, 1}, {8, 8, 1}, {8, 4, 1}};
   for (int i = 0; i < 4; i++) {
-    int *param = blocks[0];
+    const int *param = blocks[i];
     int h_stretch = ceil((param[1] * H) / (float)output_sizes[2]);
     int w_stretch = ceil((param[0] * W) / (float)output_sizes[3]);
-    int smem_size = (h_stretch + 1) * (w_stretch + 1) * 4;
-    if (smem_size < max_smem) {
+    int smem_bytes = (h_stretch + 1) * (w_stretch + 1) * (int)sizeof(float);
+    if ((size_t)smem_bytes <= max_smem) {
       block[2] = param[0];
       block[1] = param[1];
       block[0] = param[2];
-      return smem_size / 4;
+      return smem_bytes / (int)sizeof(float);
     }
   }
-  printf("Requested shared memory size exceeds the maximum (%d). Exit\n", max_smem);
+  printf("Requested shared memory size exceeds the maximum (%zu). Exit\n", max_smem);
   exit(1);
 }
 
@@ -288,7 +290,7 @@ void zoom (sycl::queue &q, int repeat, int input_sizes[4], float zoom_factor[2])
 
   // get block size and shared memory size
   sycl::range<3> block (1, 1, 1);
-  int smem_size = get_sm_size(output_sizes, H, W, block);
+  int smem_size = get_sm_size(q, output_sizes, H, W, block);
 
   sycl::range<3> grid (C * N,
                       int((output_sizes[2] - 1) / block[1] + 1),

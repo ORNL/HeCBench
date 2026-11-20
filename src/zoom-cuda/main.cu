@@ -7,19 +7,46 @@
 #include "kernels.h"
 #include "reference.h"
 
+// Per-block limit without an opt-in, and the larger amount a kernel can
+// request with cudaFuncSetAttribute. The config search uses the larger one.
+static void device_shared_memory(int &per_block, int &limit) {
+  per_block = 0;
+  int optin = 0;
+  if (cudaDeviceGetAttribute(&per_block, cudaDevAttrMaxSharedMemoryPerBlock, 0) != cudaSuccess)
+    per_block = 0;
+  if (cudaDeviceGetAttribute(&optin, cudaDevAttrMaxSharedMemoryPerBlockOptin, 0) != cudaSuccess)
+    optin = 0;
+  limit = per_block > optin ? per_block : optin;
+  if (limit <= 0) limit = 48 * 1024;
+}
+
+static void allow_dynamic_smem(const void *kernel, int bytes, int per_block) {
+  if (bytes <= per_block) return;
+  cudaError_t err = cudaFuncSetAttribute(
+      kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, bytes);
+  if (err != cudaSuccess) {
+    printf("cudaFuncSetAttribute(%d) failed: %s\n", bytes, cudaGetErrorString(err));
+    exit(1);
+  }
+}
+
 int get_sm_size(int *output_sizes, int H, int W, dim3 &block) {
 
-  int max_smem = 48 * 1024;
-  int blocks[4][3] = {{16, 16, 1}, {16, 8, 1}, {8, 8, 1}, {8, 4, 1}};
+  int per_block = 0;
+  int max_smem = 0;
+  device_shared_memory(per_block, max_smem);
+  const int blocks[4][3] = {{16, 16, 1}, {16, 8, 1}, {8, 8, 1}, {8, 4, 1}};
   for (int i = 0; i < 4; i++) {
-    int *param = blocks[0];
+    const int *param = blocks[i];
     int h_stretch = ceil((param[1] * H) / (float)output_sizes[2]);
     int w_stretch = ceil((param[0] * W) / (float)output_sizes[3]);
-    int smem_size = (h_stretch + 1) * (w_stretch + 1) * 4;
-    if (smem_size < max_smem) {
+    int smem_size = (h_stretch + 1) * (w_stretch + 1) * (int)sizeof(float);
+    if (smem_size <= max_smem) {
       block.x = param[0];
       block.y = param[1];
       block.z = param[2];
+      allow_dynamic_smem((const void *)zoom_in_kernel, smem_size, per_block);
+      allow_dynamic_smem((const void *)zoom_out_kernel, smem_size, per_block);
       return smem_size;
     }
   }
