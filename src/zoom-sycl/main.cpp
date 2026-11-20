@@ -478,5 +478,9 @@ int main(int argc, char* argv[])
   zf[0] = 0.6f; zf[1] = 0.9f;
   zoom(q, repeat, input_sizes, zf);
 
+  // 16x16 tile is ~71KB on the default image, above the old 48KB cap.
+  zf[0] = 0.12f; zf[1] = 0.12f;
+  zoom(q, repeat, input_sizes, zf);
+
   return 0;
 }
