@@ -7,19 +7,46 @@
 #include "kernels.h"
 #include "reference.h"
 
+// Per-block limit without an opt-in, and the larger amount a kernel can
+// request with hipFuncSetAttribute. The config search uses the larger one.
+static void device_shared_memory(int &per_block, int &limit) {
+  per_block = 0;
+  int optin = 0;
+  if (hipDeviceGetAttribute(&per_block, hipDeviceAttributeMaxSharedMemoryPerBlock, 0) != hipSuccess)
+    per_block = 0;
+  if (hipDeviceGetAttribute(&optin, hipDeviceAttributeSharedMemPerBlockOptin, 0) != hipSuccess)
+    optin = 0;
+  limit = per_block > optin ? per_block : optin;
+  if (limit <= 0) limit = 48 * 1024;
+}
+
+static void allow_dynamic_smem(const void *kernel, int bytes, int per_block) {
+  if (bytes <= per_block) return;
+  hipError_t err = hipFuncSetAttribute(
+      kernel, hipFuncAttributeMaxDynamicSharedMemorySize, bytes);
+  if (err != hipSuccess) {
+    printf("hipFuncSetAttribute(%d) failed: %s\n", bytes, hipGetErrorString(err));
+    exit(1);
+  }
+}
+
 int get_sm_size(int *output_sizes, int H, int W, dim3 &block) {
 
-  int max_smem = 48 * 1024;
-  int blocks[4][3] = {{16, 16, 1}, {16, 8, 1}, {8, 8, 1}, {8, 4, 1}};
+  int per_block = 0;
+  int max_smem = 0;
+  device_shared_memory(per_block, max_smem);
+  const int blocks[4][3] = {{16, 16, 1}, {16, 8, 1}, {8, 8, 1}, {8, 4, 1}};
   for (int i = 0; i < 4; i++) {
-    int *param = blocks[0];
+    const int *param = blocks[i];
     int h_stretch = ceil((param[1] * H) / (float)output_sizes[2]);
     int w_stretch = ceil((param[0] * W) / (float)output_sizes[3]);
-    int smem_size = (h_stretch + 1) * (w_stretch + 1) * 4;
-    if (smem_size < max_smem) {
+    int smem_size = (h_stretch + 1) * (w_stretch + 1) * (int)sizeof(float);
+    if (smem_size <= max_smem) {
       block.x = param[0];
       block.y = param[1];
       block.z = param[2];
+      allow_dynamic_smem((const void *)zoom_in_kernel, smem_size, per_block);
+      allow_dynamic_smem((const void *)zoom_out_kernel, smem_size, per_block);
       return smem_size;
     }
   }
@@ -208,6 +235,10 @@ int main(int argc, char* argv[])
   zoom(repeat, input_sizes, zf);
 
   zf[0] = 0.6f; zf[1] = 0.9f;
+  zoom(repeat, input_sizes, zf);
+
+  // 16x16 tile is ~71KB on the default image, above the old 48KB cap.
+  zf[0] = 0.12f; zf[1] = 0.12f;
   zoom(repeat, input_sizes, zf);
 
   return 0;
