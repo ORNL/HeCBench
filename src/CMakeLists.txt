@@ -197,6 +197,7 @@ set(HECBENCH_POC_BENCHMARKS
     hellinger
     henry
     hexciton
+    hisparse
     histogram
     hogbom
     hotspot3D
