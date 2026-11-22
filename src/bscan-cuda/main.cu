@@ -18,12 +18,16 @@ __device__ __inline__ int warp_scan(int val, volatile int *s_data)
   s_data[idx] = 0;
   idx += warpSize;
   int t = s_data[idx] = val;
-  s_data[idx] = t += s_data[idx - 1];
-  s_data[idx] = t += s_data[idx - 2];
-  s_data[idx] = t += s_data[idx - 4];
-  s_data[idx] = t += s_data[idx - 8];
-  s_data[idx] = t += s_data[idx -16];
-  return s_data[idx-1];
+  __syncwarp();
+  for (int offset = 1; offset < warpSize; offset <<= 1) {
+    int v = s_data[idx - offset];
+    __syncwarp();
+    s_data[idx] = t += v;
+    __syncwarp();
+  }
+  int r = s_data[idx-1];
+  __syncwarp();
+  return r;
 }
 
 __device__ __inline__ unsigned int lanemask_lt()
