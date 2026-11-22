@@ -46,8 +46,8 @@ __device__ __inline__ unsigned int binary_warp_scan(bool p)
   unsigned int b = __ballot(p);
   return __popc(b & mask);
 #else
-  unsigned int b = __ballot_sync(mask, p);
-  return __popc(b);
+  unsigned int b = __ballot_sync(0xffffffff, p);
+  return __popc(b & mask);
 #endif
 }
 
