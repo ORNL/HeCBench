@@ -85,8 +85,7 @@ __global__ void DCT8x8_kernel(
     __shared__ float l_Transpose[BLOCK_Y * (BLOCK_X+1)];
 
     //Process only full blocks
-    if( (globalX - modLocalX + BLOCK_SIZE - 1 >= imageW) || (globalY + BLOCK_SIZE - 1 >= imageH) )
-        return;
+    const bool process = (globalX - modLocalX + BLOCK_SIZE - 1 < imageW) && (globalY + BLOCK_SIZE - 1 < imageH);
 
     float *l_V = &l_Transpose[localY * (BLOCK_X+1) + localX];
     float *l_H = &l_Transpose[(localY + modLocalX) * (BLOCK_X+1) + localX - modLocalX];
@@ -94,14 +93,22 @@ __global__ void DCT8x8_kernel(
     d_Dst += globalY * stride + globalX;
 
     float D[8];
-    for(unsigned int i = 0; i < BLOCK_SIZE; i++)
-        l_V[i * (BLOCK_X + 1)] = d_Src[i * stride];
+    if (process) {
+        for(unsigned int i = 0; i < BLOCK_SIZE; i++)
+            l_V[i * (BLOCK_X + 1)] = d_Src[i * stride];
+    }
+    __syncthreads();
 
-    for(unsigned int i = 0; i < BLOCK_SIZE; i++)
-        D[i] = l_H[i];
-    DCT8(D);
-    for(unsigned int i = 0; i < BLOCK_SIZE; i++)
-        l_H[i] = D[i];
+    if (process) {
+        for(unsigned int i = 0; i < BLOCK_SIZE; i++)
+            D[i] = l_H[i];
+        DCT8(D);
+        for(unsigned int i = 0; i < BLOCK_SIZE; i++)
+            l_H[i] = D[i];
+    }
+    __syncthreads();
+
+    if (!process) return;
 
     for(unsigned int i = 0; i < BLOCK_SIZE; i++)
         D[i] = l_V[i * (BLOCK_X + 1)];
@@ -127,8 +134,7 @@ __global__ void IDCT8x8_kernel(
     __shared__ float l_Transpose[BLOCK_Y * (BLOCK_X+1)];
 
     //Process only full blocks
-    if( (globalX - modLocalX + BLOCK_SIZE - 1 >= imageW) || (globalY + BLOCK_SIZE - 1 >= imageH) )
-        return;
+    const bool process = (globalX - modLocalX + BLOCK_SIZE - 1 < imageW) && (globalY + BLOCK_SIZE - 1 < imageH);
 
     float *l_V = &l_Transpose[localY * (BLOCK_X+1) + localX];
     float *l_H = &l_Transpose[(localY + modLocalX) * (BLOCK_X+1) + localX - modLocalX];
@@ -136,14 +142,22 @@ __global__ void IDCT8x8_kernel(
     d_Dst += globalY * stride + globalX;
 
     float D[8];
-    for(unsigned int i = 0; i < BLOCK_SIZE; i++)
-        l_V[i * (BLOCK_X + 1)] = d_Src[i * stride];
+    if (process) {
+        for(unsigned int i = 0; i < BLOCK_SIZE; i++)
+            l_V[i * (BLOCK_X + 1)] = d_Src[i * stride];
+    }
+    __syncthreads();
 
-    for(unsigned int i = 0; i < BLOCK_SIZE; i++)
-        D[i] = l_H[i];
-    IDCT8(D);
-    for(unsigned int i = 0; i < BLOCK_SIZE; i++)
-        l_H[i] = D[i];
+    if (process) {
+        for(unsigned int i = 0; i < BLOCK_SIZE; i++)
+            D[i] = l_H[i];
+        IDCT8(D);
+        for(unsigned int i = 0; i < BLOCK_SIZE; i++)
+            l_H[i] = D[i];
+    }
+    __syncthreads();
+
+    if (!process) return;
 
     for(unsigned int i = 0; i < BLOCK_SIZE; i++)
         D[i] = l_V[i * (BLOCK_X + 1)];

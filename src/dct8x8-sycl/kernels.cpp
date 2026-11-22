@@ -83,8 +83,7 @@ void DCT8x8_kernel(
     const unsigned int   globalY = item.get_group(0) * BLOCK_Y + localY;
 
     //Process only full blocks
-    if( (globalX - modLocalX + BLOCK_SIZE - 1 >= imageW) || (globalY + BLOCK_SIZE - 1 >= imageH) )
-        return;
+    const bool process = (globalX - modLocalX + BLOCK_SIZE - 1 < imageW) && (globalY + BLOCK_SIZE - 1 < imageH);
 
     float *l_V = &l_Transpose[localY * (BLOCK_X+1) + localX];
     float *l_H = &l_Transpose[(localY + modLocalX) * (BLOCK_X+1) + localX - modLocalX];
@@ -92,14 +91,22 @@ void DCT8x8_kernel(
     d_Dst += globalY * stride + globalX;
 
     float D[8];
-    for(unsigned int i = 0; i < BLOCK_SIZE; i++)
-        l_V[i * (BLOCK_X + 1)] = d_Src[i * stride];
+    if (process) {
+        for(unsigned int i = 0; i < BLOCK_SIZE; i++)
+            l_V[i * (BLOCK_X + 1)] = d_Src[i * stride];
+    }
+    item.barrier(sycl::access::fence_space::local_space);
 
-    for(unsigned int i = 0; i < BLOCK_SIZE; i++)
-        D[i] = l_H[i];
-    DCT8(D);
-    for(unsigned int i = 0; i < BLOCK_SIZE; i++)
-        l_H[i] = D[i];
+    if (process) {
+        for(unsigned int i = 0; i < BLOCK_SIZE; i++)
+            D[i] = l_H[i];
+        DCT8(D);
+        for(unsigned int i = 0; i < BLOCK_SIZE; i++)
+            l_H[i] = D[i];
+    }
+    item.barrier(sycl::access::fence_space::local_space);
+
+    if (!process) return;
 
     for(unsigned int i = 0; i < BLOCK_SIZE; i++)
         D[i] = l_V[i * (BLOCK_X + 1)];
@@ -125,8 +132,7 @@ void IDCT8x8_kernel(
     const unsigned int   globalY = item.get_group(0) * BLOCK_Y + localY;
 
     //Process only full blocks
-    if( (globalX - modLocalX + BLOCK_SIZE - 1 >= imageW) || (globalY + BLOCK_SIZE - 1 >= imageH) )
-        return;
+    const bool process = (globalX - modLocalX + BLOCK_SIZE - 1 < imageW) && (globalY + BLOCK_SIZE - 1 < imageH);
 
     float *l_V = &l_Transpose[localY * (BLOCK_X+1) + localX];
     float *l_H = &l_Transpose[(localY + modLocalX) * (BLOCK_X+1) + localX - modLocalX];
@@ -134,14 +140,22 @@ void IDCT8x8_kernel(
     d_Dst += globalY * stride + globalX;
 
     float D[8];
-    for(unsigned int i = 0; i < BLOCK_SIZE; i++)
-        l_V[i * (BLOCK_X + 1)] = d_Src[i * stride];
+    if (process) {
+        for(unsigned int i = 0; i < BLOCK_SIZE; i++)
+            l_V[i * (BLOCK_X + 1)] = d_Src[i * stride];
+    }
+    item.barrier(sycl::access::fence_space::local_space);
 
-    for(unsigned int i = 0; i < BLOCK_SIZE; i++)
-        D[i] = l_H[i];
-    IDCT8(D);
-    for(unsigned int i = 0; i < BLOCK_SIZE; i++)
-        l_H[i] = D[i];
+    if (process) {
+        for(unsigned int i = 0; i < BLOCK_SIZE; i++)
+            D[i] = l_H[i];
+        IDCT8(D);
+        for(unsigned int i = 0; i < BLOCK_SIZE; i++)
+            l_H[i] = D[i];
+    }
+    item.barrier(sycl::access::fence_space::local_space);
+
+    if (!process) return;
 
     for(unsigned int i = 0; i < BLOCK_SIZE; i++)
         D[i] = l_V[i * (BLOCK_X + 1)];
