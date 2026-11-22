@@ -82,8 +82,6 @@ __global__ void rmsnorm_quant_two_pass(const float *__restrict__ input,
         BlockReduce<SumOp, float, THREADS_PER_WARP>(local_squares_sum) /
         static_cast<float>(inner_len);
     const float norm_factor = rsqrtf(mean_square + epsilon);
-    // BlockReduce's shared slot is rewritten by the next row
-    __syncthreads();
 
     float ld_gamma_regs[VEC];
     uint8_t st_regs[VEC];
@@ -140,8 +138,6 @@ __global__ void rmsnorm_quant_single_read(const float *__restrict__ input,
         BlockReduce<SumOp, float, THREADS_PER_WARP>(ss) /
         static_cast<float>(inner_len);
     const float norm_factor = rsqrtf(mean_square + epsilon);
-    // BlockReduce's shared slot is rewritten by the next row
-    __syncthreads();
 
 #pragma unroll 1
     for (int v = 0; v < vpt; ++v) {

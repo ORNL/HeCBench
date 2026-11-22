@@ -48,5 +48,7 @@ __device__ T BlockReduce(const T &val) {
             smem[0] = val_reg;
     }
     __syncthreads();
-    return smem[0];
+    T result = smem[0];
+    __syncthreads();
+    return result;
 }
