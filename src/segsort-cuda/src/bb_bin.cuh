@@ -36,6 +36,8 @@ void warp_exclusive_sum(const T * in, T * out, const int n)
             data += other;
     }
 
+    __syncwarp();
+
     if(lane < n) {
         out[lane] = data;
     }

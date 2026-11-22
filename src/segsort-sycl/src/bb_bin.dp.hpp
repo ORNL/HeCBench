@@ -75,6 +75,8 @@ void warp_exclusive_sum(const T * in, T * out, const int n,
             data += other;
     }
 
+    sycl::group_barrier(item_ct1.get_sub_group());
+
     if(lane < n) {
         out[lane] = data;
     }
