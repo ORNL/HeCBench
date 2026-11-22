@@ -341,6 +341,7 @@ __global__ void groupnorm_backward_kernel(
     //assert(blockDim.x % warp.size() == 0);
     if (img_size % blockDim.x == 0) {
         for (int c = 0; c < group_size; c++) {
+            __syncthreads();
             float dw_thread = 0.0f;
             float db_thread = 0.0f;
             for (int i = threadIdx.x; i < img_size; i += blockDim.x) {
