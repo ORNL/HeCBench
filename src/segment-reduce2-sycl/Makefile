@@ -32,7 +32,8 @@ obj = $(source:.cpp=.o)
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall \
           --gcc-toolchain=$(GCC_TOOLCHAIN) \
-          -I../segment-reduce2-cuda -fsycl
+          -I../segment-reduce2-cuda -fsycl \
+          -I ./oneDPL/include -I ./oneTBB/include
 
 ifeq ($(VENDOR), AdaptiveCpp)
     CFLAGS_TMP := $(CFLAGS)

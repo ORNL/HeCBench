@@ -1,8 +1,27 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <functional>
 #include <sycl/sycl.hpp>
 #include "zipf.h"
+
+// Offset-based oneapi::dpl::experimental::reduce_by_segment is only available
+// in recent oneDPL releases. Without oneDPL, or with an older one, only the
+// custom kernel is built. The oneDPL headers are included only when the
+// algorithm exists. It is also skipped with AdaptiveCpp, where it returns
+// wrong results for more than 2048 segments:
+// https://github.com/uxlfoundation/oneDPL/issues/2924
+#if defined(__has_include) && !defined(__ACPP__) && !defined(__HIPSYCL__)
+#if __has_include(<oneapi/dpl/version>)
+#include <oneapi/dpl/version>
+#if defined(ONEDPL_HAS_SEGMENTED_ALGORITHMS) && ONEDPL_HAS_SEGMENTED_ALGORITHMS >= 202611L
+#include <oneapi/dpl/execution>
+#include <oneapi/dpl/functional>
+#include <oneapi/dpl/numeric>
+#define HAS_DPL_SEGMENTED_REDUCE 1
+#endif
+#endif
+#endif
 
 // Work-group size: 128 work-items (threads) cooperate on one tile of input.
 #define WG_SIZE 128
@@ -30,6 +49,19 @@ struct Reducer {
     else
       return std::numeric_limits<value_t>::lowest();
   }
+
+#ifdef HAS_DPL_SEGMENTED_REDUCE
+  // The same operator as a function object, for library algorithms.
+  static auto op()
+  {
+    if constexpr (Kind == ReduceKind::Sum)
+      return std::plus<value_t>();
+    else if constexpr (Kind == ReduceKind::Min)
+      return oneapi::dpl::minimum<value_t>();
+    else
+      return oneapi::dpl::maximum<value_t>();
+  }
+#endif
 
   // Combine two values with the chosen operator.
   static value_t apply(value_t a, value_t b)
@@ -269,17 +301,43 @@ void launch(sycl::queue &q, const value_t *d_in, value_t *d_out,
   });
 }
 
+#ifdef HAS_DPL_SEGMENTED_REDUCE
+// Kernel names for the oneDPL algorithm, one per operator, so that the kernels
+// generated for different operators have distinct names.
+template <ReduceKind Kind> struct DplKernelName;
+template <> struct DplKernelName<ReduceKind::Sum> { };
+template <> struct DplKernelName<ReduceKind::Min> { };
+template <> struct DplKernelName<ReduceKind::Max> { };
+
+// Same computation with the oneDPL algorithm. The offsets are the CSR array
+// of num_segments + 1 entries: segment s is [offsets[s], offsets[s + 1]).
+// Every reduction starts from init_value, which is also the result of an
+// empty segment, so the identity of the operator is passed.
 template <ReduceKind Kind>
-void bench_op(sycl::queue &q, const char *name, value_t *d_in, value_t *d_out,
-              offset_t *d_offsets, offset_t num_segments, offset_t num_items,
+void launch_dpl(sycl::queue &q, const value_t *d_in, value_t *d_out,
+                const offset_t *d_offsets, offset_t num_segments,
+                offset_t num_items)
+{
+  using R = Reducer<Kind>;
+  oneapi::dpl::experimental::reduce_by_segment(
+      oneapi::dpl::execution::make_device_policy<DplKernelName<Kind>>(q),
+      d_in, d_in + num_items, d_out, num_segments, d_offsets, R::identity(),
+      R::op());
+}
+#endif
+
+// Time repeated runs of one implementation, then check its output.
+template <typename Launch>
+void bench_op(sycl::queue &q, const char *name, Launch launch_fn,
+              value_t *d_out, offset_t num_segments, offset_t num_items,
               int repeat, const std::vector<value_t> &ref)
 {
-  launch<Kind>(q, d_in, d_out, d_offsets, num_segments, num_items);
+  launch_fn();
   q.wait();
 
   auto start = std::chrono::steady_clock::now();
   for (int i = 0; i < repeat; i++)
-    launch<Kind>(q, d_in, d_out, d_offsets, num_segments, num_items);
+    launch_fn();
   q.wait();
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
@@ -288,6 +346,23 @@ void bench_op(sycl::queue &q, const char *name, value_t *d_in, value_t *d_out,
   std::vector<value_t> h_out(num_segments);
   q.memcpy(h_out.data(), d_out, num_segments * sizeof(value_t)).wait();
   count_errors(h_out, ref, name);
+}
+
+template <ReduceKind Kind>
+void bench_all(sycl::queue &q, const char *name, const char *dpl_name,
+               value_t *d_in, value_t *d_out, offset_t *d_offsets,
+               offset_t num_segments, offset_t num_items, int repeat,
+               const std::vector<value_t> &ref)
+{
+  bench_op(q, name,
+           [&] { launch<Kind>(q, d_in, d_out, d_offsets, num_segments, num_items); },
+           d_out, num_segments, num_items, repeat, ref);
+
+#ifdef HAS_DPL_SEGMENTED_REDUCE
+  bench_op(q, dpl_name,
+           [&] { launch_dpl<Kind>(q, d_in, d_out, d_offsets, num_segments, num_items); },
+           d_out, num_segments, num_items, repeat, ref);
+#endif
 }
 
 void segreduce(sycl::queue &q, offset_t num_items, int repeat)
@@ -306,12 +381,15 @@ void segreduce(sycl::queue &q, offset_t num_items, int repeat)
            (p.num_segments + 1) * sizeof(offset_t));
   q.wait();
 
-  bench_op<ReduceKind::Sum>(q, "sycl::reduce_over_group Sum", d_in, d_out,
-                            d_offsets, p.num_segments, num_items, repeat, ref_sum);
-  bench_op<ReduceKind::Min>(q, "sycl::reduce_over_group Min", d_in, d_out,
-                            d_offsets, p.num_segments, num_items, repeat, ref_min);
-  bench_op<ReduceKind::Max>(q, "sycl::reduce_over_group Max", d_in, d_out,
-                            d_offsets, p.num_segments, num_items, repeat, ref_max);
+  bench_all<ReduceKind::Sum>(q, "sycl::reduce_over_group Sum",
+                             "oneDPL reduce_by_segment Sum", d_in, d_out,
+                             d_offsets, p.num_segments, num_items, repeat, ref_sum);
+  bench_all<ReduceKind::Min>(q, "sycl::reduce_over_group Min",
+                             "oneDPL reduce_by_segment Min", d_in, d_out,
+                             d_offsets, p.num_segments, num_items, repeat, ref_min);
+  bench_all<ReduceKind::Max>(q, "sycl::reduce_over_group Max",
+                             "oneDPL reduce_by_segment Max", d_in, d_out,
+                             d_offsets, p.num_segments, num_items, repeat, ref_max);
 
   sycl::free(d_in, q);
   sycl::free(d_out, q);

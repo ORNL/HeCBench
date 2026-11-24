@@ -1,0 +1,11 @@
+Please clone the oneDPL and oneTBB GitHub repositories in the current directory before building the SYCL program
+
+https://github.com/uxlfoundation/oneDPL
+https://github.com/uxlfoundation/oneTBB
+
+The offset-based oneapi::dpl::experimental::reduce_by_segment is used when
+ONEDPL_HAS_SEGMENTED_ALGORITHMS >= 202611L (a recent oneDPL, see
+https://github.com/uxlfoundation/oneDPL/issues/2829). With an older oneDPL,
+only the custom SYCL kernel is built and run. The oneDPL algorithm is also
+skipped with AdaptiveCpp, where it returns wrong results for more than 2048
+segments (https://github.com/uxlfoundation/oneDPL/issues/2924).
