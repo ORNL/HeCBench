@@ -304,6 +304,7 @@ void groupnorm_backward_kernel(
     //assert(item.get_local_range(2) % WarpSize == 0);
     if (img_size % item.get_local_range(2) == 0) {
         for (int c = 0; c < group_size; c++) {
+            item.barrier(sycl::access::fence_space::local_space);
             float dw_thread = 0.0f;
             float db_thread = 0.0f;
             for (int i = item.get_local_id(2); i < img_size;
