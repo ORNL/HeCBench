@@ -20,12 +20,16 @@ inline int warp_scan(sycl::nd_item<1> &item, int val, volatile int *s_data)
   s_data[idx] = 0;
   idx += warpSize;
   int t = s_data[idx] = val;
-  s_data[idx] = t += s_data[idx - 1];
-  s_data[idx] = t += s_data[idx - 2];
-  s_data[idx] = t += s_data[idx - 4];
-  s_data[idx] = t += s_data[idx - 8];
-  s_data[idx] = t += s_data[idx -16];
-  return s_data[idx-1];
+  sycl::group_barrier(sg);
+  for (int offset = 1; offset < warpSize; offset <<= 1) {
+    int v = s_data[idx - offset];
+    sycl::group_barrier(sg);
+    s_data[idx] = t += v;
+    sycl::group_barrier(sg);
+  }
+  int r = s_data[idx-1];
+  sycl::group_barrier(sg);
+  return r;
 }
 
 inline unsigned int lanemask_lt(sycl::sub_group &sg)
