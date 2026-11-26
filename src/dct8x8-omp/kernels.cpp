@@ -102,29 +102,36 @@ void DCT8x8(
           const unsigned int   globalY = (omp_get_team_num() / team_X) * BLOCK_Y + localY;
 
           //Process only full blocks
-          if( (globalX - modLocalX + BLOCK_SIZE - 1 < imageW) && (globalY + BLOCK_SIZE - 1 < imageH) ) {
+          const bool process = (globalX - modLocalX + BLOCK_SIZE - 1 < imageW) && (globalY + BLOCK_SIZE - 1 < imageH);
 
-            float *l_V = &l_Transpose[localY * (BLOCK_X+1) + localX];
-            float *l_H = &l_Transpose[(localY + modLocalX) * (BLOCK_X+1) + localX - modLocalX];
-            d_Src += globalY * stride + globalX;
-            d_Dst += globalY * stride + globalX;
+          float *l_V = &l_Transpose[localY * (BLOCK_X+1) + localX];
+          float *l_H = &l_Transpose[(localY + modLocalX) * (BLOCK_X+1) + localX - modLocalX];
+          const float *src = d_Src + globalY * stride + globalX;
+                float *dst = d_Dst + globalY * stride + globalX;
 
-            float D[8];
+          float D[8];
+          if (process) {
             for(unsigned int i = 0; i < BLOCK_SIZE; i++)
-                l_V[i * (BLOCK_X + 1)] = d_Src[i * stride];
+                l_V[i * (BLOCK_X + 1)] = src[i * stride];
+          }
+          #pragma omp barrier
 
+          if (process) {
             for(unsigned int i = 0; i < BLOCK_SIZE; i++)
                 D[i] = l_H[i];
             DCT8(D);
             for(unsigned int i = 0; i < BLOCK_SIZE; i++)
                 l_H[i] = D[i];
+          }
+          #pragma omp barrier
 
+          if (process) {
             for(unsigned int i = 0; i < BLOCK_SIZE; i++)
                 D[i] = l_V[i * (BLOCK_X + 1)];
             DCT8(D);
 
             for(unsigned int i = 0; i < BLOCK_SIZE; i++)
-                d_Dst[i * stride] = D[i];
+                dst[i * stride] = D[i];
 
           }
         }
@@ -143,28 +150,35 @@ void DCT8x8(
           const unsigned int   globalY = (omp_get_team_num() / team_X) * BLOCK_Y + localY;
 
           //Process only full blocks
-          if( (globalX - modLocalX + BLOCK_SIZE - 1 < imageW) && (globalY + BLOCK_SIZE - 1 < imageH) ) {
+          const bool process = (globalX - modLocalX + BLOCK_SIZE - 1 < imageW) && (globalY + BLOCK_SIZE - 1 < imageH);
 
-            float *l_V = &l_Transpose[localY * (BLOCK_X+1) + localX];
-            float *l_H = &l_Transpose[(localY + modLocalX) * (BLOCK_X+1) + localX - modLocalX];
-            d_Src += globalY * stride + globalX;
-            d_Dst += globalY * stride + globalX;
+          float *l_V = &l_Transpose[localY * (BLOCK_X+1) + localX];
+          float *l_H = &l_Transpose[(localY + modLocalX) * (BLOCK_X+1) + localX - modLocalX];
+          const float *src = d_Src + globalY * stride + globalX;
+                float *dst = d_Dst + globalY * stride + globalX;
 
-            float D[8];
+          float D[8];
+          if (process) {
             for(unsigned int i = 0; i < BLOCK_SIZE; i++)
-                l_V[i * (BLOCK_X + 1)] = d_Src[i * stride];
+                l_V[i * (BLOCK_X + 1)] = src[i * stride];
+          }
+          #pragma omp barrier
 
+          if (process) {
             for(unsigned int i = 0; i < BLOCK_SIZE; i++)
                 D[i] = l_H[i];
             IDCT8(D);
             for(unsigned int i = 0; i < BLOCK_SIZE; i++)
                 l_H[i] = D[i];
+          }
+          #pragma omp barrier
 
+          if (process) {
             for(unsigned int i = 0; i < BLOCK_SIZE; i++)
                 D[i] = l_V[i * (BLOCK_X + 1)];
             IDCT8(D);
             for(unsigned int i = 0; i < BLOCK_SIZE; i++)
-                d_Dst[i * stride] = D[i];
+                dst[i * stride] = D[i];
           }
         }
      }
